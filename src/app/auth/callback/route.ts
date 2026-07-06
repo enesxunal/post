@@ -10,7 +10,28 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createSupabaseServerClient();
-    await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (!error && data.user?.email) {
+      const metadata = data.user.user_metadata ?? {};
+      const fullName =
+        (typeof metadata.full_name === "string" && metadata.full_name) ||
+        [
+          typeof metadata.first_name === "string" ? metadata.first_name : "",
+          typeof metadata.last_name === "string" ? metadata.last_name : "",
+        ]
+          .join(" ")
+          .trim();
+
+      await supabase.from("profiles").upsert(
+        {
+          id: data.user.id,
+          email: data.user.email,
+          full_name: fullName || null,
+        },
+        { onConflict: "id" },
+      );
+    }
   }
 
   return NextResponse.redirect(`${origin}${next}`);

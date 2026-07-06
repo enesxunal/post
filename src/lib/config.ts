@@ -20,6 +20,8 @@ export const BRAND_COLOR_PALETTE = [
   { hex: "#DC2626", label: "Kırmızı" },
   { hex: "#991B1B", label: "Bordo" },
   { hex: "#EA580C", label: "Turuncu" },
+  { hex: "#EAB308", label: "Sarı" },
+  { hex: "#FACC15", label: "Altın sarı" },
   { hex: "#D97706", label: "Altın" },
   { hex: "#7C3AED", label: "Mor" },
   { hex: "#DB2777", label: "Pembe" },
@@ -27,6 +29,7 @@ export const BRAND_COLOR_PALETTE = [
   { hex: "#92400E", label: "Kahverengi" },
   { hex: "#171717", label: "Siyah" },
   { hex: "#64748B", label: "Gri" },
+  { hex: "#FFFFFF", label: "Beyaz" },
   { hex: "#FFFBEB", label: "Krem" },
 ] as const;
 

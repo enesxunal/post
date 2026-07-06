@@ -1,13 +1,14 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   CalendarPlus2,
   Download,
   ImageIcon,
   LayoutGrid,
+  LogOut,
   RefreshCcw,
   Settings,
   Sparkles,
@@ -17,8 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { dashboardMock, userProfileMock } from "@/lib/mock-data";
-import { dashboardPostImages } from "@/lib/marketing-images";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 const statusMap = {
@@ -30,12 +30,75 @@ const statusMap = {
 
 type DashboardTab = "gallery" | "profile" | "package";
 
-export function UserDashboard() {
+export type DashboardProfile = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  businessName: string;
+  sector: string;
+  visualStyle: string;
+  primaryColor: string;
+  logoInitial: string;
+  packageName: string;
+  postsTotal: number;
+  postsReady: number;
+  postsGenerating: number;
+  addons: string[];
+  memberSince: string;
+};
+
+export type DashboardProject = {
+  id: string;
+  brandName: string;
+  primaryColor: string;
+  visualStyle: string;
+  remainingCredits: number;
+  bonusCreditsGranted: boolean;
+};
+
+export type DashboardJob = {
+  id: string;
+  dayName: string;
+  dateLabel: string;
+  status: string;
+  imageIndex: number;
+  caption: string | null;
+  gradient: string;
+};
+
+type UserDashboardProps = {
+  user: DashboardProfile;
+  project: DashboardProject | null;
+  jobs: DashboardJob[];
+  emptyMessage?: string;
+};
+
+export function UserDashboard({
+  user: profile,
+  project,
+  jobs,
+  emptyMessage,
+}: UserDashboardProps) {
+  const router = useRouter();
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [tab, setTab] = useState<DashboardTab>("gallery");
-  const [selectedJobId, setSelectedJobId] = useState(dashboardMock.jobs[0]?.id);
-  const { project, jobs } = dashboardMock;
-  const profile = userProfileMock;
+  const [selectedJobId, setSelectedJobId] = useState(jobs[0]?.id);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const selectedJob = jobs.find((job) => job.id === selectedJobId) ?? jobs[0];
+  const remainingCredits = project?.remainingCredits ?? 0;
+
+  async function handleLogout() {
+    if (!supabase) {
+      router.push("/login");
+      return;
+    }
+
+    setIsLoggingOut(true);
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,_#f8fffa_0%,_#f1f5f9_100%)]">
@@ -53,9 +116,20 @@ export function UserDashboard() {
               <p className="text-xs text-slate-500">Üye paneli</p>
             </div>
           </div>
-          <Link href="/" className="text-sm text-slate-500 hover:text-slate-700">
-            Anasayfa
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link href="/" className="text-sm text-slate-500 hover:text-slate-700">
+              Anasayfa
+            </Link>
+            <Button
+              variant="outline"
+              className="h-9 px-4 text-sm"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Çıkış
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -113,7 +187,7 @@ export function UserDashboard() {
               <Sparkles className="h-5 w-5 text-emerald-600" />
               <div>
                 <p className="text-xs text-slate-500">Revizyon kredisi</p>
-                <p className="text-xl font-semibold text-slate-950">{project.remainingCredits}</p>
+                <p className="text-xl font-semibold text-slate-950">{remainingCredits}</p>
               </div>
             </div>
           </Card>
@@ -132,99 +206,118 @@ export function UserDashboard() {
                     Hazır görselleri indirin, caption görüntüleyin veya yeniden üretin.
                   </p>
                 </div>
-                <Button variant="outline">
-                  <Download className="mr-2 h-4 w-4" />
-                  Tümünü ZIP indir
-                </Button>
-              </div>
-
-              <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {jobs.map((job) => {
-                    const status = statusMap[job.status as keyof typeof statusMap];
-                    const imageUrl = dashboardPostImages[job.imageIndex % dashboardPostImages.length];
-
-                    return (
-                      <button
-                        key={job.id}
-                        type="button"
-                        onClick={() => setSelectedJobId(job.id)}
-                        className={cn(
-                          "overflow-hidden rounded-[24px] border bg-white text-left transition hover:-translate-y-0.5",
-                          selectedJobId === job.id
-                            ? "border-emerald-400 ring-2 ring-emerald-200"
-                            : "border-emerald-100",
-                        )}
-                      >
-                        <div className="relative aspect-square">
-                          <Image
-                            src={imageUrl}
-                            alt={job.dayName}
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 768px) 50vw, 25vw"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                          <Badge className={cn("absolute left-3 top-3 border-0", status.className)}>
-                            {status.label}
-                          </Badge>
-                          <div className="absolute bottom-3 left-3 right-3">
-                            <p className="text-sm font-semibold text-white">{job.dayName}</p>
-                            <p className="text-xs text-white/80">{job.dateLabel}</p>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {selectedJob ? (
-                  <Card className="h-fit space-y-4 p-5 lg:sticky lg:top-6">
-                    <p className="text-sm font-medium text-slate-500">Seçili post</p>
-                    <div className="relative aspect-square overflow-hidden rounded-[24px]">
-                      <Image
-                        src={
-                          dashboardPostImages[
-                            selectedJob.imageIndex % dashboardPostImages.length
-                          ]
-                        }
-                        alt={selectedJob.dayName}
-                        fill
-                        className="object-cover"
-                        sizes="400px"
-                      />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-semibold text-slate-950">{selectedJob.dayName}</h2>
-                      <p className="text-sm text-slate-500">{selectedJob.dateLabel}</p>
-                    </div>
-                    {selectedJob.caption ? (
-                      <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
-                        <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">
-                          Caption
-                        </p>
-                        <p className="mt-2 text-sm leading-6 text-slate-700">{selectedJob.caption}</p>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-slate-500">Caption henüz hazır değil.</p>
-                    )}
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button variant="outline" className="w-full">
-                        <Download className="mr-2 h-4 w-4" />
-                        İndir
-                      </Button>
-                      <Button variant="outline" className="w-full">
-                        <RefreshCcw className="mr-2 h-4 w-4" />
-                        Yeniden üret
-                      </Button>
-                    </div>
-                    <Button variant="secondary" className="w-full">
-                      <CalendarPlus2 className="mr-2 h-4 w-4" />
-                      Takvime ekle
-                    </Button>
-                  </Card>
+                {jobs.length > 0 ? (
+                  <Button variant="outline">
+                    <Download className="mr-2 h-4 w-4" />
+                    Tümünü ZIP indir
+                  </Button>
                 ) : null}
               </div>
+
+              {jobs.length === 0 ? (
+                <Card className="space-y-4 p-8 text-center">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+                    <ImageIcon className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-slate-950">
+                      Henüz postunuz yok
+                    </h2>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      {emptyMessage ??
+                        "Onboarding akışını tamamlayıp ödeme yaptıktan sonra postlarınız burada görünür."}
+                    </p>
+                  </div>
+                  <Link href="/onboarding">
+                    <Button>İlk paketimi oluştur</Button>
+                  </Link>
+                </Card>
+              ) : (
+                <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {jobs.map((job) => {
+                      const status = statusMap[job.status as keyof typeof statusMap];
+
+                      return (
+                        <button
+                          key={job.id}
+                          type="button"
+                          onClick={() => setSelectedJobId(job.id)}
+                          className={cn(
+                            "overflow-hidden rounded-[24px] border bg-white text-left transition hover:-translate-y-0.5",
+                            selectedJobId === job.id
+                              ? "border-emerald-400 ring-2 ring-emerald-200"
+                              : "border-emerald-100",
+                          )}
+                        >
+                          <div className="relative aspect-square">
+                            <div
+                              className={cn(
+                                "absolute inset-0 bg-gradient-to-br",
+                                job.gradient,
+                              )}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                            <Badge
+                              className={cn("absolute left-3 top-3 border-0", status.className)}
+                            >
+                              {status.label}
+                            </Badge>
+                            <div className="absolute bottom-3 left-3 right-3">
+                              <p className="text-sm font-semibold text-white">{job.dayName}</p>
+                              <p className="text-xs text-white/80">{job.dateLabel}</p>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {selectedJob ? (
+                    <Card className="h-fit space-y-4 p-5 lg:sticky lg:top-6">
+                      <p className="text-sm font-medium text-slate-500">Seçili post</p>
+                      <div
+                        className={cn(
+                          "relative aspect-square overflow-hidden rounded-[24px] bg-gradient-to-br",
+                          selectedJob.gradient,
+                        )}
+                      />
+                      <div>
+                        <h2 className="text-xl font-semibold text-slate-950">
+                          {selectedJob.dayName}
+                        </h2>
+                        <p className="text-sm text-slate-500">{selectedJob.dateLabel}</p>
+                      </div>
+                      {selectedJob.caption ? (
+                        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
+                          <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">
+                            Caption
+                          </p>
+                          <p className="mt-2 text-sm leading-6 text-slate-700">
+                            {selectedJob.caption}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-slate-500">Caption henüz hazır değil.</p>
+                      )}
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button variant="outline" className="w-full">
+                          <Download className="mr-2 h-4 w-4" />
+                          İndir
+                        </Button>
+                        <Button variant="outline" className="w-full">
+                          <RefreshCcw className="mr-2 h-4 w-4" />
+                          Yeniden üret
+                        </Button>
+                      </div>
+                      <Button variant="secondary" className="w-full">
+                        <CalendarPlus2 className="mr-2 h-4 w-4" />
+                        Takvime ekle
+                      </Button>
+                    </Card>
+                  ) : null}
+                </div>
+              )}
             </>
           )}
 
@@ -232,10 +325,15 @@ export function UserDashboard() {
             <Card className="space-y-6 p-6">
               <div>
                 <Badge>Profilim</Badge>
-                <h1 className="mt-2 text-2xl font-semibold text-slate-950">Hesap ve marka bilgileri</h1>
+                <h1 className="mt-2 text-2xl font-semibold text-slate-950">
+                  Hesap ve marka bilgileri
+                </h1>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <InfoField label="Ad Soyad" value={`${profile.firstName} ${profile.lastName}`} />
+                <InfoField
+                  label="Ad Soyad"
+                  value={`${profile.firstName} ${profile.lastName}`.trim()}
+                />
                 <InfoField label="E-posta" value={profile.email} />
                 <InfoField label="İşletme adı" value={profile.businessName} />
                 <InfoField label="Sektör" value={profile.sector} />
@@ -248,7 +346,7 @@ export function UserDashboard() {
                   style={{ backgroundColor: profile.primaryColor }}
                 />
                 <div>
-                  <p className="text-sm font-medium text-slate-800">Marka rengi</p>
+                  <p className="text-sm font-medium text-slate-800">Ana marka rengi</p>
                   <p className="text-sm text-slate-500">{profile.primaryColor}</p>
                 </div>
               </div>
@@ -259,26 +357,32 @@ export function UserDashboard() {
             <Card className="space-y-6 p-6">
               <div>
                 <Badge>Paketim</Badge>
-                <h1 className="mt-2 text-2xl font-semibold text-slate-950">{profile.packageName}</h1>
+                <h1 className="mt-2 text-2xl font-semibold text-slate-950">
+                  {profile.packageName}
+                </h1>
                 <p className="mt-1 text-sm text-slate-600">Tek ödeme • 30 özel gün postu</p>
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
-                <PackageStat label="Toplam post" value="30" />
+                <PackageStat label="Toplam post" value={String(profile.postsTotal)} />
                 <PackageStat label="Hazır" value={String(profile.postsReady)} />
-                <PackageStat label="Kredi" value={String(project.remainingCredits)} />
+                <PackageStat label="Kredi" value={String(remainingCredits)} />
               </div>
               <div>
                 <p className="text-sm font-medium text-slate-800">Ek paketler</p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {profile.addons.map((addon) => (
-                    <Badge key={addon}>{addon}</Badge>
-                  ))}
+                  {profile.addons.length > 0 ? (
+                    profile.addons.map((addon) => <Badge key={addon}>{addon}</Badge>)
+                  ) : (
+                    <p className="text-sm text-slate-500">Henüz ek paket yok.</p>
+                  )}
                 </div>
               </div>
-              <Button variant="outline" className="w-fit">
-                <ImageIcon className="mr-2 h-4 w-4" />
-                Yeni proje başlat
-              </Button>
+              <Link href="/onboarding">
+                <Button variant="outline" className="w-fit">
+                  <ImageIcon className="mr-2 h-4 w-4" />
+                  Yeni proje başlat
+                </Button>
+              </Link>
             </Card>
           )}
         </main>

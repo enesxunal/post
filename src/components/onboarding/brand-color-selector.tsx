@@ -72,7 +72,8 @@ export function BrandColorSelector({ value, onChange }: BrandColorSelectorProps)
       <div className="grid gap-3 sm:grid-cols-3">
         {Array.from({ length: MAX_BRAND_COLORS }).map((_, index) => {
           const color = value[index];
-          const label = `${index + 1}. Renk`;
+          const label =
+            index === 0 ? "Ana renk" : index === 1 ? "2. Renk" : "3. Renk";
 
           return (
             <div

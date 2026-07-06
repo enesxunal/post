@@ -176,6 +176,12 @@ alter table style_modifiers enable row level security;
 create policy "users can read own profile" on profiles
 for select using (auth.uid() = id);
 
+create policy "users can insert own profile" on profiles
+for insert with check (auth.uid() = id);
+
+create policy "users can update own profile" on profiles
+for update using (auth.uid() = id);
+
 create policy "users can read own projects" on projects
 for select using (auth.uid() = user_id);
 
@@ -202,5 +208,31 @@ for select using (true);
 
 create policy "public can read style modifiers" on style_modifiers
 for select using (true);
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.profiles (id, email, full_name)
+  values (
+    new.id,
+    new.email,
+    coalesce(new.raw_user_meta_data->>'full_name', '')
+  )
+  on conflict (id) do update
+  set
+    email = excluded.email,
+    full_name = coalesce(excluded.full_name, profiles.full_name);
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
 
 -- TODO: configure storage bucket policies for logos, generated assets, and thumbnails.

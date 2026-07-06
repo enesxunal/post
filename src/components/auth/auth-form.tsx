@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Mail } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -36,6 +36,8 @@ type AuthMode = "signup" | "login";
 
 export function AuthForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = searchParams.get("next") ?? "/dashboard";
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [mode, setMode] = useState<AuthMode>("signup");
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -73,11 +75,11 @@ export function AuthForm() {
       return;
     }
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
         data: {
           full_name: `${values.firstName} ${values.lastName}`.trim(),
           first_name: values.firstName,
@@ -89,6 +91,17 @@ export function AuthForm() {
     if (error) {
       setFeedback({ type: "error", message: error.message });
       return;
+    }
+
+    if (data.user?.id) {
+      await supabase.from("profiles").upsert(
+        {
+          id: data.user.id,
+          email: values.email,
+          full_name: `${values.firstName} ${values.lastName}`.trim(),
+        },
+        { onConflict: "id" },
+      );
     }
 
     setFeedback({
@@ -119,7 +132,7 @@ export function AuthForm() {
       return;
     }
 
-    router.push("/dashboard");
+    router.push(nextPath);
     router.refresh();
   }
 
@@ -139,7 +152,7 @@ export function AuthForm() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
       },
     });
 
