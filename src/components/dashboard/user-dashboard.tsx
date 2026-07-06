@@ -63,7 +63,9 @@ export type DashboardJob = {
   status: string;
   imageIndex: number;
   caption: string | null;
+  imageUrl?: string | null;
   gradient: string;
+  errorMessage?: string | null;
 };
 
 type UserDashboardProps = {
@@ -251,12 +253,21 @@ export function UserDashboard({
                           )}
                         >
                           <div className="relative aspect-square">
-                            <div
-                              className={cn(
-                                "absolute inset-0 bg-gradient-to-br",
-                                job.gradient,
-                              )}
-                            />
+                            {job.imageUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={job.imageUrl}
+                                alt={job.dayName}
+                                className="absolute inset-0 h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div
+                                className={cn(
+                                  "absolute inset-0 bg-gradient-to-br",
+                                  job.gradient,
+                                )}
+                              />
+                            )}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
                             <Badge
                               className={cn("absolute left-3 top-3 border-0", status.className)}
@@ -276,12 +287,23 @@ export function UserDashboard({
                   {selectedJob ? (
                     <Card className="h-fit space-y-4 p-5 lg:sticky lg:top-6">
                       <p className="text-sm font-medium text-slate-500">Seçili post</p>
-                      <div
-                        className={cn(
-                          "relative aspect-square overflow-hidden rounded-[24px] bg-gradient-to-br",
-                          selectedJob.gradient,
+                      <div className="relative aspect-square overflow-hidden rounded-[24px]">
+                        {selectedJob.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={selectedJob.imageUrl}
+                            alt={selectedJob.dayName}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div
+                            className={cn(
+                              "h-full w-full bg-gradient-to-br",
+                              selectedJob.gradient,
+                            )}
+                          />
                         )}
-                      />
+                      </div>
                       <div>
                         <h2 className="text-xl font-semibold text-slate-950">
                           {selectedJob.dayName}

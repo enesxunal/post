@@ -185,11 +185,23 @@ for update using (auth.uid() = id);
 create policy "users can read own projects" on projects
 for select using (auth.uid() = user_id);
 
+create policy "users can insert own projects" on projects
+for insert with check (auth.uid() = user_id);
+
+create policy "users can update own projects" on projects
+for update using (auth.uid() = user_id);
+
 create policy "users can read own orders" on orders
 for select using (auth.uid() = user_id);
 
 create policy "users can read own jobs" on generation_jobs
 for select using (auth.uid() = user_id);
+
+create policy "users can insert own jobs" on generation_jobs
+for insert with check (auth.uid() = user_id);
+
+create policy "users can update own jobs" on generation_jobs
+for update using (auth.uid() = user_id);
 
 create policy "users can read own assets" on assets
 for select using (

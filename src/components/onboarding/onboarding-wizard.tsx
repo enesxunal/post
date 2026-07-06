@@ -29,6 +29,7 @@ import {
   MAX_SELECTED_DAYS,
 } from "@/lib/config";
 import { formatCurrency } from "@/lib/utils";
+import { saveOnboardingDraft } from "@/lib/onboarding/draft";
 import type { AddonKey, SectorKey, VisualStyle } from "@/types/domain";
 
 const schema = z.object({
@@ -268,9 +269,25 @@ export function OnboardingWizard() {
                           Tek ödeme • Güvenli ödeme • Arka planda üretim
                         </p>
                         <div className="mt-5">
-                          <Link href="/checkout">
+                          <Link
+                            href="/checkout"
+                            onClick={() => {
+                              const values = form.getValues();
+                              saveOnboardingDraft({
+                                brandName: values.brandName,
+                                logoUrl: values.logoUrl,
+                                brandColors: values.brandColors,
+                                sector: values.sector,
+                                customSector: values.customSector,
+                                brandDescription: values.brandDescription,
+                                visualStyle: values.visualStyle as VisualStyle,
+                                selectedDays,
+                                purchasedAddons: selectedAddons,
+                              });
+                            }}
+                          >
                             <Button variant="secondary" className="w-full">
-                              Guvenli Ode
+                              Güvenli Öde
                             </Button>
                           </Link>
                         </div>

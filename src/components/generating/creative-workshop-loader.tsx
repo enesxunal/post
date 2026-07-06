@@ -1,32 +1,124 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { GENERATING_MESSAGES } from "@/lib/config";
+import { loadOnboardingDraft } from "@/lib/onboarding/draft";
 
 const floatingPosts = ["29 Ekim", "Kandil", "Cuma", "Bayram", "Anneler Günü"];
 
-export function CreativeWorkshopLoader() {
-  const [index, setIndex] = useState(0);
-  const [progress, setProgress] = useState(12);
+type GenerationPhase = "starting" | "running" | "done" | "error";
+
+type GenerationStatus = {
+  projectId: string;
+  total: number;
+  ready: number;
+  failed: number;
+  queued: number;
+  inProgress: number;
+  progress: number;
+  done: boolean;
+  brandName?: string;
+};
+
+type CreativeWorkshopLoaderProps = {
+  orderId: string;
+};
+
+export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps) {
+  const router = useRouter();
+  const [phase, setPhase] = useState<GenerationPhase>("starting");
+  const [messageIndex, setMessageIndex] = useState(0);
+  const [status, setStatus] = useState<GenerationStatus | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const isRunningRef = useRef(false);
+
+  const progress = status?.progress ?? (phase === "starting" ? 8 : 0);
+
+  const runPipeline = useCallback(async () => {
+    if (isRunningRef.current) return;
+    isRunningRef.current = true;
+    setPhase("running");
+    setError(null);
+
+    try {
+      const draft = loadOnboardingDraft();
+      if (!draft) {
+        throw new Error("Marka bilgileri bulunamadı. Onboarding adımını tekrar tamamlayın.");
+      }
+
+      const startResponse = await fetch("/api/generation/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ draft: { ...draft, orderId }, orderId }),
+      });
+
+      const startData = (await startResponse.json()) as GenerationStatus & {
+        error?: string;
+        projectId?: string;
+      };
+
+      if (!startResponse.ok || !startData.projectId) {
+        throw new Error(startData.error ?? "Üretim başlatılamadı");
+      }
+
+      let currentStatus = startData;
+      setStatus(currentStatus);
+
+      while (!currentStatus.done) {
+        const nextResponse = await fetch("/api/generation/process-next", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectId: currentStatus.projectId }),
+        });
+
+        const nextData = (await nextResponse.json()) as {
+          status?: GenerationStatus;
+          error?: string;
+        };
+
+        if (!nextResponse.ok || !nextData.status) {
+          throw new Error(nextData.error ?? "Görsel üretimi durdu");
+        }
+
+        currentStatus = nextData.status;
+        setStatus(currentStatus);
+
+        if (!nextData.status.done && nextData.status.queued === 0 && nextData.status.inProgress === 0) {
+          break;
+        }
+      }
+
+      setPhase("done");
+      setTimeout(() => {
+        router.push(`/projects/${currentStatus.projectId}`);
+      }, 1500);
+    } catch (pipelineError) {
+      setPhase("error");
+      setError(
+        pipelineError instanceof Error
+          ? pipelineError.message
+          : "Üretim sırasında bir hata oluştu",
+      );
+      isRunningRef.current = false;
+    }
+  }, [orderId, router]);
+
+  useEffect(() => {
+    runPipeline();
+  }, [runPipeline]);
 
   useEffect(() => {
     const messageTimer = window.setInterval(() => {
-      setIndex((current) => (current + 1) % GENERATING_MESSAGES.length);
+      setMessageIndex((current) => (current + 1) % GENERATING_MESSAGES.length);
     }, 2200);
-
-    const progressTimer = window.setInterval(() => {
-      setProgress((current) => Math.min(current + Math.random() * 8, 96));
-    }, 1400);
-
-    return () => {
-      window.clearInterval(messageTimer);
-      window.clearInterval(progressTimer);
-    };
+    return () => window.clearInterval(messageTimer);
   }, []);
 
   return (
@@ -40,13 +132,17 @@ export function CreativeWorkshopLoader() {
       <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-4 py-10 sm:px-6">
         <div className="mb-8 text-center lg:text-left">
           <Badge className="border-emerald-400/30 bg-emerald-500/10 text-emerald-200">
-            Dijital atölye çalışıyor
+            {phase === "done" ? "Tamamlandı" : "Dijital atölye çalışıyor"}
           </Badge>
           <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl">
-            Markanız için postlar üretiliyor
+            {status?.brandName
+              ? `${status.brandName} için postlar üretiliyor`
+              : "Markanız için postlar üretiliyor"}
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-emerald-100/80 sm:text-base">
-            Sayfadan çıksanız bile üretim devam eder. Hazır olduğunda size e-posta göndeririz.
+            {phase === "done"
+              ? "Görseller hazır! Panele yönlendiriliyorsunuz..."
+              : "Gemini AI görsellerinizi oluşturuyor. Bu işlem birkaç dakika sürebilir."}
           </p>
         </div>
 
@@ -55,64 +151,100 @@ export function CreativeWorkshopLoader() {
             <div className="rounded-[28px] border border-white/10 bg-white/5 p-5 backdrop-blur">
               <div className="mb-3 flex items-center justify-between text-sm">
                 <span className="text-emerald-200">İlerleme</span>
-                <span className="font-semibold">{Math.round(progress)}%</span>
+                <span className="font-semibold">{progress}%</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-white/10">
                 <motion.div
                   className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-lime-300 to-emerald-500"
                   animate={{ width: `${progress}%` }}
-                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
                 />
               </div>
+              {status ? (
+                <p className="mt-3 text-xs text-emerald-200/80">
+                  {status.ready} / {status.total} görsel hazır
+                  {status.failed > 0 ? ` • ${status.failed} hata` : ""}
+                </p>
+              ) : null}
             </div>
 
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                className="rounded-[28px] border border-emerald-400/30 bg-emerald-500/10 p-5"
-              >
-                <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">
-                  Şu an
-                </p>
-                <p className="mt-2 text-xl font-semibold text-white">
-                  {GENERATING_MESSAGES[index]}
-                </p>
-              </motion.div>
-            </AnimatePresence>
-
-            <div className="grid gap-2">
-              {GENERATING_MESSAGES.map((message, messageIndex) => (
-                <div
-                  key={message}
-                  className={`rounded-2xl border px-4 py-3 text-sm transition ${
-                    index === messageIndex
-                      ? "border-emerald-400/40 bg-white/10 text-white"
-                      : "border-white/5 bg-white/[0.02] text-white/45"
-                  }`}
-                >
-                  {message}
+            {phase === "error" ? (
+              <div className="rounded-[28px] border border-red-400/30 bg-red-500/10 p-5">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-300" />
+                  <div>
+                    <p className="font-semibold text-red-100">Üretim durdu</p>
+                    <p className="mt-2 text-sm leading-6 text-red-100/80">{error}</p>
+                    <Button
+                      variant="secondary"
+                      className="mt-4"
+                      onClick={() => {
+                        isRunningRef.current = false;
+                        setPhase("starting");
+                        runPipeline();
+                      }}
+                    >
+                      Tekrar dene
+                    </Button>
+                  </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : phase === "done" ? (
+              <div className="rounded-[28px] border border-emerald-400/30 bg-emerald-500/10 p-5">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-300" />
+                  <p className="font-semibold">Tüm görseller üretildi!</p>
+                </div>
+              </div>
+            ) : (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={messageIndex}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  className="rounded-[28px] border border-emerald-400/30 bg-emerald-500/10 p-5"
+                >
+                  <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">
+                    Şu an
+                  </p>
+                  <p className="mt-2 flex items-center gap-2 text-xl font-semibold text-white">
+                    <Loader2 className="h-5 w-5 animate-spin text-emerald-300" />
+                    {GENERATING_MESSAGES[messageIndex]}
+                  </p>
+                </motion.div>
+              </AnimatePresence>
+            )}
 
-            <Link href="/dashboard">
-              <Button variant="secondary" className="w-full sm:w-auto">
-                Postlarıma git
-              </Button>
-            </Link>
+            {status?.projectId ? (
+              <Link href={`/projects/${status.projectId}`}>
+                <Button variant="secondary" className="w-full sm:w-auto">
+                  Panele git
+                </Button>
+              </Link>
+            ) : (
+              <Link href="/dashboard">
+                <Button variant="secondary" className="w-full sm:w-auto">
+                  Panele git
+                </Button>
+              </Link>
+            )}
           </div>
 
-          <WorkshopStage activeIndex={index} />
+          <WorkshopStage activeIndex={messageIndex} readyCount={status?.ready ?? 0} />
         </div>
       </div>
     </div>
   );
 }
 
-function WorkshopStage({ activeIndex }: { activeIndex: number }) {
+function WorkshopStage({
+  activeIndex,
+  readyCount,
+}: {
+  activeIndex: number;
+  readyCount: number;
+}) {
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[520px]">
       <motion.div
@@ -131,17 +263,12 @@ function WorkshopStage({ activeIndex }: { activeIndex: number }) {
         animate={{ scale: activeIndex === 3 ? [1, 1.12, 1] : [1, 1.04, 1] }}
         transition={{ duration: 1.4, repeat: Number.POSITIVE_INFINITY }}
       >
-        <div className="flex h-full items-center justify-center text-sm font-bold text-emerald-950">
-          AI
+        <div className="flex h-full flex-col items-center justify-center text-sm font-bold text-emerald-950">
+          <span>AI</span>
+          {readyCount > 0 ? (
+            <span className="mt-1 text-[10px] font-semibold">{readyCount} hazır</span>
+          ) : null}
         </div>
-      </motion.div>
-
-      <motion.div
-        className="absolute left-8 top-1/2 -translate-y-1/2 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-semibold backdrop-blur"
-        animate={{ x: [0, 8, 120, 140], opacity: [1, 1, 1, 0] }}
-        transition={{ duration: 4.5, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
-      >
-        LOGO
       </motion.div>
 
       {floatingPosts.map((label, postIndex) => {
@@ -169,49 +296,6 @@ function WorkshopStage({ activeIndex }: { activeIndex: number }) {
           </motion.div>
         );
       })}
-
-      <ConveyorCards />
-
-      {Array.from({ length: 18 }).map((_, particleIndex) => (
-        <motion.span
-          key={particleIndex}
-          className="absolute h-1.5 w-1.5 rounded-full bg-emerald-300/80"
-          style={{
-            left: `${8 + particleIndex * 5}%`,
-            top: `${12 + (particleIndex % 5) * 16}%`,
-          }}
-          animate={{
-            opacity: [0.1, 1, 0.1],
-            y: [0, -18, 0],
-            scale: [0.8, 1.2, 0.8],
-          }}
-          transition={{
-            duration: 2 + particleIndex * 0.08,
-            repeat: Number.POSITIVE_INFINITY,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function ConveyorCards() {
-  return (
-    <div className="absolute bottom-8 left-6 right-6 overflow-hidden rounded-2xl border border-white/10 bg-black/20 py-3">
-      <motion.div
-        className="flex gap-3 px-3"
-        animate={{ x: ["0%", "-50%"] }}
-        transition={{ duration: 12, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-      >
-        {[...floatingPosts, ...floatingPosts].map((label, index) => (
-          <div
-            key={`${label}-${index}`}
-            className="flex h-16 w-24 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/80 to-emerald-700/80 text-xs font-semibold"
-          >
-            {label}
-          </div>
-        ))}
-      </motion.div>
     </div>
   );
 }

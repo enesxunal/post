@@ -1,4 +1,5 @@
 import { UserDashboard } from "@/components/dashboard/user-dashboard";
+import { mapGenerationJobsForDashboard } from "@/lib/generation/map-jobs";
 import { requireSessionUser } from "@/lib/supabase/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -48,34 +49,11 @@ export default async function ProjectDetailPage({
 
   const { data: generationJobs } = await supabase
     .from("generation_jobs")
-    .select("id, status, caption_text, created_at")
+    .select("id, status, type, caption_text, image_url, created_at, error_message")
     .eq("project_id", project.id)
     .order("created_at", { ascending: true });
 
-  const jobs =
-    generationJobs?.map((job, index) => ({
-      id: job.id,
-      dayName: "Özel gün postu",
-      dateLabel: new Date(job.created_at).toLocaleDateString("tr-TR"),
-      status:
-        job.status === "ready"
-          ? "ready"
-          : job.status === "failed"
-            ? "failed"
-            : job.status === "queued"
-              ? "queued"
-              : "generating",
-      imageIndex: index,
-      caption: job.caption_text,
-      gradient: [
-        "from-rose-600 via-red-700 to-rose-950",
-        "from-emerald-500 via-green-600 to-emerald-900",
-        "from-pink-400 via-rose-500 to-fuchsia-800",
-        "from-teal-500 via-emerald-600 to-teal-950",
-        "from-violet-500 via-purple-600 to-indigo-950",
-        "from-amber-400 via-orange-500 to-amber-900",
-      ][index % 6],
-    })) ?? [];
+  const jobs = mapGenerationJobsForDashboard(generationJobs ?? []);
 
   return (
     <UserDashboard
@@ -89,7 +67,7 @@ export default async function ProjectDetailPage({
         primaryColor: project.primary_color,
         logoInitial: project.brand_name.charAt(0).toUpperCase(),
         packageName: "Ana Paket",
-        postsTotal: 30,
+        postsTotal: jobs.length,
         postsReady: jobs.filter((job) => job.status === "ready").length,
         postsGenerating: jobs.filter((job) => job.status === "generating").length,
         addons: [],
