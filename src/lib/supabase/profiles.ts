@@ -11,6 +11,16 @@ export async function ensureUserProfile(user: ProfileInput) {
   const admin = createSupabaseAdminClient();
   const supabase = admin ?? (await createSupabaseServerClient());
 
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (existing) {
+    return;
+  }
+
   const { error } = await supabase.from("profiles").upsert(
     {
       id: user.id,

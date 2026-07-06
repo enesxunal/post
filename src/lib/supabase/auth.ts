@@ -1,7 +1,7 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { ensureUserProfile } from "@/lib/supabase/profiles";
 
 export type SessionUser = {
   id: string;
@@ -47,7 +47,8 @@ function parseUserNames(metadata: Record<string, unknown> | undefined, email: st
   return { firstName: fallback, lastName: "", fullName: fallback };
 }
 
-export async function getSessionUser(): Promise<SessionUser | null> {
+/** Aynı sayfa isteğinde tekrar auth çağrısını önler. */
+export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -64,7 +65,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     email: user.email,
     ...names,
   };
-}
+});
 
 export async function requireSessionUser(next = "/dashboard"): Promise<SessionUser> {
   const user = await getSessionUser();
@@ -72,12 +73,6 @@ export async function requireSessionUser(next = "/dashboard"): Promise<SessionUs
   if (!user) {
     redirect(`/login?next=${encodeURIComponent(next)}`);
   }
-
-  await ensureUserProfile({
-    id: user.id,
-    email: user.email,
-    fullName: user.fullName,
-  });
 
   return user;
 }

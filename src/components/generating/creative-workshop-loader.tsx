@@ -511,7 +511,6 @@ export function CreativeWorkshopLoader({
               {status?.projectId ? (
                 <Link
                   href={`/projects/${status.projectId}`}
-                  prefetch={false}
                   className="inline-flex h-11 w-full items-center justify-center rounded-full bg-emerald-50 px-5 text-sm font-semibold text-emerald-700 sm:w-auto"
                 >
                   Profilde gör

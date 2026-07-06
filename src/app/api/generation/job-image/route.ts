@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 
-import { requireSessionUser } from "@/lib/supabase/auth";
+import { getSessionUser } from "@/lib/supabase/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /** Tek job görseli — panel ve üretim sayfası lazy load için. */
 export async function GET(request: Request) {
-  const user = await requireSessionUser("/login");
+  const user = await getSessionUser();
+  if (!user) {
+    return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+  }
   const jobId = new URL(request.url).searchParams.get("jobId");
 
   if (!jobId) {

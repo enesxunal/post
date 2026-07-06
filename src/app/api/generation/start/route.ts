@@ -9,10 +9,13 @@ import { findProjectIdByOrderId } from "@/lib/generation/queue-processor";
 import { scheduleQueueProcessing } from "@/lib/generation/schedule-queue";
 import type { OnboardingDraft } from "@/lib/onboarding/draft";
 import { isOrderPaid, userHasPaidOrder } from "@/lib/orders/service";
-import { requireSessionUser } from "@/lib/supabase/auth";
+import { getSessionUser } from "@/lib/supabase/auth";
 
 export async function POST(request: Request) {
-  const user = await requireSessionUser("/login");
+  const user = await getSessionUser();
+  if (!user) {
+    return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+  }
 
   const body = (await request.json()) as {
     draft?: OnboardingDraft;
@@ -85,7 +88,10 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
-  const user = await requireSessionUser("/login");
+  const user = await getSessionUser();
+  if (!user) {
+    return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+  }
   const url = new URL(request.url);
   const projectId = url.searchParams.get("projectId");
   const lightweight = url.searchParams.get("lightweight") === "1";

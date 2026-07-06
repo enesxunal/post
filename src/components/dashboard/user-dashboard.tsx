@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CalendarPlus2,
@@ -103,6 +103,9 @@ export function UserDashboard({
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [jobs, setJobs] = useState(initialJobs);
   const [tab, setTab] = useState<DashboardTab>("gallery");
+  const selectTab = (next: DashboardTab) => {
+    startTransition(() => setTab(next));
+  };
   const [selectedJobId, setSelectedJobId] = useState(initialJobs[0]?.id);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -308,19 +311,19 @@ export function UserDashboard({
               active={tab === "gallery"}
               icon={<LayoutGrid className="h-4 w-4" />}
               label="Görsellerim"
-              onClick={() => setTab("gallery")}
+              onClick={() => selectTab("gallery")}
             />
             <NavItem
               active={tab === "profile"}
               icon={<UserRound className="h-4 w-4" />}
               label="Profilim"
-              onClick={() => setTab("profile")}
+              onClick={() => selectTab("profile")}
             />
             <NavItem
               active={tab === "package"}
               icon={<Settings className="h-4 w-4" />}
               label="Paketim"
-              onClick={() => setTab("package")}
+              onClick={() => selectTab("package")}
             />
           </Card>
 
@@ -401,6 +404,7 @@ export function UserDashboard({
                               className="absolute inset-0"
                               gradient={job.gradient}
                               initialUrl={job.imageUrl}
+                              lazy={selectedJobId !== job.id}
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
                             <Badge
@@ -429,6 +433,7 @@ export function UserDashboard({
                           className="h-full w-full"
                           gradient={selectedJob.gradient}
                           initialUrl={selectedJob.imageUrl}
+                          lazy={false}
                         />
                       </div>
                       <div>

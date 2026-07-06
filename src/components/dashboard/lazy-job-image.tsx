@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { loadJobImage } from "@/lib/dashboard/job-image-cache";
 import { cn } from "@/lib/utils";
 
 type LazyJobImageProps = {
@@ -13,6 +14,8 @@ type LazyJobImageProps = {
   gradient?: string;
   initialUrl?: string | null;
   story?: boolean;
+  /** false ise görünene kadar API çağrısı yapılmaz */
+  lazy?: boolean;
 };
 
 export function LazyJobImage({
@@ -24,9 +27,35 @@ export function LazyJobImage({
   gradient,
   initialUrl,
   story = false,
+  lazy = true,
 }: LazyJobImageProps) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const [url, setUrl] = useState<string | null>(initialUrl ?? null);
   const [loading, setLoading] = useState(false);
+  const [visible, setVisible] = useState(!lazy);
+
+  useEffect(() => {
+    if (!lazy) {
+      setVisible(true);
+      return;
+    }
+
+    const node = rootRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "120px" },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [lazy]);
 
   useEffect(() => {
     if (initialUrl) {
@@ -34,19 +63,15 @@ export function LazyJobImage({
       return;
     }
 
-    if (status !== "ready") {
-      setUrl(null);
+    if (status !== "ready" || !visible) {
+      if (status !== "ready") setUrl(null);
       return;
     }
 
     let active = true;
     setLoading(true);
 
-    void fetch(`/api/generation/job-image?jobId=${jobId}`, { cache: "no-store" })
-      .then(async (response) => {
-        if (!response.ok) return null;
-        return (await response.json()) as { imageUrl?: string; storyImageUrl?: string };
-      })
+    void loadJobImage(jobId, story)
       .then((data) => {
         if (!active || !data) return;
         setUrl(story ? (data.storyImageUrl ?? null) : (data.imageUrl ?? null));
@@ -58,7 +83,7 @@ export function LazyJobImage({
     return () => {
       active = false;
     };
-  }, [initialUrl, jobId, status, story]);
+  }, [initialUrl, jobId, status, story, visible]);
 
   if (url) {
     return (
@@ -70,7 +95,7 @@ export function LazyJobImage({
   }
 
   return (
-    <div className={cn("relative", className)}>
+    <div ref={rootRef} className={cn("relative", className)}>
       <div className={cn("absolute inset-0 bg-gradient-to-br", gradient ?? "from-slate-400 to-slate-600")} />
       {loading ? (
         <div className="absolute inset-0 flex items-center justify-center bg-black/10 text-xs font-medium text-white/90">
