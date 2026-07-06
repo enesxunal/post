@@ -2,38 +2,46 @@ import { sectorModifiers, styles } from "@/lib/mock-data";
 import { getPromptLibraryEntry } from "@/lib/ai/prompt-library";
 import type { BrandContext, PromptPreview } from "@/types/domain";
 
-export function composeImagePrompt(context: BrandContext, dayId: string): PromptPreview {
-  const day = getPromptLibraryEntry(dayId);
+export async function composeImagePrompt(
+  context: BrandContext,
+  dayId: string,
+): Promise<PromptPreview> {
+  const day = await getPromptLibraryEntry(dayId);
   const sector = sectorModifiers.find((item) => item.key === context.sector);
   const style = styles.find((item) => item.key === context.visualStyle);
 
   const headline =
-    day?.headlineAlternatives[0] ?? `${context.brandName} için özel gün paylaşımı`;
+    day?.headlineAlternatives[0] ?? `${context.brandName} — ${day?.name ?? "Özel Gün"}`;
+
+  const captionHint = day?.captionIdeas?.slice(0, 2).join(" | ") ?? "";
 
   const prompt = [
     day?.promptTemplate,
-    `Brand name: ${context.brandName}.`,
-    `Brand colors in order (1=primary): ${(context.brandColors?.length ? context.brandColors : [context.primaryColor]).join(", ")}.`,
-    `Brand description: ${context.brandDescription ?? "Not provided"}.`,
-    `Sector modifier: ${sector?.promptModifier ?? context.customSector ?? "general small business"}.`,
-    `Style modifier: ${style?.promptModifier ?? "clean modern style"}.`,
-    `Cultural context: ${day?.culturalContext ?? "Respect Turkish cultural expectations."}`,
-    `Visual direction: ${day?.visualDirection ?? "premium, clean, mobile-friendly social media design"}.`,
-    "Instagram square post, clean social media design, readable Turkish text, include selected headline inside the visual.",
-    "Place the uploaded brand logo clearly without distortion, preserve logo proportions, do not alter the logo text.",
-    "Use the brand primary color naturally, leave safe margins, avoid clutter, avoid unreadable typography, avoid random extra text.",
-    "If using cultural or religious elements, keep them respectful and subtle.",
+    `Marka adı: ${context.brandName}.`,
+    `Marka renkleri (öncelik sırasıyla): ${(context.brandColors?.length ? context.brandColors : [context.primaryColor]).join(", ")}.`,
+    `Marka açıklaması: ${context.brandDescription ?? "Yerel KOBİ işletmesi"}.`,
+    `Sektör: ${sector?.promptModifier ?? context.customSector ?? "genel KOBİ"}.`,
+    `Stil: ${style?.promptModifier ?? "temiz modern"}.`,
+    `Kültürel bağlam: ${day?.culturalContext ?? "Türkiye kültürüne uygun, saygılı ton."}`,
+    `Görsel yön: ${day?.visualDirection ?? "premium, sade, mobil uyumlu"}.`,
+    captionHint ? `Caption ilhamı: ${captionHint}.` : null,
+    `Görselde Türkçe başlık olarak şunu kullan: "${headline}".`,
+    "Instagram kare post (1:1), okunaklı Türkçe tipografi, marka logosu için net alan.",
+    "Logo oranını bozma, gereksiz İngilizce metin ekleme, kalabalık kompozisyondan kaçın.",
+    "Dini ve milli günlerde saygılı, abartısız görsel dil kullan.",
   ]
     .filter(Boolean)
     .join(" ");
 
   const negativePrompt = [
     day?.avoidRules,
-    "avoid unreadable Turkish",
-    "avoid distorted flags",
-    "avoid distorted religious symbols",
-    "avoid distorted brand logo",
-    "avoid extra random text",
+    "okunmayan Türkçe",
+    "bozuk bayrak",
+    "bozuk dini sembol",
+    "bozuk logo",
+    "rastgele fazla yazı",
+    "watermark",
+    "düşük çözünürlük",
   ]
     .filter(Boolean)
     .join(", ");

@@ -20,7 +20,15 @@ export async function POST(request: Request) {
   const amount = body.amount ?? BASE_PACKAGE_PRICE;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-  await createToslaOrder(user.id, amount, orderId);
+  await createToslaOrder(
+    {
+      id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+    },
+    amount,
+    orderId,
+  );
 
   try {
     const session = await createPaymentSession({

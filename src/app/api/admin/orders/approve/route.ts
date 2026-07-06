@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 
-import { requireAdminUser } from "@/lib/admin/auth";
+import { getAdminSession } from "@/lib/admin/auth";
 import { approveEftOrder } from "@/lib/orders/service";
 
 export async function POST(request: Request) {
-  await requireAdminUser();
+  const admin = await getAdminSession();
+  if (!admin) {
+    return NextResponse.json({ error: "Yetkisiz erişim" }, { status: 401 });
+  }
 
   const body = (await request.json()) as { orderId?: string };
 

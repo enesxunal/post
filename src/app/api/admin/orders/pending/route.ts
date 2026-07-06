@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 
-import { requireAdminUser } from "@/lib/admin/auth";
+import { getAdminSession } from "@/lib/admin/auth";
 import { listPendingEftOrders } from "@/lib/orders/service";
 
 export async function GET() {
-  await requireAdminUser();
+  const admin = await getAdminSession();
+  if (!admin) {
+    return NextResponse.json({ error: "Yetkisiz erişim" }, { status: 401 });
+  }
 
   try {
     const orders = await listPendingEftOrders();

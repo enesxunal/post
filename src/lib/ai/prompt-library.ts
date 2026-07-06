@@ -1,5 +1,6 @@
-import { specialDaysCatalog } from "@/lib/special-days-data";
+import { getSpecialDayFromStore } from "@/lib/special-days/repository";
+import type { SpecialDay } from "@/types/domain";
 
-export function getPromptLibraryEntry(dayId: string) {
-  return specialDaysCatalog.find((item) => item.id === dayId);
+export async function getPromptLibraryEntry(dayId: string): Promise<SpecialDay | undefined> {
+  return getSpecialDayFromStore(dayId);
 }

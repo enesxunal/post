@@ -1,21 +1,29 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ensureUserProfile } from "@/lib/supabase/profiles";
+
+type OrderUser = {
+  id: string;
+  email: string;
+  fullName?: string;
+};
 
 async function getClient() {
   return createSupabaseAdminClient() ?? (await createSupabaseServerClient());
 }
 
 export async function createEftOrder(
-  userId: string,
+  user: OrderUser,
   amount: number,
   addons: string[] = [],
 ) {
+  await ensureUserProfile(user);
   const supabase = await getClient();
 
   const { data, error } = await supabase
     .from("orders")
     .insert({
-      user_id: userId,
+      user_id: user.id,
       amount_total: amount,
       currency: "TRY",
       status: "pending",
@@ -32,13 +40,18 @@ export async function createEftOrder(
   return data;
 }
 
-export async function createToslaOrder(userId: string, amount: number, externalOrderId: string) {
+export async function createToslaOrder(
+  user: OrderUser,
+  amount: number,
+  externalOrderId: string,
+) {
+  await ensureUserProfile(user);
   const supabase = await getClient();
 
   const { data, error } = await supabase
     .from("orders")
     .insert({
-      user_id: userId,
+      user_id: user.id,
       amount_total: amount,
       currency: "TRY",
       status: "pending",

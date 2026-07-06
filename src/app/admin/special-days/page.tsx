@@ -1,5 +1,5 @@
-import { AdminOverview } from "@/components/admin/admin-overview";
+import { SpecialDaysEditor } from "@/components/admin/special-days-editor";
 
 export default function AdminSpecialDaysPage() {
-  return <AdminOverview />;
+  return <SpecialDaysEditor />;
 }

@@ -44,7 +44,11 @@ export const specialDaysCatalog: SpecialDay[] = [
     culturalContext: "Yeni başlangıç, teşekkür ve iyi dilek tonu uygundur.",
     popularUsages: ["Mutlu yıllar"],
     headlineAlternatives: ["Mutlu Yıllar", "Yeni Yıla Merhaba"],
-    captionIdeas: ["Yeni yıl için teşekkür ve iyi dilek mesajı."],
+    captionIdeas: [
+      "Yeni yıla birlikte girerken bize güvenen tüm müşterilerimize teşekkür ederiz. Mutlu yıllar!",
+      "2026 size sağlık, mutluluk ve bol kazanç getirsin. Yeni yılda da yanınızdayız.",
+      "Yeni yıl kutlu olsun! Güzel anılar biriktirmeye devam edelim.",
+    ],
     visualDirection: "modern kutlama, temiz kompozisyon",
     avoidRules: "aşırı klişe ve kalabalık konfeti",
     promptTemplate: "Create a premium Turkish New Year social media post for a small business.",

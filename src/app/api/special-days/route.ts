@@ -1,14 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { requireAdminUser, getAdminSession } from "@/lib/admin/auth";
 import { listSpecialDays } from "@/lib/special-days/repository";
 
 export async function GET() {
-  const admin = await getAdminSession();
-  if (!admin) {
-    return NextResponse.json({ error: "Yetkisiz erişim" }, { status: 401 });
-  }
-
   const data = await listSpecialDays();
   return NextResponse.json({ data });
 }

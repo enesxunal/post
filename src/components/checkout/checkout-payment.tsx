@@ -75,12 +75,12 @@ export function CheckoutPayment({ amount }: CheckoutPaymentProps) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-2 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-1">
+      <div className="relative z-10 grid grid-cols-2 gap-2 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-1">
         <button
           type="button"
           onClick={() => setMethod("eft")}
           className={cn(
-            "rounded-xl px-3 py-2.5 text-sm font-medium transition",
+            "relative z-10 cursor-pointer rounded-xl px-3 py-2.5 text-sm font-medium transition touch-manipulation",
             method === "eft" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500",
           )}
         >
@@ -90,7 +90,7 @@ export function CheckoutPayment({ amount }: CheckoutPaymentProps) {
           type="button"
           onClick={() => setMethod("card")}
           className={cn(
-            "rounded-xl px-3 py-2.5 text-sm font-medium transition",
+            "relative z-10 cursor-pointer rounded-xl px-3 py-2.5 text-sm font-medium transition touch-manipulation",
             method === "card" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500",
           )}
         >

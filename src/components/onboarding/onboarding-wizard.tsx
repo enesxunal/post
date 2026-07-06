@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -57,6 +58,7 @@ const steps = [
 ];
 
 export function OnboardingWizard() {
+  const router = useRouter();
   const [step, setStep] = useState(0);
   const [selectedDays, setSelectedDays] = useState<SelectedDayEntry[]>(getDefaultSelectedDays());
   const [selectedAddons, setSelectedAddons] = useState<AddonKey[]>([]);
@@ -269,8 +271,10 @@ export function OnboardingWizard() {
                           Tek ödeme • Güvenli ödeme • Arka planda üretim
                         </p>
                         <div className="mt-5">
-                          <Link
-                            href="/checkout"
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className="w-full"
                             onClick={() => {
                               const values = form.getValues();
                               saveOnboardingDraft({
@@ -284,12 +288,11 @@ export function OnboardingWizard() {
                                 selectedDays,
                                 purchasedAddons: selectedAddons,
                               });
+                              router.push("/checkout");
                             }}
                           >
-                            <Button variant="secondary" className="w-full">
-                              Güvenli Öde
-                            </Button>
-                          </Link>
+                            Güvenli Öde
+                          </Button>
                         </div>
                       </Card>
                     </div>

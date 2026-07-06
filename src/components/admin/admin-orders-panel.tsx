@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
-
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
@@ -62,10 +60,8 @@ export function AdminOrdersPanel() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-4xl">
-        <Badge>Admin</Badge>
-        <h1 className="mt-3 text-3xl font-semibold text-slate-950">EFT onay paneli</h1>
+    <div>
+      <h1 className="text-3xl font-semibold text-slate-950">EFT onay paneli</h1>
         <p className="mt-2 text-sm text-slate-600">
           Havale/EFT ile gelen ödemeleri onaylayın. Onaydan sonra kullanıcı tasarım üretebilir.
         </p>
@@ -122,7 +118,6 @@ export function AdminOrdersPanel() {
             ))
           )}
         </div>
-      </div>
     </div>
   );
 }

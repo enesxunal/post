@@ -1,5 +1,5 @@
-import { AdminOverview } from "@/components/admin/admin-overview";
+import { StyleModifiersPanel } from "@/components/admin/modifier-panels";
 
 export default function AdminStyleModifiersPage() {
-  return <AdminOverview />;
+  return <StyleModifiersPanel />;
 }

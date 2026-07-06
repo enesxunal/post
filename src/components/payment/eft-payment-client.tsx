@@ -73,9 +73,14 @@ export function EftPaymentClient({ orderId }: EftPaymentClientProps) {
           <p className="text-sm text-slate-600">
             Artık postlarınızı üretmeye başlayabilirsiniz.
           </p>
-          <Link href={`/orders/${orderId}/generating`}>
-            <Button className="w-full">Tasarımları oluştur</Button>
-          </Link>
+          <Button
+            className="mt-5 w-full"
+            onClick={() => {
+              window.location.href = `/orders/${orderId}/generating`;
+            }}
+          >
+            Tasarımları oluştur
+          </Button>
         </Card>
       </div>
     );

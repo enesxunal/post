@@ -48,7 +48,15 @@ export async function POST(request: Request) {
   }
 
   try {
-    const created = await createProjectWithJobs(user.id, body.draft, orderId);
+    const created = await createProjectWithJobs(
+      {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+      },
+      body.draft,
+      orderId,
+    );
     const status = await getProjectStatus(created.projectId, user.id);
     return NextResponse.json({ ...created, ...status });
   } catch (error) {

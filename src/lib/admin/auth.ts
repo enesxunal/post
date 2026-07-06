@@ -1,24 +1,18 @@
 import { redirect } from "next/navigation";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getSessionUser } from "@/lib/supabase/auth";
+import { getSessionUser, type SessionUser } from "@/lib/supabase/auth";
 
 function authRedirect(next: string): never {
   redirect(`/login?next=${encodeURIComponent(next)}`);
 }
 
-export async function requireAdminUser(next = "/admin/orders") {
-  const user = await getSessionUser();
-  if (!user) {
-    authRedirect(next);
-  }
-
+async function isAdminUser(user: SessionUser) {
   const adminEmails =
-    process.env.ADMIN_EMAILS?.split(",").map((email) => email.trim().toLowerCase()) ??
-    [];
+    process.env.ADMIN_EMAILS?.split(",").map((email) => email.trim().toLowerCase()) ?? [];
 
   if (adminEmails.includes(user.email.toLowerCase())) {
-    return user;
+    return true;
   }
 
   const supabase = await createSupabaseServerClient();
@@ -28,9 +22,24 @@ export async function requireAdminUser(next = "/admin/orders") {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (profile?.role === "admin") {
-    return user;
+  return profile?.role === "admin";
+}
+
+export async function getAdminSession(): Promise<SessionUser | null> {
+  const user = await getSessionUser();
+  if (!user) return null;
+  return (await isAdminUser(user)) ? user : null;
+}
+
+export async function requireAdminUser(next = "/admin/orders") {
+  const user = await getSessionUser();
+  if (!user) {
+    authRedirect(next);
   }
 
-  authRedirect(next);
+  if (!(await isAdminUser(user))) {
+    authRedirect(next);
+  }
+
+  return user;
 }

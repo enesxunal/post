@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ensureUserProfile } from "@/lib/supabase/profiles";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -23,14 +24,11 @@ export async function GET(request: Request) {
           .join(" ")
           .trim();
 
-      await supabase.from("profiles").upsert(
-        {
-          id: data.user.id,
-          email: data.user.email,
-          full_name: fullName || null,
-        },
-        { onConflict: "id" },
-      );
+      await ensureUserProfile({
+        id: data.user.id,
+        email: data.user.email,
+        fullName: fullName || undefined,
+      });
     }
   }
 

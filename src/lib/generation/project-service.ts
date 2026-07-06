@@ -2,6 +2,7 @@ import type { OnboardingDraft } from "@/lib/onboarding/draft";
 import { expandSelectedDaysForJobs } from "@/lib/selected-days";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ensureUserProfile } from "@/lib/supabase/profiles";
 import type { AddonKey, BrandContext, SectorKey, VisualStyle } from "@/types/domain";
 
 const META_SEPARATOR = "\n<!--POST_META:";
@@ -90,10 +91,12 @@ async function getWritableClient() {
 }
 
 export async function createProjectWithJobs(
-  userId: string,
+  user: { id: string; email: string; fullName?: string },
   draft: OnboardingDraft,
   orderId?: string,
 ) {
+  await ensureUserProfile(user);
+  const userId = user.id;
   const supabase = await getWritableClient();
   const primaryColor = draft.brandColors[0] ?? "#16A34A";
   const expandedDays = expandSelectedDaysForJobs(draft.selectedDays);

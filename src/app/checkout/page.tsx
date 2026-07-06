@@ -3,9 +3,12 @@ import { Card } from "@/components/ui/card";
 import { CheckoutPayment } from "@/components/checkout/checkout-payment";
 import { BASE_PACKAGE_PRICE } from "@/lib/config";
 import { addonOptions } from "@/lib/mock-data";
+import { requireSessionUser } from "@/lib/supabase/auth";
 import { formatCurrency } from "@/lib/utils";
 
-export default function CheckoutPage() {
+export default async function CheckoutPage() {
+  await requireSessionUser("/checkout");
+
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-[1fr_0.9fr]">
@@ -20,7 +23,7 @@ export default function CheckoutPage() {
           </p>
         </Card>
 
-        <Card className="space-y-4">
+        <Card className="relative z-10 space-y-4">
           <p className="text-sm text-slate-500">Ana paket</p>
           <p className="text-3xl font-semibold text-slate-950">
             {formatCurrency(BASE_PACKAGE_PRICE)}

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ensureUserProfile } from "@/lib/supabase/profiles";
 
 export type SessionUser = {
   id: string;
@@ -71,6 +72,12 @@ export async function requireSessionUser(next = "/dashboard"): Promise<SessionUs
   if (!user) {
     redirect(`/login?next=${encodeURIComponent(next)}`);
   }
+
+  await ensureUserProfile({
+    id: user.id,
+    email: user.email,
+    fullName: user.fullName,
+  });
 
   return user;
 }

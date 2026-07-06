@@ -14,7 +14,11 @@ export async function POST(request: Request) {
 
   try {
     const order = await createEftOrder(
-      user.id,
+      {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+      },
       body.amount ?? BASE_PACKAGE_PRICE,
       body.addons ?? [],
     );
