@@ -403,6 +403,7 @@ export async function processOneQueuedJob(projectId: string) {
 
     const image = await generateImage(preview.prompt, [], {
       aspectRatio: resolveAspectRatio(context.postFormat ?? "square"),
+      headline: preview.headline,
     });
 
     if (isPlaceholderImageUrl(image.imageUrl)) {

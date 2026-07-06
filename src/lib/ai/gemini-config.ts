@@ -1,3 +1,5 @@
+import { isIdeogramConfigured } from "@/lib/ai/ideogram-config";
+
 /** Tek GEMINI_API_KEY ile hem metin hem görsel modelleri kullanılır. */
 export const GEMINI_DEFAULTS = {
   imageModel: "gemini-2.5-flash-image",
@@ -25,6 +27,7 @@ export function getGeminiTextModel() {
 export function resolveImageProvider() {
   const explicit = process.env.IMAGE_PROVIDER?.trim();
   if (explicit) return explicit;
+  if (isIdeogramConfigured()) return "ideogram";
   return isGeminiConfigured() ? "gemini" : "mock";
 }
 

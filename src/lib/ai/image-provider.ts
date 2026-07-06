@@ -1,9 +1,16 @@
-import { resolveImageProvider, isGeminiConfigured } from "@/lib/ai/gemini-config";
+import {
+  isGeminiConfigured,
+  resolveImageProvider,
+} from "@/lib/ai/gemini-config";
+import { isIdeogramConfigured } from "@/lib/ai/ideogram-config";
 import { generateImageWithGemini } from "@/lib/ai/providers/gemini";
+import { generateImageWithIdeogram } from "@/lib/ai/providers/ideogram";
 import { generateImageMock } from "@/lib/ai/providers/mock";
 
 export type ImageGenerationOptions = {
   aspectRatio?: string;
+  /** Ideogram json_prompt için — Türkçe başlık yazımı */
+  headline?: string;
 };
 
 export function isPlaceholderImageUrl(url: string | null | undefined): boolean {
@@ -18,6 +25,10 @@ export async function generateImage(
 ) {
   const provider = resolveImageProvider();
 
+  if (provider === "ideogram") {
+    return generateImageWithIdeogram(prompt, inputImageUrls, options);
+  }
+
   if (provider === "gemini") {
     return generateImageWithGemini(prompt, inputImageUrls, options);
   }
@@ -27,10 +38,9 @@ export async function generateImage(
     void options;
   }
 
-  // Mock yalnızca yerel geliştirmede — canlıda Gemini yoksa hata ver
-  if (isGeminiConfigured() || process.env.VERCEL === "1") {
+  if (isIdeogramConfigured() || isGeminiConfigured() || process.env.VERCEL === "1") {
     throw new Error(
-      "Görsel üretilemedi: IMAGE_PROVIDER=gemini ayarlı ama Gemini görsel API yanıt vermedi.",
+      `Görsel üretilemedi: IMAGE_PROVIDER=${provider} ayarlı ama API yanıt vermedi.`,
     );
   }
 
