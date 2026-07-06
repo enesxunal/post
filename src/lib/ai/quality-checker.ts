@@ -13,6 +13,7 @@ export async function checkGeneratedImageQuality(input: {
   expectedHeadline: string;
   brandName: string;
   brandBrief?: BrandCreativeBrief;
+  isNationalDay?: boolean;
 }): Promise<QualityCheckResult> {
   const fallbackPass: QualityCheckResult = { passed: true, issues: [], severity: "low" };
 
@@ -43,6 +44,12 @@ export async function checkGeneratedImageQuality(input: {
         "4) Clip art, stick figure, amatör çizim, çocuk karakteri çizimi var mı?",
         "5) Görsel çok basit mi (düz arka plan + tek kelime)?",
         "6) Metin okunmuyor mu, logo bozuk mu?",
+        input.isNationalDay
+          ? "7) Milli bayram görseli: Türk bayrağı (kırmızı-beyaz ay-yıldız) var mı? Bilim kurgu/soyut blok estetiği uygun mu?"
+          : "",
+        input.isNationalDay
+          ? "8) Başlıkta Türkçe yazım doğru mu? (ör: Ağustos — Áğostus veya Agustos YANLIŞ)"
+          : "",
         "",
         "passed=false yap: yazım hatası, clip art, izinsiz alt metin, amatör/basit görsel.",
         'JSON: {"passed":true,"issues":[],"severity":"low"}',

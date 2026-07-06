@@ -1,4 +1,4 @@
-import { composeImagePrompt } from "@/lib/ai/prompt-composer";
+import { getPromptLibraryEntry } from "@/lib/ai/prompt-library";
 import { generateCaption } from "@/lib/ai/caption-provider";
 import { generateImage } from "@/lib/ai/image-provider";
 import {
@@ -241,11 +241,14 @@ export async function processOneQueuedJob(projectId: string) {
       .update({ status: "generating_caption", updated_at: nowIso() })
       .eq("id", nextJob.id);
 
+    const day = await getPromptLibraryEntry(dayId);
+
     const quality = await checkGeneratedImageQuality({
       imageUrl: image.imageUrl,
       expectedHeadline: preview.headline,
       brandName: context.brandName,
       brandBrief: preview.brandBrief,
+      isNationalDay: day?.category === "national",
     });
 
     if (shouldRetryQualityCheck(quality)) {

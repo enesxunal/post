@@ -53,6 +53,19 @@ function fillMasterTemplate(
     .replaceAll("{selected_headline}", headline);
 }
 
+function appendNationalDayRequirements(sections: string[], day: SpecialDay) {
+  if (day.category !== "national") return;
+
+  sections.push(
+    "",
+    "=== TURKISH NATIONAL DAY (MANDATORY) ===",
+    "- Include a tasteful, accurate Turkish flag motif (red field, white star and crescent) in the composition.",
+    "- Prominent red-white national palette; proud, respectful, celebratory — NOT sci-fi, NOT abstract tech blocks.",
+    "- Spell Turkish correctly: use \"Ağustos\" (with ğ), never \"Áğostus\", \"Agustos\" or ASCII approximations.",
+    "- The occasion must be instantly recognizable as a Turkish national holiday post.",
+  );
+}
+
 function appendBuildingBlocks(sections: string[], blocks?: PromptBuildingBlocks) {
   if (!blocks) return;
 
@@ -119,6 +132,7 @@ export function composePrompt(
   );
 
   appendBuildingBlocks(sections, blocks);
+  appendNationalDayRequirements(sections, day);
 
   sections.push(
     "",
@@ -156,6 +170,10 @@ export function composePrompt(
     day.avoidRules,
     sector?.avoidRules,
     "misspelled Turkish",
+    "Áğostus",
+    "Agustos without ğ",
+    "sci-fi abstract blocks instead of national holiday",
+    "missing Turkish flag on national day",
     "customer description as visible text",
     "generic identical template for all brands",
     "distorted logo",
