@@ -1,3 +1,9 @@
+-- =============================================================================
+-- SUPABASE KURULUM — Bu dosyanın TAMAMINI bir kez SQL Editor'da çalıştırın.
+-- Sıra: 1) Bu dosya (schema.sql)  2) İsteğe bağlı seed.sql
+-- Sadece policy parçasını çalıştırmayın; önce tablolar oluşmalı.
+-- =============================================================================
+
 create extension if not exists "pgcrypto";
 
 do $$
@@ -172,6 +178,22 @@ alter table selected_days enable row level security;
 alter table special_days enable row level security;
 alter table sector_modifiers enable row level security;
 alter table style_modifiers enable row level security;
+
+-- Policy'ler (tekrar çalıştırılabilir)
+drop policy if exists "users can read own profile" on profiles;
+drop policy if exists "users can insert own profile" on profiles;
+drop policy if exists "users can update own profile" on profiles;
+drop policy if exists "users can read own projects" on projects;
+drop policy if exists "users can insert own projects" on projects;
+drop policy if exists "users can update own projects" on projects;
+drop policy if exists "users can read own orders" on orders;
+drop policy if exists "users can read own jobs" on generation_jobs;
+drop policy if exists "users can insert own jobs" on generation_jobs;
+drop policy if exists "users can update own jobs" on generation_jobs;
+drop policy if exists "users can read own assets" on assets;
+drop policy if exists "public can read prompt library" on special_days;
+drop policy if exists "public can read sector modifiers" on sector_modifiers;
+drop policy if exists "public can read style modifiers" on style_modifiers;
 
 create policy "users can read own profile" on profiles
 for select using (auth.uid() = id);
