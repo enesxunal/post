@@ -1,7 +1,7 @@
 export const IDEOGRAM_DEFAULTS = {
   apiBase: "https://api.ideogram.ai",
   model: "v4" as const,
-  renderingSpeed: "QUALITY" as const,
+  renderingSpeed: "DEFAULT" as const,
 } as const;
 
 export type IdeogramRenderingSpeed = "TURBO" | "DEFAULT" | "QUALITY";
