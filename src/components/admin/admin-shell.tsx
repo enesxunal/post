@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   CalendarDays,
   CreditCard,
+  ImagePlus,
   LayoutDashboard,
   Palette,
   Sparkles,
@@ -17,6 +18,7 @@ const NAV_ITEMS = [
   { href: "/admin", label: "Genel Bakış", icon: LayoutDashboard },
   { href: "/admin/orders", label: "EFT Onayları", icon: CreditCard },
   { href: "/admin/special-days", label: "Özel Günler & Metinler", icon: CalendarDays },
+  { href: "/admin/generation-test", label: "Görsel Test", icon: ImagePlus },
   { href: "/admin/prompt-library", label: "Prompt Önizleme", icon: Sparkles },
   { href: "/admin/sector-modifiers", label: "Sektör Kuralları", icon: Wrench },
   { href: "/admin/style-modifiers", label: "Stil Kuralları", icon: Palette },
