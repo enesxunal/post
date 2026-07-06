@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { CheckCircle2, Loader2, Octagon } from "lucide-react";
@@ -29,7 +28,6 @@ type JobPreview = {
   id: string;
   status: string;
   type: string;
-  image_url?: string | null;
 };
 
 type GenerationStatus = {
@@ -64,7 +62,7 @@ function saveActiveProjectId(projectId: string) {
 
 function getFocusJobProgress(job: JobPreview | undefined) {
   if (!job) return 12;
-  if (job.status === "ready" && job.image_url) return 100;
+  if (job.status === "ready") return 100;
   if (job.status === "failed") return 8;
   if (job.status === "queued") return 28;
   if (["composing_prompt", "generating_image", "generating_caption"].includes(job.status)) {
@@ -80,13 +78,14 @@ export function CreativeWorkshopLoader({
   focusJobId,
   focusDayName,
 }: CreativeWorkshopLoaderProps) {
-  const router = useRouter();
   const isRegenerateMode = mode === "regenerate" && Boolean(initialProjectId);
   const [phase, setPhase] = useState<GenerationPhase>("starting");
   const [messageIndex, setMessageIndex] = useState(0);
   const [status, setStatus] = useState<GenerationStatus | null>(null);
+  const [previewImages, setPreviewImages] = useState<Record<string, string>>({});
   const [stopping, setStopping] = useState(false);
   const startedRef = useRef(false);
+  const queueStartedRef = useRef(false);
 
   const focusJob = useMemo(
     () => status?.jobs?.find((job) => job.id === focusJobId),
@@ -107,18 +106,26 @@ export function CreativeWorkshopLoader({
     ? getFocusJobProgress(focusJob)
     : (status?.progress ?? (phase === "starting" ? 5 : 0));
 
-  const readyJobs = status?.jobs?.filter((job) => job.status === "ready" && job.image_url) ?? [];
+  const readyJobIds =
+    status?.jobs?.filter((job) => job.status === "ready").map((job) => job.id) ?? [];
+
+  const readyJobs = readyJobIds
+    .map((id) => ({ id, url: previewImages[id] }))
+    .filter((item): item is { id: string; url: string } => Boolean(item.url));
 
   const pollStatus = useCallback(async (projectId: string) => {
-    const response = await fetch(`/api/generation/start?projectId=${projectId}`, {
-      cache: "no-store",
-    });
+    const response = await fetch(
+      `/api/generation/start?projectId=${projectId}&lightweight=1`,
+      { cache: "no-store" },
+    );
     const data = (await response.json()) as GenerationStatus & { error?: string };
     if (!response.ok) throw new Error(data.error ?? "Durum alınamadı");
     return data;
   }, []);
 
-  const kickQueue = useCallback(async (projectId: string) => {
+  const kickQueueOnce = useCallback(async (projectId: string) => {
+    if (queueStartedRef.current) return;
+    queueStartedRef.current = true;
     await fetch("/api/generation/process-queue", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -132,7 +139,7 @@ export function CreativeWorkshopLoader({
 
       if (isRegenerateMode && focusJobId) {
         const target = next.jobs?.find((job) => job.id === focusJobId);
-        if (target?.status === "ready" && target.image_url) {
+        if (target?.status === "ready") {
           setPhase("done");
           return;
         }
@@ -197,7 +204,7 @@ export function CreativeWorkshopLoader({
           const data = await pollStatus(initialProjectId);
           applyStatus(data);
           if (!data.done && !data.stopped) {
-            await kickQueue(initialProjectId);
+            await kickQueueOnce(initialProjectId);
           }
         } catch {
           setPhase("running");
@@ -236,12 +243,32 @@ export function CreativeWorkshopLoader({
       applyStatus(startData);
 
       if (!startData.done && !startData.stopped) {
-        await kickQueue(startData.projectId);
+        await kickQueueOnce(startData.projectId);
       }
     }
 
     void start();
-  }, [applyStatus, initialProjectId, isRegenerateMode, kickQueue, orderId, pollStatus]);
+  }, [applyStatus, initialProjectId, isRegenerateMode, kickQueueOnce, orderId, pollStatus]);
+
+  useEffect(() => {
+    if (!status?.jobs?.length) return;
+
+    for (const job of status.jobs) {
+      if (job.status !== "ready" || previewImages[job.id]) continue;
+
+      void fetch(`/api/generation/job-image?jobId=${job.id}`, { cache: "no-store" })
+        .then(async (response) => {
+          if (!response.ok) return null;
+          return (await response.json()) as { imageUrl?: string };
+        })
+        .then((data) => {
+          if (!data?.imageUrl) return;
+          setPreviewImages((current) =>
+            current[job.id] ? current : { ...current, [job.id]: data.imageUrl! },
+          );
+        });
+    }
+  }, [previewImages, status?.jobs]);
 
   useEffect(() => {
     if (!status?.projectId || phase === "done" || phase === "stopped" || phase === "failed") {
@@ -259,14 +286,14 @@ export function CreativeWorkshopLoader({
 
         if (isRegenerateMode && focusJobId) {
           const target = next.jobs?.find((job) => job.id === focusJobId);
-          if (target?.status === "ready" && target.image_url) {
-            window.setTimeout(() => router.push(`/projects/${projectId}`), 2200);
+          if (target?.status === "ready") {
+            setPhase("done");
           }
           return;
         }
 
         if (next.done) {
-          window.setTimeout(() => router.push(`/projects/${projectId}`), 2000);
+          setPhase("done");
         }
       } catch {
         // Sessizce tekrar dene — sunucu kuyruğu arka planda çalışıyor
@@ -283,7 +310,6 @@ export function CreativeWorkshopLoader({
     isRegenerateMode,
     phase,
     pollStatus,
-    router,
     status?.projectId,
   ]);
 
@@ -303,8 +329,8 @@ export function CreativeWorkshopLoader({
   const subtitle =
     phase === "done"
       ? isRegenerateMode
-        ? "Görsel hazır! Panele yönlendiriliyorsunuz..."
-        : "Tüm görseller hazır! Panele yönlendiriliyorsunuz..."
+        ? "Görsel hazır! İstediğiniz zaman profile gidebilirsiniz."
+        : "Tüm görseller hazır! Profile gidip inceleyebilirsiniz."
       : phase === "failed"
         ? "Görsel üretilemedi. Profilinizden tekrar deneyebilirsiniz."
         : phase === "stopped"
@@ -362,7 +388,7 @@ export function CreativeWorkshopLoader({
                 <p className="mt-3 text-xs text-emerald-200/80">
                   {isRegenerateMode ? (
                     <>
-                      {focusJob?.status === "ready" && focusJob.image_url
+                      {focusJob?.status === "ready"
                         ? "Görsel hazır"
                         : focusJob?.status === "failed"
                           ? "Üretim başarısız"
@@ -392,11 +418,11 @@ export function CreativeWorkshopLoader({
                       : "Üretim tamamlandı!"}
                   </p>
                 </div>
-                {isRegenerateMode && focusJob?.image_url ? (
+                {isRegenerateMode && focusJobId && previewImages[focusJobId] ? (
                   <div className="mt-4 overflow-hidden rounded-2xl border border-emerald-400/30">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={focusJob.image_url}
+                      src={previewImages[focusJobId]}
                       alt={resolvedDayName}
                       className="aspect-square w-full object-cover"
                     />
@@ -449,7 +475,7 @@ export function CreativeWorkshopLoader({
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={job.image_url!}
+                        src={job.url}
                         alt="Hazır post"
                         className="h-full w-full object-cover"
                       />
@@ -477,13 +503,13 @@ export function CreativeWorkshopLoader({
               ) : null}
 
               {status?.projectId ? (
-                <Button
-                  variant="secondary"
-                  className="w-full sm:w-auto"
-                  onClick={() => router.push(`/projects/${status.projectId}`)}
+                <Link
+                  href={`/projects/${status.projectId}`}
+                  prefetch={false}
+                  className="inline-flex h-11 w-full items-center justify-center rounded-full bg-emerald-50 px-5 text-sm font-semibold text-emerald-700 sm:w-auto"
                 >
                   Profilde gör
-                </Button>
+                </Link>
               ) : (
                 <Link
                   href="/dashboard"
@@ -497,9 +523,17 @@ export function CreativeWorkshopLoader({
 
           <WorkshopStage
             activeIndex={messageIndex}
-            readyCount={isRegenerateMode ? (focusJob?.image_url ? 1 : 0) : (status?.ready ?? 0)}
+            readyCount={
+              isRegenerateMode
+                ? focusJob?.status === "ready"
+                  ? 1
+                  : 0
+                : (status?.ready ?? 0)
+            }
             focusDayName={isRegenerateMode ? resolvedDayName : undefined}
-            focusImageUrl={isRegenerateMode ? focusJob?.image_url : undefined}
+            focusImageUrl={
+              isRegenerateMode && focusJobId ? previewImages[focusJobId] : undefined
+            }
           />
         </div>
       </div>

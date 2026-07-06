@@ -148,27 +148,10 @@ export async function createProjectWithJobs(
   };
 }
 
-export async function getProjectStatus(projectId: string, userId: string) {
-  const supabase = await getWritableClient();
-
-  const { data: project } = await supabase
-    .from("projects")
-    .select("id, user_id, status, brand_name, generation_stopped_at")
-    .eq("id", projectId)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (!project) {
-    return null;
-  }
-
-  const { data: jobs } = await supabase
-    .from("generation_jobs")
-    .select("id, status, type, image_url, caption_text, error_message")
-    .eq("project_id", projectId)
-    .order("created_at", { ascending: true });
-
-  const list = jobs ?? [];
+function computeProjectProgress(
+  project: { brand_name: string; generation_stopped_at: string | null },
+  list: Array<{ status: string }>,
+) {
   const ready = list.filter((job) => job.status === "ready").length;
   const failed = list.filter((job) => job.status === "failed").length;
   const total = list.length;
@@ -190,9 +173,7 @@ export async function getProjectStatus(projectId: string, userId: string) {
   const done = stopped || (pending === 0 && total > 0);
 
   return {
-    projectId,
     brandName: project.brand_name,
-    projectStatus: project.status,
     stopped,
     total,
     ready,
@@ -201,6 +182,68 @@ export async function getProjectStatus(projectId: string, userId: string) {
     inProgress,
     done,
     progress: total > 0 ? Math.round((ready / total) * 100) : 0,
+  };
+}
+
+/** Polling için hafif durum — görsel verisi taşınmaz. */
+export async function getProjectStatusLightweight(projectId: string, userId: string) {
+  const supabase = await getWritableClient();
+
+  const { data: project } = await supabase
+    .from("projects")
+    .select("id, user_id, status, brand_name, generation_stopped_at")
+    .eq("id", projectId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!project) {
+    return null;
+  }
+
+  const { data: jobs } = await supabase
+    .from("generation_jobs")
+    .select("id, status, type, error_message")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: true });
+
+  const list = jobs ?? [];
+  const metrics = computeProjectProgress(project, list);
+
+  return {
+    projectId,
+    projectStatus: project.status,
+    ...metrics,
+    jobs: list,
+  };
+}
+
+export async function getProjectStatus(projectId: string, userId: string) {
+  const supabase = await getWritableClient();
+
+  const { data: project } = await supabase
+    .from("projects")
+    .select("id, user_id, status, brand_name, generation_stopped_at")
+    .eq("id", projectId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!project) {
+    return null;
+  }
+
+  const { data: jobs } = await supabase
+    .from("generation_jobs")
+    .select("id, status, type, image_url, caption_text, error_message")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: true });
+
+  const list = jobs ?? [];
+  const metrics = computeProjectProgress(project, list);
+
+  return {
+    projectId,
+    projectStatus: project.status,
+    ...metrics,
     jobs: list,
   };
 }

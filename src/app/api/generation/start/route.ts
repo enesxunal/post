@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import {
   createProjectWithJobs,
   getProjectStatus,
+  getProjectStatusLightweight,
 } from "@/lib/generation/project-service";
 import { findProjectIdByOrderId } from "@/lib/generation/queue-processor";
 import { scheduleQueueProcessing } from "@/lib/generation/schedule-queue";
@@ -85,19 +86,20 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   const user = await requireSessionUser("/login");
-  const projectId = new URL(request.url).searchParams.get("projectId");
+  const url = new URL(request.url);
+  const projectId = url.searchParams.get("projectId");
+  const lightweight = url.searchParams.get("lightweight") === "1";
 
   if (!projectId) {
     return NextResponse.json({ error: "projectId gerekli" }, { status: 400 });
   }
 
-  const status = await getProjectStatus(projectId, user.id);
+  const status = lightweight
+    ? await getProjectStatusLightweight(projectId, user.id)
+    : await getProjectStatus(projectId, user.id);
+
   if (!status) {
     return NextResponse.json({ error: "Proje bulunamadı" }, { status: 404 });
-  }
-
-  if (!status.done && !status.stopped) {
-    scheduleQueueProcessing(projectId);
   }
 
   return NextResponse.json(status);

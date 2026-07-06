@@ -1,5 +1,4 @@
 import { UserDashboard } from "@/components/dashboard/user-dashboard";
-import { DashboardLiveRefresh } from "@/components/dashboard/dashboard-live-refresh";
 import { decodeProjectMeta } from "@/lib/generation/project-service";
 import { mapGenerationJobsForDashboard } from "@/lib/generation/map-jobs";
 import { requireSessionUser } from "@/lib/supabase/auth";
@@ -54,7 +53,7 @@ export default async function ProjectDetailPage({
   const { data: generationJobs } = await supabase
     .from("generation_jobs")
     .select(
-      "id, status, type, caption_text, image_url, created_at, error_message, approved_at, story_image_url, story_status, hashtags",
+      "id, status, type, caption_text, created_at, error_message, approved_at, story_status, hashtags",
     )
     .eq("project_id", project.id)
     .order("created_at", { ascending: true });
@@ -65,12 +64,9 @@ export default async function ProjectDetailPage({
   ).length;
 
   return (
-    <>
-      <DashboardLiveRefresh
-        isGenerating={postsGenerating > 0 || project.status === "generating"}
-      />
-      <UserDashboard
-        user={{
+    <UserDashboard
+      liveGenerating={postsGenerating > 0 || project.status === "generating"}
+      user={{
           firstName: user.firstName,
           lastName: user.lastName,
           email: user.email,
@@ -100,7 +96,6 @@ export default async function ProjectDetailPage({
         jobs={jobs}
         postFormat={meta.postFormat}
         hasStoryAddon={meta.purchasedAddons.includes("story")}
-      />
-    </>
+    />
   );
 }

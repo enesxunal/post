@@ -37,7 +37,7 @@ export const BRAND_COLORS = BRAND_COLOR_PALETTE.map((item) => item.hex);
 
 export const MAX_JOB_RETRIES = 1;
 export const JOB_STUCK_MINUTES = 8;
-export const GENERATION_POLL_MS = 4000;
+export const GENERATION_POLL_MS = 15000;
 
 /** true: sadece 1 görsel isteği + yerel prompt (marka brief ve vision QC kapalı) */
 export const LEAN_GENERATION_MODE =

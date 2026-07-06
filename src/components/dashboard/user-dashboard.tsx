@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CalendarPlus2,
@@ -20,7 +20,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { LazyJobImage } from "@/components/dashboard/lazy-job-image";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { GENERATION_POLL_MS } from "@/lib/config";
+import { mapJobStatus } from "@/lib/generation/map-jobs";
 import { getPostFormatLabel, getPreviewAspectClass } from "@/lib/image-formats";
 import type { PostFormat } from "@/types/domain";
 import { cn } from "@/lib/utils";
@@ -83,23 +86,73 @@ type UserDashboardProps = {
   postFormat?: PostFormat;
   hasStoryAddon?: boolean;
   emptyMessage?: string;
+  /** Arka planda üretim devam ediyorsa hafif polling (sayfa yenilemeden) */
+  liveGenerating?: boolean;
 };
 
 export function UserDashboard({
   user: profile,
   project,
-  jobs,
+  jobs: initialJobs,
   postFormat = "square",
   hasStoryAddon = false,
   emptyMessage,
+  liveGenerating = false,
 }: UserDashboardProps) {
   const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const [jobs, setJobs] = useState(initialJobs);
   const [tab, setTab] = useState<DashboardTab>("gallery");
-  const [selectedJobId, setSelectedJobId] = useState(jobs[0]?.id);
+  const [selectedJobId, setSelectedJobId] = useState(initialJobs[0]?.id);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [copiedCaption, setCopiedCaption] = useState(false);
+
+  useEffect(() => {
+    setJobs(initialJobs);
+    setSelectedJobId((current) => current ?? initialJobs[0]?.id);
+  }, [initialJobs]);
+
+  useEffect(() => {
+    if (!liveGenerating || !project?.id) return;
+
+    let active = true;
+
+    async function poll() {
+      try {
+        const response = await fetch(
+          `/api/generation/start?projectId=${project!.id}&lightweight=1`,
+          { cache: "no-store" },
+        );
+        if (!response.ok || !active) return;
+
+        const data = (await response.json()) as {
+          jobs?: Array<{ id: string; status: string; error_message?: string | null }>;
+        };
+
+        setJobs((current) =>
+          current.map((job) => {
+            const row = data.jobs?.find((item) => item.id === job.id);
+            if (!row) return job;
+            return {
+              ...job,
+              status: mapJobStatus(row.status),
+              errorMessage: row.error_message ?? job.errorMessage,
+            };
+          }),
+        );
+      } catch {
+        // Sessizce tekrar dene
+      }
+    }
+
+    void poll();
+    const timer = window.setInterval(() => void poll(), GENERATION_POLL_MS);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [liveGenerating, project?.id]);
 
   const selectedJob = jobs.find((job) => job.id === selectedJobId) ?? jobs[0];
   const remainingCredits = project?.remainingCredits ?? 0;
@@ -163,11 +216,7 @@ export function UserDashboard({
     }
   }
 
-  const canRetryGeneration = Boolean(
-    project &&
-      selectedJob &&
-      (selectedJob.status === "failed" || !selectedJob.imageUrl),
-  );
+  const canRetryGeneration = Boolean(project && selectedJob && selectedJob.status === "failed");
 
   async function regeneratePost() {
     if (!project || !selectedJob || !canRetryGeneration) return;
@@ -344,22 +393,15 @@ export function UserDashboard({
                               : "border-emerald-100",
                           )}
                         >
-                          <div className={cn("relative", previewAspect)}>
-                            {job.imageUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={job.imageUrl}
-                                alt={job.dayName}
-                                className="absolute inset-0 h-full w-full object-cover"
-                              />
-                            ) : (
-                              <div
-                                className={cn(
-                                  "absolute inset-0 bg-gradient-to-br",
-                                  job.gradient,
-                                )}
-                              />
-                            )}
+                          <div className={cn("relative overflow-hidden", previewAspect)}>
+                            <LazyJobImage
+                              jobId={job.id}
+                              status={job.status}
+                              alt={job.dayName}
+                              className="absolute inset-0"
+                              gradient={job.gradient}
+                              initialUrl={job.imageUrl}
+                            />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
                             <Badge
                               className={cn("absolute left-3 top-3 border-0", status.className)}
@@ -380,21 +422,14 @@ export function UserDashboard({
                     <Card className="h-fit space-y-4 p-5 lg:sticky lg:top-6">
                       <p className="text-sm font-medium text-slate-500">Seçili post</p>
                       <div className={cn("relative overflow-hidden rounded-[24px]", previewAspect)}>
-                        {selectedJob.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={selectedJob.imageUrl}
-                            alt={selectedJob.dayName}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div
-                            className={cn(
-                              "h-full w-full bg-gradient-to-br",
-                              selectedJob.gradient,
-                            )}
-                          />
-                        )}
+                        <LazyJobImage
+                          jobId={selectedJob.id}
+                          status={selectedJob.status}
+                          alt={selectedJob.dayName}
+                          className="h-full w-full"
+                          gradient={selectedJob.gradient}
+                          initialUrl={selectedJob.imageUrl}
+                        />
                       </div>
                       <div>
                         <h2 className="text-xl font-semibold text-slate-950">
@@ -454,13 +489,15 @@ export function UserDashboard({
                       {hasStoryAddon && selectedJob.approvedAt ? (
                         <div className="space-y-3 rounded-2xl border border-violet-100 bg-violet-50/40 p-4">
                           <p className="text-sm font-medium text-slate-800">Story (1080×1920)</p>
-                          {selectedJob.storyImageUrl ? (
+                          {selectedJob.storyStatus === "ready" ? (
                             <div className="relative aspect-[9/16] max-h-64 overflow-hidden rounded-xl">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={selectedJob.storyImageUrl}
+                              <LazyJobImage
+                                jobId={selectedJob.id}
+                                status="ready"
                                 alt="Story"
-                                className="h-full w-full object-cover"
+                                className="h-full w-full"
+                                story
+                                initialUrl={selectedJob.storyImageUrl}
                               />
                             </div>
                           ) : (
@@ -468,7 +505,7 @@ export function UserDashboard({
                               Feed postu onaylandı. Aynı tasarımdan story üretin.
                             </p>
                           )}
-                          {!selectedJob.storyImageUrl ? (
+                          {selectedJob.storyStatus !== "ready" ? (
                             <Button
                               variant="secondary"
                               className="w-full"

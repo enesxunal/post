@@ -22,7 +22,7 @@ export function mapGenerationJobsForDashboard(
     status: string;
     type: string;
     caption_text: string | null;
-    image_url: string | null;
+    image_url?: string | null;
     created_at: string;
     error_message?: string | null;
     approved_at?: string | null;
