@@ -1,179 +1,244 @@
 import { generateTextWithGemini } from "@/lib/ai/providers/gemini";
 import { isGeminiConfigured } from "@/lib/ai/gemini-config";
-import { sectors } from "@/lib/mock-data";
-import type { BrandContext, SectorKey } from "@/types/domain";
+import { sectorModifiers, sectors, styles } from "@/lib/mock-data";
+import type { BrandContext, SectorKey, SpecialDay } from "@/types/domain";
+
+export type SpecialDayContext = Pick<
+  SpecialDay,
+  | "name"
+  | "category"
+  | "culturalContext"
+  | "visualDirection"
+  | "captionIdeas"
+  | "headlineAlternatives"
+  | "avoidRules"
+>;
 
 export type BrandCreativeBrief = {
   positioning: string;
   toneOfVoice: string;
   visualDirection: string;
   visualQuality: string;
-  /** Görselde sadece bu kısa metin (varsa) — yoksa null */
   subtextOnImage: string | null;
   onImageTextRules: string;
   avoidOnImage: string[];
+  /** Marka + özel günün nasıl birleşeceği */
+  dayHarmony: string;
+  /** Görselde sahne ve kompozisyon tarifi */
+  sceneComposition: string;
+  /** Sektör + özel gün + marka tonu birleşimi */
+  sectorBlend: string;
 };
 
-const SECTOR_FALLBACK: Partial<Record<SectorKey, { positioning: string; tone: string; visual: string }>> = {
+const UNIVERSAL_AVOID = [
+  "clip art",
+  "stick figure",
+  "amatör çizim",
+  "yazım hatalı Türkçe",
+  "gereksiz alt slogan",
+  "hizmet listesi",
+  "fazla metin bloğu",
+  "düz arka plan + tek kelime",
+];
+
+const SECTOR_FALLBACK: Partial<
+  Record<SectorKey, { positioning: string; tone: string; visual: string }>
+> = {
   agency: {
-    positioning: "Kurumsal dijital çözümler, web yazılımı ve e-ticaret projeleri üreten profesyonel ajans",
-    tone: "kurumsal, güven veren, teknoloji odaklı, premium ajans dili",
-    visual: "modern tech agency aesthetic, subtle grid or UI accents, depth and layering, no clip art",
+    positioning: "Dijital çözümler ve kurumsal hizmet sunan profesyonel ajans",
+    tone: "kurumsal, güven veren, teknoloji odaklı",
+    visual: "premium dijital ajans estetiği, katmanlı modern kompozisyon",
   },
   beauty: {
-    positioning: "Güzellik ve bakım hizmeti sunan yerel işletme",
+    positioning: "Güzellik ve kişisel bakım hizmeti sunan işletme",
     tone: "zarif, sıcak, güven veren",
-    visual: "soft premium beauty brand aesthetic, elegant lighting",
+    visual: "yumuşak ışık, premium güzellik markası estetiği",
   },
   cafe: {
     positioning: "Kafe veya restoran işletmesi",
     tone: "sıcak, davetkar, samimi",
-    visual: "cozy appetizing food & beverage aesthetic",
+    visual: "iştah açıcı, sıcak mekan hissi",
   },
   dental: {
-    positioning: "Diş sağlığı ve ağız bakımı hizmeti",
+    positioning: "Diş ve ağız sağlığı hizmeti",
     tone: "temiz, profesyonel, güvenilir",
-    visual: "clinical clean healthcare aesthetic",
+    visual: "hijyenik, aydınlık sağlık estetiği",
   },
   "real-estate": {
-    positioning: "Gayrimenkul danışmanlığı ve emlak hizmetleri",
+    positioning: "Gayrimenkul danışmanlığı",
     tone: "kurumsal, güvenilir, modern",
-    visual: "architecture and city lifestyle aesthetic",
+    visual: "mimari ve şehir yaşamı estetiği",
   },
   education: {
     positioning: "Eğitim ve öğrenme odaklı kurum",
     tone: "ilham veren, güvenilir, umut dolu",
-    visual: "clean educational brand aesthetic",
+    visual: "aydınlık, düzenli eğitim markası estetiği",
   },
   boutique: {
     positioning: "Perakende ve butik mağaza",
     tone: "şık, davetkar, trend",
-    visual: "retail fashion boutique aesthetic",
+    visual: "zarif perakende vitrin estetiği",
   },
   "auto-service": {
-    positioning: "Otomotiv servis ve bakım hizmeti",
-    tone: "güvenilir, profesyonel, çözüm odaklı",
-    visual: "automotive service professional aesthetic",
+    positioning: "Otomotiv servis ve bakım",
+    tone: "güvenilir, profesyonel",
+    visual: "temiz oto servis profesyonelliği",
   },
   fitness: {
-    positioning: "Spor ve fitness hizmeti",
-    tone: "enerjik, motive edici, dinamik",
-    visual: "athletic energetic fitness aesthetic",
+    positioning: "Spor ve fitness merkezi",
+    tone: "enerjik, motive edici",
+    visual: "dinamik atletik enerji",
   },
   nutrition: {
     positioning: "Beslenme ve sağlıklı yaşam danışmanlığı",
-    tone: "sağlıklı, güven veren, bilimsel",
-    visual: "wellness nutrition aesthetic",
+    tone: "sağlıklı, bilimsel, güven veren",
+    visual: "temiz wellness estetiği",
   },
   other: {
     positioning: "Yerel KOBİ işletmesi",
     tone: "samimi, profesyonel, güven veren",
-    visual: "clean modern small business aesthetic",
+    visual: "modern KOBİ markası estetiği",
   },
 };
 
-function inferFromRawDescription(raw: string): Partial<BrandCreativeBrief> {
-  const lower = raw.toLowerCase();
-  const hints: Partial<BrandCreativeBrief> = {};
-
-  if (
-    lower.includes("e-ticaret") ||
-    lower.includes("eticaret") ||
-    lower.includes("e ticaret") ||
-    lower.includes("yazılım") ||
-    lower.includes("yazilim") ||
-    lower.includes("web") ||
-    lower.includes("ajans") ||
-    lower.includes("dijital")
-  ) {
-    hints.positioning =
-      "Kurumsal web siteleri, e-ticaret yazılımları ve dijital çözümler sunan profesyonel ajans";
-    hints.toneOfVoice = "kurumsal, teknoloji odaklı, güven veren, premium ajans dili";
-    hints.visualDirection =
-      "modern dijital ajans estetiği, derinlik ve katmanlı kompozisyon, ince grid veya UI dokunuşları";
-    hints.visualQuality =
-      "ajans kalitesinde, premium, profesyonel sosyal medya tasarımı — clip art ve çocuk çizimi YASAK";
-    hints.subtextOnImage = null;
-  }
-
-  if (lower.includes("güzellik") || lower.includes("kuaför") || lower.includes("bakım")) {
-    hints.positioning = "Güzellik ve kişisel bakım hizmeti sunan işletme";
-  }
-
-  if (lower.includes("kafe") || lower.includes("restoran") || lower.includes("kahve")) {
-    hints.positioning = "Kafe veya restoran işletmesi";
-  }
-
-  return hints;
+function getSectorModifier(sector: SectorKey) {
+  return sectorModifiers.find((item) => item.key === sector);
 }
 
-function buildFallbackBrief(context: BrandContext): BrandCreativeBrief {
+function refineRawDescription(raw: string, brandName: string, sector: SectorKey): string {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return SECTOR_FALLBACK[sector]?.positioning ?? SECTOR_FALLBACK.other!.positioning;
+  }
+
+  const lower = trimmed.toLowerCase();
+  const fixes: Array<[RegExp, string]> = [
+    [/yazilim/gi, "yazılım"],
+    [/eticaret/gi, "e-ticaret"],
+    [/e ticaret/gi, "e-ticaret"],
+    [/cozum/gi, "çözüm"],
+    [/cozuml/gi, "çözüm"],
+  ];
+
+  let refined = trimmed;
+  for (const [pattern, replacement] of fixes) {
+    refined = refined.replace(pattern, replacement);
+  }
+
+  if (refined.length < 20 && !refined.toLowerCase().includes(brandName.toLowerCase())) {
+    return `${brandName}, ${refined}`;
+  }
+
+  return refined.charAt(0).toUpperCase() + refined.slice(1);
+}
+
+function buildFallbackHarmony(
+  context: BrandContext,
+  day?: SpecialDayContext,
+  sectorMod?: ReturnType<typeof getSectorModifier>,
+): Pick<BrandCreativeBrief, "dayHarmony" | "sceneComposition" | "sectorBlend"> {
+  const dayName = day?.name ?? "özel gün";
   const sectorLabel =
-    sectors.find((item) => item.key === context.sector)?.label ??
-    context.customSector ??
-    "KOBİ";
+    sectors.find((item) => item.key === context.sector)?.label ?? context.customSector ?? "KOBİ";
+
+  return {
+    dayHarmony: `${context.brandName} (${sectorLabel}) için ${dayName} kutlaması: markanın ${sectorMod?.toneHints ?? "profesyonel"} tonu ile ${day?.culturalContext ?? "saygılı kutlama"} birleşmeli. Satış baskısı yok, güven ve samimiyet ön planda.`,
+    sceneComposition: [
+      `Ön planda büyük Türkçe başlık: "${day?.headlineAlternatives[0] ?? dayName}".`,
+      `Arka plan ve dekor: ${day?.visualDirection ?? "modern kutlama"} + ${sectorMod?.visualCues ?? "sektöre uygun görsel ipuçları"}.`,
+      `Marka renkleri kompozisyonda doğal şekilde kullanılsın.`,
+      `${context.brandName} logosu köşede küçük ve net.`,
+      "Premium sosyal medya tasarımı, derinlik ve katman hissi.",
+    ].join(" "),
+    sectorBlend: `${sectorMod?.promptModifier ?? "professional local business"} estetiği, ${day?.category ?? "özel gün"} kategorisine uygun saygılı ton.`,
+  };
+}
+
+function buildFallbackBrief(context: BrandContext, day?: SpecialDayContext): BrandCreativeBrief {
+  const sectorMod = getSectorModifier(context.sector);
   const sectorDefaults = SECTOR_FALLBACK[context.sector] ?? SECTOR_FALLBACK.other!;
-  const inferred = inferFromRawDescription(context.brandDescription ?? "");
+  const style = styles.find((item) => item.key === context.visualStyle);
+  const refinedRaw = refineRawDescription(
+    context.brandDescription ?? "",
+    context.brandName,
+    context.sector,
+  );
+  const harmony = buildFallbackHarmony(context, day, sectorMod);
 
   const positioning =
-    inferred.positioning ??
-    (context.brandDescription?.trim().length
-      ? `${context.brandName}: ${context.brandDescription.trim()}`
-      : `${context.brandName} — ${sectorDefaults.positioning}`);
+    refinedRaw.length > 10
+      ? `${context.brandName}: ${refinedRaw}`
+      : `${context.brandName} — ${sectorDefaults.positioning}`;
 
   return {
     positioning,
-    toneOfVoice: inferred.toneOfVoice ?? sectorDefaults.tone,
-    visualDirection: inferred.visualDirection ?? sectorDefaults.visual,
+    toneOfVoice: `${sectorMod?.toneHints ?? sectorDefaults.tone}, ${style?.description ?? "modern"}`,
+    visualDirection: `${sectorDefaults.visual}. ${day?.visualDirection ?? ""}`.trim(),
     visualQuality:
-      inferred.visualQuality ??
-      "premium professional social media design, layered composition, refined typography — never clip art or stick figures",
-    subtextOnImage: inferred.subtextOnImage ?? null,
+      "Ajans kalitesinde premium sosyal medya tasarımı: katmanlı kompozisyon, okunaklı tipografi, gerçekçi veya üst düzey illüstrasyon — asla clip art veya amatör çizim değil.",
+    subtextOnImage: null,
     onImageTextRules:
-      "Görselde YALNIZCA büyük kutlama başlığı + köşede küçük marka adı/logo. Hizmet açıklaması, slogan veya uzun cümle EKLEME.",
+      "Görselde YALNIZCA büyük kutlama başlığı + köşede küçük marka adı/logo. Müşterinin ham cümlesini, hizmet listesini veya uzun sloganı görsele yazma.",
     avoidOnImage: [
-      "clip art",
-      "stick figure children",
-      "amatör çizim",
-      "yazım hatalı Türkçe",
-      "gereksiz alt slogan",
-      "hizmet listesi",
-      "fazla metin bloğu",
+      ...UNIVERSAL_AVOID,
+      ...(sectorMod?.avoidRules ? [sectorMod.avoidRules] : []),
+      ...(day?.avoidRules ? [day.avoidRules] : []),
     ],
+    ...harmony,
   };
 }
 
 export async function buildBrandCreativeBrief(
   context: BrandContext,
-  specialDayName?: string,
+  day?: SpecialDayContext,
 ): Promise<BrandCreativeBrief> {
-  const fallback = buildFallbackBrief(context);
+  const fallback = buildFallbackBrief(context, day);
+  const sectorMod = getSectorModifier(context.sector);
   const sectorLabel =
     sectors.find((item) => item.key === context.sector)?.label ?? context.customSector ?? "";
+  const styleLabel = styles.find((item) => item.key === context.visualStyle)?.name ?? context.visualStyle;
+  const rawInput = context.brandDescription?.trim() || "Müşteri kısa veya eksik bilgi verdi";
 
   if (!isGeminiConfigured()) {
     return fallback;
   }
 
-  const rawInput = context.brandDescription?.trim() || "Müşteri detay vermedi";
-
   try {
     const text = await generateTextWithGemini(
       [
-        "Sen Türkiye'deki KOBİ'ler için çalışan kıdemli bir marka ve kreatif direktörsün.",
-        "Müşterinin kısa, eksik veya bozuk cümlelerini profesyonel marka diline çeviriyorsun.",
+        "Sen Türkiye KOBİ'leri için çalışan KIDEMLİ MARKA YÖNETİCİSİ ve kreatif direktörsün.",
+        "TÜM sektörlerde (güzellik, kafe, diş, emlak, eğitim, ajans, spor vb.) aynı kalitede brief yazarsın.",
+        "Görevin: müşterinin eksik/bozuk cümlesini profesyonelleştirmek VE seçilen özel günle markayı harmanlamak.",
         "",
+        "=== MARKA ===",
         `Marka adı: ${context.brandName}`,
-        `Sektör seçimi: ${sectorLabel}`,
-        `Müşterinin kendi cümlesi (ham): "${rawInput}"`,
-        specialDayName ? `Özel gün: ${specialDayName}` : "",
-        `Görsel stil tercihi: ${context.visualStyle}`,
+        `Sektör: ${sectorLabel}`,
+        `Müşterinin ham cümlesi: "${rawInput}"`,
+        `Görsel stil tercihi: ${styleLabel}`,
+        `Marka renkleri: ${(context.brandColors?.length ? context.brandColors : [context.primaryColor]).join(", ")}`,
+        sectorMod
+          ? `Sektör görsel ipuçları: ${sectorMod.visualCues}. Ton: ${sectorMod.toneHints}. Kaçınılacak: ${sectorMod.avoidRules}.`
+          : "",
         "",
-        "Görev:",
-        "1) Müşterinin ne iş yaptığını 1-2 cümlede PROFESYONEL Türkçe ile yaz (yazım düzelt, anlamı netleştir).",
-        "2) Sosyal medya görseli için ton ve görsel yön belirle.",
-        "3) Görselde alt metin/slogan gerekiyorsa EN FAZLA 4 kelimelik, yazımı kusursuz bir ifade öner; gerekmiyorsa null ver.",
-        "4) Ajans/kurumsal markalar için görselde genelde SLOGAN OLMAMALI — subtextOnImage null olsun.",
+        "=== ÖZEL GÜN ===",
+        day
+          ? [
+              `Gün: ${day.name} (${day.category})`,
+              `Kültürel bağlam: ${day.culturalContext}`,
+              `Görsel yön: ${day.visualDirection}`,
+              `Başlık seçenekleri: ${day.headlineAlternatives.join(" | ")}`,
+              `Caption fikirleri: ${day.captionIdeas.slice(0, 3).join(" | ")}`,
+              `Kaçınılacaklar: ${day.avoidRules}`,
+            ].join("\n")
+          : "Özel gün bilgisi yok",
+        "",
+        "=== KURALLAR ===",
+        "1) positioning: Müşterinin ne iş yaptığını yazım düzelterek 1-2 cümle profesyonel Türkçe.",
+        "2) dayHarmony: Bu markanın BU özel günle nasıl bir araya geleceğini 2 cümle anlat (marka + gün uyumu).",
+        "3) sceneComposition: Görsel AI için somut sahne tarifi — arka plan, dekor, ışık, kompozisyon, nerede başlık, nerede logo. Clip art yasak, premium tasarım.",
+        "4) sectorBlend: Sektör estetiği + özel gün ruhu nasıl birleşir.",
+        "5) subtextOnImage: Çoğu durumda null. Sadece çok kısa (max 4 kelime) ve yazımı garanti ise ver.",
+        "6) Müşterinin ham cümlesini görsele kopyalama — sadece brief'te kullan.",
         "",
         "JSON dön:",
         JSON.stringify({
@@ -181,7 +246,10 @@ export async function buildBrandCreativeBrief(
           toneOfVoice: "string",
           visualDirection: "string",
           visualQuality: "string",
-          subtextOnImage: "string veya null",
+          dayHarmony: "string",
+          sceneComposition: "string",
+          sectorBlend: "string",
+          subtextOnImage: "null veya string",
           onImageTextRules: "string",
           avoidOnImage: ["string"],
         }),
@@ -197,6 +265,9 @@ export async function buildBrandCreativeBrief(
       toneOfVoice: parsed.toneOfVoice?.trim() || fallback.toneOfVoice,
       visualDirection: parsed.visualDirection?.trim() || fallback.visualDirection,
       visualQuality: parsed.visualQuality?.trim() || fallback.visualQuality,
+      dayHarmony: parsed.dayHarmony?.trim() || fallback.dayHarmony,
+      sceneComposition: parsed.sceneComposition?.trim() || fallback.sceneComposition,
+      sectorBlend: parsed.sectorBlend?.trim() || fallback.sectorBlend,
       subtextOnImage:
         parsed.subtextOnImage === null || parsed.subtextOnImage === undefined
           ? null
@@ -204,7 +275,7 @@ export async function buildBrandCreativeBrief(
       onImageTextRules: parsed.onImageTextRules?.trim() || fallback.onImageTextRules,
       avoidOnImage:
         Array.isArray(parsed.avoidOnImage) && parsed.avoidOnImage.length
-          ? parsed.avoidOnImage.map(String)
+          ? [...new Set([...parsed.avoidOnImage.map(String), ...UNIVERSAL_AVOID])]
           : fallback.avoidOnImage,
     };
   } catch (error) {

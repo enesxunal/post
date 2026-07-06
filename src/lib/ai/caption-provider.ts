@@ -6,7 +6,20 @@ import type { BrandContext } from "@/types/domain";
 
 export async function generateCaption(context: BrandContext, dayId: string) {
   const day = await getPromptLibraryEntry(dayId);
-  const brief = await buildBrandCreativeBrief(context, day?.name);
+  const brief = await buildBrandCreativeBrief(
+    context,
+    day
+      ? {
+          name: day.name,
+          category: day.category,
+          culturalContext: day.culturalContext,
+          visualDirection: day.visualDirection,
+          captionIdeas: day.captionIdeas,
+          headlineAlternatives: day.headlineAlternatives,
+          avoidRules: day.avoidRules,
+        }
+      : undefined,
+  );
 
   const fallback = {
     caption:
@@ -22,6 +35,7 @@ export async function generateCaption(context: BrandContext, dayId: string) {
           "Sen Türkiye'deki KOBİ'ler için sosyal medya metni yazan bir uzmansın.",
           `Marka: ${context.brandName}`,
           `Marka konumlandırma: ${brief.positioning}`,
+          `Marka + özel gün uyumu: ${brief.dayHarmony}`,
           `Sektör: ${context.sector}`,
           `Özel gün: ${day?.name ?? dayId}`,
           `Marka açıklaması: ${context.brandDescription ?? "yerel işletme"}`,
