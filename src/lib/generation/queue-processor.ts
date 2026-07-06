@@ -243,6 +243,7 @@ export async function processOneQueuedJob(projectId: string) {
       imageUrl: image.imageUrl,
       expectedHeadline: preview.headline,
       brandName: context.brandName,
+      brandBrief: preview.brandBrief,
     });
 
     if (shouldRetryQualityCheck(quality)) {

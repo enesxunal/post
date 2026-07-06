@@ -1,5 +1,6 @@
 import { analyzeImageWithGemini } from "@/lib/ai/providers/gemini";
 import { isGeminiConfigured } from "@/lib/ai/gemini-config";
+import type { BrandCreativeBrief } from "@/lib/ai/brand-creative-director";
 
 export type QualityCheckResult = {
   passed: boolean;
@@ -11,6 +12,7 @@ export async function checkGeneratedImageQuality(input: {
   imageUrl: string;
   expectedHeadline: string;
   brandName: string;
+  brandBrief?: BrandCreativeBrief;
 }): Promise<QualityCheckResult> {
   const fallbackPass: QualityCheckResult = { passed: true, issues: [], severity: "low" };
 
@@ -18,24 +20,32 @@ export async function checkGeneratedImageQuality(input: {
     return fallbackPass;
   }
 
+  const allowedSubtext = input.brandBrief?.subtextOnImage;
+
   try {
     const text = await analyzeImageWithGemini(
       [
-        "Sen Türk sosyal medya görsel kalite kontrol uzmanısın.",
-        `Marka: ${input.brandName}`,
-        `Görselde olması beklenen Türkçe başlık: "${input.expectedHeadline}"`,
+        "Sen Türk sosyal medya görsel kalite kontrol uzmanısın. Müşteriye sunulmadan önce görseli reddet veya onayla.",
         "",
-        "Bu Instagram kare post görselini incele ve şunları kontrol et:",
-        "1) Türkçe yazım hatası veya anlamsız/bozuk metin var mı?",
-        "2) Metin okunmuyor veya çok küçük mü?",
-        "3) Logo veya marka alanı bozuk/distorsiyonlu mu?",
-        "4) Görsel çok basit, boş veya amatör mü (sadece düz renk + tek kelime)?",
-        "5) AI artefaktı, fazla parmak, garip tipografi var mı?",
+        `Marka adı (doğru yazım): "${input.brandName}"`,
+        `Beklenen ana başlık: "${input.expectedHeadline}"`,
+        allowedSubtext
+          ? `İzin verilen tek ikincil metin: "${allowedSubtext}"`
+          : "İkincil metin/slogan/hizmet açıklaması OLMAMALI — sadece başlık + marka adı.",
+        input.brandBrief?.positioning
+          ? `Marka konumlandırma (görselde paragraf olarak YAZILMAMALI): ${input.brandBrief.positioning}`
+          : "",
         "",
-        "Sadece JSON dön:",
-        '{"passed":true,"issues":[],"severity":"low"}',
-        "passed=false yap eğer yazım hatası, okunmayan metin veya ciddi görsel hata varsa.",
-        'severity: "high" ciddi hata, "medium" orta, "low" kabul edilebilir.',
+        "KONTROL LİSTESİ:",
+        "1) Türkçe yazım hatası var mı? (ör: Çözülmeri, E-Ticaret yanlış yazım)",
+        "2) Marka adı doğru yazılmış mı?",
+        "3) İzin verilmeyen slogan, hizmet listesi veya uzun alt cümle var mı?",
+        "4) Clip art, stick figure, amatör çizim, çocuk karakteri çizimi var mı?",
+        "5) Görsel çok basit mi (düz arka plan + tek kelime)?",
+        "6) Metin okunmuyor mu, logo bozuk mu?",
+        "",
+        "passed=false yap: yazım hatası, clip art, izinsiz alt metin, amatör/basit görsel.",
+        'JSON: {"passed":true,"issues":[],"severity":"low"}',
       ].join("\n"),
       input.imageUrl,
     );

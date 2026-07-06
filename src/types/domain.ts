@@ -108,6 +108,7 @@ export interface PromptPreview {
   headline: string;
   prompt: string;
   negativePrompt: string;
+  brandBrief?: import("@/lib/ai/brand-creative-director").BrandCreativeBrief;
 }
 
 export interface ProjectRecord {
