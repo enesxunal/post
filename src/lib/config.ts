@@ -44,7 +44,7 @@ export const GENERATING_MESSAGES = [
 ];
 
 export const TODO_LABELS = {
-  tosla: "TODO: connect Tosla real API",
+  tosla: "Tosla canlı ödeme bağlı — env eksikse mock moda düşer",
   imageProvider: "TODO: connect Nano Banana image API",
   emailProvider: "TODO: configure email provider",
   cronWorker: "TODO: deploy cron worker",
