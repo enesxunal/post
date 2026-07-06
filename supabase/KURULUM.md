@@ -27,8 +27,22 @@ Aynı şekilde `supabase/seed.sql` dosyasını çalıştırabilirsin.
 | `relation "projects" does not exist` | Sadece policy SQL'i çalıştırılmış; önce `schema.sql` gerekli |
 | `type "app_role" already exists` | Şema zaten kurulu; sorun değil, devam edebilirsin |
 
-## Vercel env
+## Vercel env (yeni Supabase paneli)
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY` (Settings → API → service_role)
+**Project URL** artık API Keys sayfasında yazmıyor olabilir. Şu formülle oluştur:
+
+```text
+https://PROJE-KODU.supabase.co
+```
+
+Proje kodu = tarayıcı adresindeki kod (örnek: `jpavgsimjqbkukwevnl`)
+
+| Supabase paneli | Vercel env |
+|-----------------|------------|
+| Publishable key (`sb_publishable_...`) | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` |
+| Secret key (`sb_secret_...`) | `SUPABASE_SECRET_KEY` |
+| Project URL | `NEXT_PUBLIC_SUPABASE_URL` |
+
+Alternatif: sadece `NEXT_PUBLIC_SUPABASE_PROJECT_ID=jpavgsimjqbkukwevnl` yaz, URL otomatik oluşur.
+
+Eski **Legacy anon / service_role** sekmesi varsa onlar da çalışır.
