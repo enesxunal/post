@@ -24,9 +24,9 @@ export async function POST(request: Request) {
     if (!status) {
       return NextResponse.json({ error: "Proje bulunamadı" }, { status: 404 });
     }
-    if (!status.done) {
-      scheduleQueueProcessing(body.projectId);
-    }
+  if (!status.done && !status.stopped) {
+    scheduleQueueProcessing(body.projectId);
+  }
     return NextResponse.json(status);
   }
 
@@ -96,7 +96,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Proje bulunamadı" }, { status: 404 });
   }
 
-  if (!status.done) {
+  if (!status.done && !status.stopped) {
     scheduleQueueProcessing(projectId);
   }
 

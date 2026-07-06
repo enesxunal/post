@@ -132,7 +132,7 @@ export async function getProjectStatusAdmin(projectId: string) {
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, user_id, status, brand_name")
+    .select("id, user_id, status, brand_name, generation_stopped_at")
     .eq("id", projectId)
     .maybeSingle();
 
@@ -153,12 +153,15 @@ export async function getProjectStatusAdmin(projectId: string) {
     ["generating_image", "generating_caption", "composing_prompt"].includes(j.status),
   ).length;
 
-  const done = ready + failed >= total && total > 0 && queued === 0 && inProgress === 0;
+  const done =
+    Boolean(project.generation_stopped_at) ||
+    (ready + failed >= total && total > 0 && queued === 0 && inProgress === 0);
 
   return {
     projectId,
     brandName: project.brand_name,
     projectStatus: project.status,
+    stopped: Boolean(project.generation_stopped_at),
     total,
     ready,
     failed,
@@ -170,8 +173,74 @@ export async function getProjectStatusAdmin(projectId: string) {
   };
 }
 
+export async function stopProjectGeneration(projectId: string, userId: string) {
+  const supabase = adminClient();
+
+  const { data: project } = await supabase
+    .from("projects")
+    .select("id, user_id, generation_stopped_at")
+    .eq("id", projectId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!project) {
+    throw new Error("Proje bulunamadı");
+  }
+
+  if (project.generation_stopped_at) {
+    return getProjectStatusAdmin(projectId);
+  }
+
+  const stoppedAt = nowIso();
+
+  await supabase
+    .from("projects")
+    .update({ generation_stopped_at: stoppedAt, updated_at: stoppedAt })
+    .eq("id", projectId);
+
+  await supabase
+    .from("generation_jobs")
+    .update({
+      status: "failed",
+      error_message: "Üretim kullanıcı tarafından durduruldu",
+      updated_at: stoppedAt,
+    })
+    .eq("project_id", projectId)
+    .eq("status", "queued");
+
+  await syncProjectStatus(projectId);
+
+  return getProjectStatusAdmin(projectId);
+}
+
+export async function isProjectGenerationStopped(projectId: string) {
+  const supabase = adminClient();
+  const { data } = await supabase
+    .from("projects")
+    .select("generation_stopped_at")
+    .eq("id", projectId)
+    .maybeSingle();
+
+  return Boolean(data?.generation_stopped_at);
+}
+
 export async function processOneQueuedJob(projectId: string) {
   const supabase = adminClient();
+
+  if (await isProjectGenerationStopped(projectId)) {
+    await supabase
+      .from("generation_jobs")
+      .update({
+        status: "failed",
+        error_message: "Üretim kullanıcı tarafından durduruldu",
+        updated_at: nowIso(),
+      })
+      .eq("project_id", projectId)
+      .eq("status", "queued");
+
+    const status = await getProjectStatusAdmin(projectId);
+    return { processed: false, reason: "stopped", status, shouldContinue: false };
+  }
 
   await recoverStuckJobs(projectId);
 
@@ -209,6 +278,11 @@ export async function processOneQueuedJob(projectId: string) {
 
   if (!project) {
     throw new Error("Proje bulunamadı");
+  }
+
+  if (project.generation_stopped_at) {
+    const status = await getProjectStatusAdmin(projectId);
+    return { processed: false, reason: "stopped", status, shouldContinue: false };
   }
 
   await supabase
@@ -353,6 +427,14 @@ export async function resumeAllStuckProjects() {
 
   let resumed = 0;
   for (const project of projects ?? []) {
+    const { data: row } = await supabase
+      .from("projects")
+      .select("generation_stopped_at")
+      .eq("id", project.id)
+      .maybeSingle();
+
+    if (row?.generation_stopped_at) continue;
+
     await recoverStuckJobs(project.id);
     const status = await getProjectStatusAdmin(project.id);
     if ((status?.queued ?? 0) > 0 || (status?.inProgress ?? 0) > 0) {

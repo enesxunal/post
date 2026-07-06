@@ -153,7 +153,7 @@ export async function getProjectStatus(projectId: string, userId: string) {
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, user_id, status, brand_name")
+    .select("id, user_id, status, brand_name, generation_stopped_at")
     .eq("id", projectId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -186,12 +186,14 @@ export async function getProjectStatus(projectId: string, userId: string) {
     ),
   ).length;
 
-  const done = pending === 0 && total > 0;
+  const stopped = Boolean(project.generation_stopped_at);
+  const done = stopped || (pending === 0 && total > 0);
 
   return {
     projectId,
     brandName: project.brand_name,
     projectStatus: project.status,
+    stopped,
     total,
     ready,
     failed,

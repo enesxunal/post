@@ -48,6 +48,7 @@ create table if not exists projects (
   remaining_credits integer not null default 10,
   bonus_credits_granted boolean not null default false,
   status project_status not null default 'draft',
+  generation_stopped_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

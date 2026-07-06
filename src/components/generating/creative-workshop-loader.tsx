@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, Octagon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { loadOnboardingDraft } from "@/lib/onboarding/draft";
 
 const floatingPosts = ["29 Ekim", "Kandil", "Cuma", "Bayram", "Anneler Günü"];
 
-type GenerationPhase = "starting" | "running" | "done";
+type GenerationPhase = "starting" | "running" | "done" | "stopped";
 
 type JobPreview = {
   id: string;
@@ -31,6 +31,7 @@ type GenerationStatus = {
   inProgress: number;
   progress: number;
   done: boolean;
+  stopped?: boolean;
   brandName?: string;
   jobs?: JobPreview[];
 };
@@ -52,6 +53,7 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
   const [phase, setPhase] = useState<GenerationPhase>("starting");
   const [messageIndex, setMessageIndex] = useState(0);
   const [status, setStatus] = useState<GenerationStatus | null>(null);
+  const [stopping, setStopping] = useState(false);
   const startedRef = useRef(false);
 
   const progress = status?.progress ?? (phase === "starting" ? 5 : 0);
@@ -73,6 +75,32 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
       body: JSON.stringify({ projectId }),
     }).catch(() => undefined);
   }, []);
+
+  const stopGeneration = useCallback(async () => {
+    if (!status?.projectId || stopping) return;
+
+    const confirmed = window.confirm(
+      "Üretimi durdurmak istediğinize emin misiniz?\n\nHazır olan görseller kalır, sırada bekleyenler üretilmez.",
+    );
+    if (!confirmed) return;
+
+    setStopping(true);
+    try {
+      const response = await fetch("/api/generation/stop", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: status.projectId }),
+      });
+      const data = (await response.json()) as GenerationStatus & { error?: string };
+      if (!response.ok) throw new Error(data.error ?? "Durdurulamadı");
+      setStatus(data);
+      setPhase("stopped");
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Durdurulamadı");
+    } finally {
+      setStopping(false);
+    }
+  }, [status?.projectId, stopping]);
 
   useEffect(() => {
     if (startedRef.current) return;
@@ -103,9 +131,9 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
 
       saveActiveProjectId(startData.projectId);
       setStatus(startData);
-      setPhase(startData.done ? "done" : "running");
+      setPhase(startData.stopped ? "stopped" : startData.done ? "done" : "running");
 
-      if (!startData.done) {
+    if (!startData.done && !startData.stopped) {
         await kickQueue(startData.projectId);
       }
     }
@@ -114,7 +142,7 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
   }, [orderId, kickQueue]);
 
   useEffect(() => {
-    if (!status?.projectId || status.done) return;
+    if (!status?.projectId || status.done || status.stopped) return;
 
     const projectId = status.projectId;
     let active = true;
@@ -124,6 +152,10 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
         const next = await pollStatus(projectId);
         if (!active) return;
         setStatus(next);
+        if (next.stopped) {
+          setPhase("stopped");
+          return;
+        }
         if (next.done) {
           setPhase("done");
           window.setTimeout(() => router.push(`/projects/${projectId}`), 2000);
@@ -137,7 +169,7 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
       active = false;
       window.clearInterval(timer);
     };
-  }, [status?.projectId, status?.done, pollStatus, router]);
+  }, [status?.projectId, status?.done, status?.stopped, pollStatus, router]);
 
   useEffect(() => {
     const messageTimer = window.setInterval(() => {
@@ -156,7 +188,11 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
       <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-4 py-10 sm:px-6">
         <div className="mb-8 text-center lg:text-left">
           <Badge className="border-emerald-400/30 bg-emerald-500/10 text-emerald-200">
-            {phase === "done" ? "Tamamlandı" : "Arka planda üretiliyor"}
+            {phase === "done"
+              ? "Tamamlandı"
+              : phase === "stopped"
+                ? "Durduruldu"
+                : "Arka planda üretiliyor"}
           </Badge>
           <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl">
             {status?.brandName
@@ -166,7 +202,9 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
           <p className="mt-3 max-w-2xl text-sm leading-7 text-emerald-100/80 sm:text-base">
             {phase === "done"
               ? "Tüm görseller hazır! Panele yönlendiriliyorsunuz..."
-              : "Görseller sırayla üretiliyor. Bu sayfayı kapatabilirsiniz — hazır olanlar profilinizde görünür."}
+              : phase === "stopped"
+                ? "Üretim durduruldu. Hazır olan görseller profilinizde — kalanlar üretilmedi."
+                : "Görseller sırayla üretiliyor. Bu sayfayı kapatabilirsiniz — hazır olanlar profilinizde görünür."}
           </p>
         </div>
 
@@ -199,6 +237,16 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
                   <CheckCircle2 className="h-5 w-5 text-emerald-300" />
                   <p className="font-semibold">Üretim tamamlandı!</p>
                 </div>
+              </div>
+            ) : phase === "stopped" ? (
+              <div className="rounded-[28px] border border-amber-400/30 bg-amber-500/10 p-5">
+                <div className="flex items-center gap-3">
+                  <Octagon className="h-5 w-5 text-amber-300" />
+                  <p className="font-semibold">Üretim durduruldu</p>
+                </div>
+                <p className="mt-2 text-sm text-amber-100/80">
+                  {status?.ready ?? 0} görsel hazır. Kalan sıradaki görseller iptal edildi.
+                </p>
               </div>
             ) : (
               <AnimatePresence mode="wait">
@@ -239,22 +287,40 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
               </div>
             ) : null}
 
-            {status?.projectId ? (
-              <Button
-                variant="secondary"
-                className="w-full sm:w-auto"
-                onClick={() => router.push(`/projects/${status.projectId}`)}
-              >
-                Profilde gör
-              </Button>
-            ) : (
-              <Link
-                href="/dashboard"
-                className="inline-flex h-11 items-center justify-center rounded-full bg-emerald-50 px-5 text-sm font-semibold text-emerald-700"
-              >
-                Panele git
-              </Link>
-            )}
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              {status?.projectId && phase !== "done" && phase !== "stopped" ? (
+                <Button
+                  variant="outline"
+                  className="w-full border-red-400/40 bg-red-500/10 text-red-100 hover:bg-red-500/20 sm:w-auto"
+                  onClick={() => void stopGeneration()}
+                  disabled={stopping || !status.projectId}
+                >
+                  {stopping ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Octagon className="mr-2 h-4 w-4" />
+                  )}
+                  Üretimi durdur
+                </Button>
+              ) : null}
+
+              {status?.projectId ? (
+                <Button
+                  variant="secondary"
+                  className="w-full sm:w-auto"
+                  onClick={() => router.push(`/projects/${status.projectId}`)}
+                >
+                  Profilde gör
+                </Button>
+              ) : (
+                <Link
+                  href="/dashboard"
+                  className="inline-flex h-11 items-center justify-center rounded-full bg-emerald-50 px-5 text-sm font-semibold text-emerald-700"
+                >
+                  Panele git
+                </Link>
+              )}
+            </div>
           </div>
 
           <WorkshopStage activeIndex={messageIndex} readyCount={status?.ready ?? 0} />
