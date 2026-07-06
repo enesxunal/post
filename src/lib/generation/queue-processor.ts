@@ -1,0 +1,351 @@
+import { composeImagePrompt } from "@/lib/ai/prompt-composer";
+import { generateCaption } from "@/lib/ai/caption-provider";
+import { generateImage } from "@/lib/ai/image-provider";
+import {
+  checkGeneratedImageQuality,
+  shouldRetryQualityCheck,
+} from "@/lib/ai/quality-checker";
+import { MAX_JOB_RETRIES } from "@/lib/config";
+import { projectToBrandContext } from "@/lib/generation/project-service";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { scheduleQueueProcessing } from "@/lib/generation/schedule-queue";
+
+type JobRow = {
+  id: string;
+  project_id: string;
+  user_id: string;
+  type: string;
+  status: string;
+  retry_count: number;
+};
+
+function adminClient() {
+  const client = createSupabaseAdminClient();
+  if (!client) {
+    throw new Error("SUPABASE_SECRET_KEY gerekli");
+  }
+  return client;
+}
+
+async function getReadClient() {
+  return createSupabaseAdminClient() ?? (await createSupabaseServerClient());
+}
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+export async function findProjectIdByOrderId(userId: string, orderId: string) {
+  const supabase = await getReadClient();
+  const { data } = await supabase
+    .from("projects")
+    .select("id, status")
+    .eq("user_id", userId)
+    .eq("package_type", `order:${orderId}`)
+    .maybeSingle();
+
+  return data;
+}
+
+export async function recoverStuckJobs(projectId: string) {
+  const supabase = adminClient();
+  const cutoff = new Date(Date.now() - 8 * 60 * 1000).toISOString();
+
+  await supabase
+    .from("generation_jobs")
+    .update({
+      status: "queued",
+      error_message: "Zaman aşımı — otomatik yeniden denenecek",
+      updated_at: nowIso(),
+    })
+    .eq("project_id", projectId)
+    .in("status", ["generating_image", "generating_caption", "composing_prompt"])
+    .lt("updated_at", cutoff);
+}
+
+async function pickNextJob(projectId: string): Promise<JobRow | null> {
+  const supabase = adminClient();
+
+  const { data: queued } = await supabase
+    .from("generation_jobs")
+    .select("id, project_id, user_id, type, status, retry_count")
+    .eq("project_id", projectId)
+    .eq("status", "queued")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (queued) return queued as JobRow;
+
+  const { data: retryable } = await supabase
+    .from("generation_jobs")
+    .select("id, project_id, user_id, type, status, retry_count")
+    .eq("project_id", projectId)
+    .eq("status", "failed")
+    .lt("retry_count", MAX_JOB_RETRIES)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  return (retryable as JobRow | null) ?? null;
+}
+
+async function syncProjectStatus(projectId: string) {
+  const supabase = adminClient();
+
+  const { data: jobs } = await supabase
+    .from("generation_jobs")
+    .select("status")
+    .eq("project_id", projectId);
+
+  const list = jobs ?? [];
+  const total = list.length;
+  const ready = list.filter((j) => j.status === "ready").length;
+  const failed = list.filter((j) => j.status === "failed").length;
+  const pending = list.filter((j) =>
+    ["queued", "generating_image", "generating_caption", "composing_prompt"].includes(j.status),
+  ).length;
+
+  if (pending > 0) {
+    await supabase
+      .from("projects")
+      .update({ status: "generating", updated_at: nowIso() })
+      .eq("id", projectId);
+    return { ready, total, pending, done: false };
+  }
+
+  const finalStatus = ready > 0 ? "ready" : "failed";
+  await supabase
+    .from("projects")
+    .update({ status: finalStatus, updated_at: nowIso() })
+    .eq("id", projectId);
+
+  return { ready, total, pending: 0, done: true, failed };
+}
+
+export async function getProjectStatusAdmin(projectId: string) {
+  const supabase = adminClient();
+
+  const { data: project } = await supabase
+    .from("projects")
+    .select("id, user_id, status, brand_name")
+    .eq("id", projectId)
+    .maybeSingle();
+
+  if (!project) return null;
+
+  const { data: jobs } = await supabase
+    .from("generation_jobs")
+    .select("id, status, type, image_url, caption_text, error_message, retry_count")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: true });
+
+  const list = jobs ?? [];
+  const ready = list.filter((j) => j.status === "ready").length;
+  const failed = list.filter((j) => j.status === "failed").length;
+  const total = list.length;
+  const queued = list.filter((j) => j.status === "queued").length;
+  const inProgress = list.filter((j) =>
+    ["generating_image", "generating_caption", "composing_prompt"].includes(j.status),
+  ).length;
+
+  const done = ready + failed >= total && total > 0 && queued === 0 && inProgress === 0;
+
+  return {
+    projectId,
+    brandName: project.brand_name,
+    projectStatus: project.status,
+    total,
+    ready,
+    failed,
+    queued,
+    inProgress,
+    done,
+    progress: total > 0 ? Math.round((ready / total) * 100) : 0,
+    jobs: list,
+  };
+}
+
+export async function processOneQueuedJob(projectId: string) {
+  const supabase = adminClient();
+
+  await recoverStuckJobs(projectId);
+
+  const { data: inFlight } = await supabase
+    .from("generation_jobs")
+    .select("id")
+    .eq("project_id", projectId)
+    .in("status", ["generating_image", "generating_caption", "composing_prompt"])
+    .limit(1)
+    .maybeSingle();
+
+  if (inFlight) {
+    const status = await getProjectStatusAdmin(projectId);
+    return { processed: false, reason: "busy", status, shouldContinue: true };
+  }
+
+  const nextJob = await pickNextJob(projectId);
+  if (!nextJob) {
+    const status = await syncProjectStatus(projectId);
+    const fullStatus = await getProjectStatusAdmin(projectId);
+    return {
+      processed: false,
+      reason: "idle",
+      status: fullStatus,
+      shouldContinue: false,
+      ...status,
+    };
+  }
+
+  const { data: project } = await supabase
+    .from("projects")
+    .select("*")
+    .eq("id", projectId)
+    .single();
+
+  if (!project) {
+    throw new Error("Proje bulunamadı");
+  }
+
+  await supabase
+    .from("projects")
+    .update({ status: "generating", updated_at: nowIso() })
+    .eq("id", projectId);
+
+  await supabase
+    .from("generation_jobs")
+    .update({ status: "composing_prompt", error_message: null, updated_at: nowIso() })
+    .eq("id", nextJob.id);
+
+  const context = projectToBrandContext(project);
+  const dayId = nextJob.type;
+
+  try {
+    const preview = await composeImagePrompt(context, dayId);
+
+    await supabase
+      .from("generation_jobs")
+      .update({ status: "generating_image", prompt: preview.prompt, updated_at: nowIso() })
+      .eq("id", nextJob.id);
+
+    const image = await generateImage(
+      preview.prompt,
+      context.logoUrl ? [context.logoUrl] : [],
+    );
+
+    await supabase
+      .from("generation_jobs")
+      .update({ status: "generating_caption", updated_at: nowIso() })
+      .eq("id", nextJob.id);
+
+    const quality = await checkGeneratedImageQuality({
+      imageUrl: image.imageUrl,
+      expectedHeadline: preview.headline,
+      brandName: context.brandName,
+    });
+
+    if (shouldRetryQualityCheck(quality)) {
+      const nextRetry = (nextJob.retry_count ?? 0) + 1;
+      if (nextRetry >= MAX_JOB_RETRIES) {
+        await supabase
+          .from("generation_jobs")
+          .update({
+            status: "failed",
+            retry_count: nextRetry,
+            error_message: `Kalite kontrolü: ${quality.issues.join(", ") || "Görsel uygun değil"}`,
+            updated_at: nowIso(),
+          })
+          .eq("id", nextJob.id);
+      } else {
+        await supabase
+          .from("generation_jobs")
+          .update({
+            status: "queued",
+            retry_count: nextRetry,
+            image_url: null,
+            thumbnail_url: null,
+            error_message: `Kalite kontrolü yeniden denenecek: ${quality.issues.join(", ")}`,
+            updated_at: nowIso(),
+          })
+          .eq("id", nextJob.id);
+      }
+
+      const status = await getProjectStatusAdmin(projectId);
+      return { processed: true, qualityRejected: true, status, shouldContinue: true };
+    }
+
+    const caption = context.purchasedAddons.includes("caption")
+      ? await generateCaption(context, dayId)
+      : null;
+
+    await supabase
+      .from("generation_jobs")
+      .update({
+        status: "ready",
+        image_url: image.imageUrl,
+        thumbnail_url: image.thumbnailUrl,
+        caption_text: caption?.caption ?? null,
+        hashtags: caption?.hashtags ?? [],
+        provider: "gemini",
+        error_message: null,
+        updated_at: nowIso(),
+      })
+      .eq("id", nextJob.id);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Üretim hatası";
+    const nextRetry = (nextJob.retry_count ?? 0) + 1;
+
+    if (nextRetry >= MAX_JOB_RETRIES) {
+      await supabase
+        .from("generation_jobs")
+        .update({
+          status: "failed",
+          retry_count: nextRetry,
+          error_message: message,
+          updated_at: nowIso(),
+        })
+        .eq("id", nextJob.id);
+    } else {
+      await supabase
+        .from("generation_jobs")
+        .update({
+          status: "queued",
+          retry_count: nextRetry,
+          error_message: `${message} — yeniden denenecek`,
+          updated_at: nowIso(),
+        })
+        .eq("id", nextJob.id);
+    }
+  }
+
+  const status = await getProjectStatusAdmin(projectId);
+  const hasMore =
+    (status?.queued ?? 0) > 0 ||
+    (status?.jobs?.some(
+      (j) => j.status === "failed" && (j.retry_count ?? 0) < MAX_JOB_RETRIES,
+    ) ??
+      false);
+
+  return { processed: true, status, shouldContinue: hasMore };
+}
+
+export async function resumeAllStuckProjects() {
+  const supabase = adminClient();
+  const { data: projects } = await supabase
+    .from("projects")
+    .select("id")
+    .eq("status", "generating");
+
+  let resumed = 0;
+  for (const project of projects ?? []) {
+    await recoverStuckJobs(project.id);
+    const status = await getProjectStatusAdmin(project.id);
+    if ((status?.queued ?? 0) > 0 || (status?.inProgress ?? 0) > 0) {
+      scheduleQueueProcessing(project.id);
+      resumed += 1;
+    }
+  }
+
+  return { resumed, total: projects?.length ?? 0 };
+}

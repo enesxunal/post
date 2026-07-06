@@ -174,7 +174,13 @@ export async function getProjectStatus(projectId: string, userId: string) {
       job.status === "generating_image" || job.status === "generating_caption",
   ).length;
 
-  const done = ready + failed >= total && total > 0;
+  const pending = list.filter((job) =>
+    ["queued", "generating_image", "generating_caption", "composing_prompt"].includes(
+      job.status,
+    ),
+  ).length;
+
+  const done = pending === 0 && total > 0;
 
   return {
     projectId,
@@ -186,78 +192,28 @@ export async function getProjectStatus(projectId: string, userId: string) {
     queued,
     inProgress,
     done,
-    progress: total > 0 ? Math.round(((ready + failed) / total) * 100) : 0,
+    progress: total > 0 ? Math.round((ready / total) * 100) : 0,
     jobs: list,
   };
 }
 
 export async function processNextProjectJob(projectId: string, userId: string) {
-  const supabase = await getWritableClient();
+  const { processOneQueuedJob } = await import("@/lib/generation/queue-processor");
+  const { scheduleQueueProcessing } = await import("@/lib/generation/schedule-queue");
 
-  const { data: project } = await supabase
-    .from("projects")
-    .select("*")
-    .eq("id", projectId)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (!project) {
+  const status = await getProjectStatus(projectId, userId);
+  if (!status) {
     throw new Error("Proje bulunamadı");
   }
 
-  const { data: nextJob } = await supabase
-    .from("generation_jobs")
-    .select("*")
-    .eq("project_id", projectId)
-    .eq("user_id", userId)
-    .in("status", ["queued", "failed"])
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+  const result = await processOneQueuedJob(projectId);
 
-  if (!nextJob) {
-    const status = await getProjectStatus(projectId, userId);
-    if (status?.done) {
-      await supabase
-        .from("projects")
-        .update({ status: status.failed > 0 && status.ready === 0 ? "failed" : "ready" })
-        .eq("id", projectId);
-    }
-    return { processed: false, status };
+  if (result.shouldContinue) {
+    scheduleQueueProcessing(projectId);
   }
 
-  await supabase
-    .from("generation_jobs")
-    .update({ status: "generating_image", error_message: null })
-    .eq("id", nextJob.id);
-
-  const context = projectToBrandContext(project);
-  const dayId = nextJob.type;
-
-  try {
-    const { runGenerationPipeline } = await import("@/lib/ai/generation-pipeline");
-    const result = await runGenerationPipeline(context, dayId);
-
-    await supabase
-      .from("generation_jobs")
-      .update({
-        status: "ready",
-        prompt: result.prompt,
-        image_url: result.imageUrl,
-        thumbnail_url: result.thumbnailUrl,
-        caption_text: result.caption?.caption ?? null,
-        hashtags: result.caption?.hashtags ?? [],
-        provider: "gemini",
-      })
-      .eq("id", nextJob.id);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Üretim hatası";
-    await supabase
-      .from("generation_jobs")
-      .update({ status: "failed", error_message: message })
-      .eq("id", nextJob.id);
-  }
-
-  const status = await getProjectStatus(projectId, userId);
-  return { processed: true, status };
+  return {
+    processed: result.processed,
+    status: result.status ?? (await getProjectStatus(projectId, userId)),
+  };
 }

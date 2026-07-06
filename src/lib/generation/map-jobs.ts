@@ -11,7 +11,7 @@ const gradients = [
 
 export function mapJobStatus(status: string) {
   if (status === "ready") return "ready";
-  if (status === "failed") return "failed";
+  if (status === "failed") return "generating";
   if (status === "queued") return "queued";
   return "generating";
 }

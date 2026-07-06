@@ -107,3 +107,30 @@ export async function generateTextWithGemini(prompt: string) {
   const result = await model.generateContent(prompt);
   return result.response.text();
 }
+
+export async function analyzeImageWithGemini(prompt: string, imageUrl: string) {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY tanımlı değil");
+  }
+
+  const imagePart = await imageUrlToPart(imageUrl);
+  if (!imagePart) {
+    throw new Error("Görsel analiz için yüklenemedi");
+  }
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const modelName = getGeminiTextModel();
+  const model = genAI.getGenerativeModel({ model: modelName });
+
+  const result = await model.generateContent({
+    contents: [
+      {
+        role: "user",
+        parts: [imagePart, { text: prompt }],
+      },
+    ],
+  });
+
+  return result.response.text();
+}

@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/generation-resume",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}

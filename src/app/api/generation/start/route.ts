@@ -4,6 +4,8 @@ import {
   createProjectWithJobs,
   getProjectStatus,
 } from "@/lib/generation/project-service";
+import { findProjectIdByOrderId } from "@/lib/generation/queue-processor";
+import { scheduleQueueProcessing } from "@/lib/generation/schedule-queue";
 import type { OnboardingDraft } from "@/lib/onboarding/draft";
 import { isOrderPaid, userHasPaidOrder } from "@/lib/orders/service";
 import { requireSessionUser } from "@/lib/supabase/auth";
@@ -22,7 +24,21 @@ export async function POST(request: Request) {
     if (!status) {
       return NextResponse.json({ error: "Proje bulunamadı" }, { status: 404 });
     }
+    if (!status.done) {
+      scheduleQueueProcessing(body.projectId);
+    }
     return NextResponse.json(status);
+  }
+
+  const orderId = body.orderId ?? body.draft?.orderId;
+
+  if (orderId) {
+    const existing = await findProjectIdByOrderId(user.id, orderId);
+    if (existing?.id) {
+      scheduleQueueProcessing(existing.id);
+      const status = await getProjectStatus(existing.id, user.id);
+      return NextResponse.json(status ?? { projectId: existing.id });
+    }
   }
 
   if (!body.draft?.brandName || !body.draft.selectedDays?.length) {
@@ -32,7 +48,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const orderId = body.orderId ?? body.draft.orderId;
   const paymentOk = orderId
     ? await isOrderPaid(orderId, user.id)
     : await userHasPaidOrder(user.id);
@@ -57,6 +72,9 @@ export async function POST(request: Request) {
       body.draft,
       orderId,
     );
+
+    scheduleQueueProcessing(created.projectId);
+
     const status = await getProjectStatus(created.projectId, user.id);
     return NextResponse.json({ ...created, ...status });
   } catch (error) {
@@ -76,6 +94,10 @@ export async function GET(request: Request) {
   const status = await getProjectStatus(projectId, user.id);
   if (!status) {
     return NextResponse.json({ error: "Proje bulunamadı" }, { status: 404 });
+  }
+
+  if (!status.done) {
+    scheduleQueueProcessing(projectId);
   }
 
   return NextResponse.json(status);

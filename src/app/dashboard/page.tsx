@@ -1,4 +1,5 @@
 import { UserDashboard } from "@/components/dashboard/user-dashboard";
+import { DashboardLiveRefresh } from "@/components/dashboard/dashboard-live-refresh";
 import { mapGenerationJobsForDashboard } from "@/lib/generation/map-jobs";
 import { requireSessionUser } from "@/lib/supabase/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -37,8 +38,12 @@ export default async function DashboardPage() {
       })
     : new Date().toLocaleDateString("tr-TR", { month: "long", year: "numeric" });
 
+  const postsGenerating = jobs.filter((job) => job.status === "generating" || job.status === "queued").length;
+
   return (
-    <UserDashboard
+    <>
+      <DashboardLiveRefresh isGenerating={postsGenerating > 0 || project?.status === "generating"} />
+      <UserDashboard
       user={{
         firstName: user.firstName,
         lastName: user.lastName,
@@ -51,7 +56,7 @@ export default async function DashboardPage() {
         packageName: "Ana Paket",
         postsTotal: jobs.length || 30,
         postsReady: jobs.filter((job) => job.status === "ready").length,
-        postsGenerating: jobs.filter((job) => job.status === "generating").length,
+        postsGenerating: jobs.filter((job) => job.status === "generating" || job.status === "queued").length,
         addons: [],
         memberSince,
       }}
@@ -68,6 +73,7 @@ export default async function DashboardPage() {
           : null
       }
       jobs={jobs}
-    />
+      />
+    </>
   );
 }

@@ -4,16 +4,23 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { GENERATING_MESSAGES } from "@/lib/config";
+import { GENERATING_MESSAGES, GENERATION_POLL_MS } from "@/lib/config";
 import { loadOnboardingDraft } from "@/lib/onboarding/draft";
 
 const floatingPosts = ["29 Ekim", "Kandil", "Cuma", "Bayram", "Anneler Günü"];
 
-type GenerationPhase = "starting" | "running" | "done" | "error";
+type GenerationPhase = "starting" | "running" | "done";
+
+type JobPreview = {
+  id: string;
+  status: string;
+  type: string;
+  image_url?: string | null;
+};
 
 type GenerationStatus = {
   projectId: string;
@@ -25,40 +32,63 @@ type GenerationStatus = {
   progress: number;
   done: boolean;
   brandName?: string;
+  jobs?: JobPreview[];
 };
 
 type CreativeWorkshopLoaderProps = {
   orderId: string;
 };
 
+function saveActiveProjectId(projectId: string) {
+  try {
+    sessionStorage.setItem("post_active_project_id", projectId);
+  } catch {
+    // ignore
+  }
+}
+
 export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps) {
   const router = useRouter();
   const [phase, setPhase] = useState<GenerationPhase>("starting");
   const [messageIndex, setMessageIndex] = useState(0);
   const [status, setStatus] = useState<GenerationStatus | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const isRunningRef = useRef(false);
+  const startedRef = useRef(false);
 
-  const progress = status?.progress ?? (phase === "starting" ? 8 : 0);
+  const progress = status?.progress ?? (phase === "starting" ? 5 : 0);
+  const readyJobs = status?.jobs?.filter((job) => job.status === "ready" && job.image_url) ?? [];
 
-  const runPipeline = useCallback(async () => {
-    if (isRunningRef.current) return;
-    isRunningRef.current = true;
-    setPhase("running");
-    setError(null);
+  const pollStatus = useCallback(async (projectId: string) => {
+    const response = await fetch(`/api/generation/start?projectId=${projectId}`, {
+      cache: "no-store",
+    });
+    const data = (await response.json()) as GenerationStatus & { error?: string };
+    if (!response.ok) throw new Error(data.error ?? "Durum alınamadı");
+    return data;
+  }, []);
 
-    try {
+  const kickQueue = useCallback(async (projectId: string) => {
+    await fetch("/api/generation/process-queue", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectId }),
+    }).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+
+    async function start() {
       const draft = loadOnboardingDraft();
       if (!draft) {
-        throw new Error("Marka bilgileri bulunamadı. Onboarding adımını tekrar tamamlayın.");
+        setPhase("running");
+        return;
       }
-
-      const draftWithOrder = { ...draft, orderId };
 
       const startResponse = await fetch("/api/generation/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ draft: { ...draftWithOrder, orderId }, orderId }),
+        body: JSON.stringify({ draft: { ...draft, orderId }, orderId }),
       });
 
       const startData = (await startResponse.json()) as GenerationStatus & {
@@ -67,54 +97,47 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
       };
 
       if (!startResponse.ok || !startData.projectId) {
-        throw new Error(startData.error ?? "Üretim başlatılamadı");
+        setPhase("running");
+        return;
       }
 
-      let currentStatus = startData;
-      setStatus(currentStatus);
+      saveActiveProjectId(startData.projectId);
+      setStatus(startData);
+      setPhase(startData.done ? "done" : "running");
 
-      while (!currentStatus.done) {
-        const nextResponse = await fetch("/api/generation/process-next", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ projectId: currentStatus.projectId }),
-        });
-
-        const nextData = (await nextResponse.json()) as {
-          status?: GenerationStatus;
-          error?: string;
-        };
-
-        if (!nextResponse.ok || !nextData.status) {
-          throw new Error(nextData.error ?? "Görsel üretimi durdu");
-        }
-
-        currentStatus = nextData.status;
-        setStatus(currentStatus);
-
-        if (!nextData.status.done && nextData.status.queued === 0 && nextData.status.inProgress === 0) {
-          break;
-        }
+      if (!startData.done) {
+        await kickQueue(startData.projectId);
       }
-
-      setPhase("done");
-      setTimeout(() => {
-        router.push(`/projects/${currentStatus.projectId}`);
-      }, 1500);
-    } catch (pipelineError) {
-      setPhase("error");
-      setError(
-        pipelineError instanceof Error
-          ? pipelineError.message
-          : "Üretim sırasında bir hata oluştu",
-      );
-      isRunningRef.current = false;
     }
-  }, [orderId, router]);
+
+    void start();
+  }, [orderId, kickQueue]);
 
   useEffect(() => {
-    runPipeline();
-  }, [runPipeline]);
+    if (!status?.projectId || status.done) return;
+
+    const projectId = status.projectId;
+    let active = true;
+
+    const timer = window.setInterval(async () => {
+      try {
+        const next = await pollStatus(projectId);
+        if (!active) return;
+        setStatus(next);
+        if (next.done) {
+          setPhase("done");
+          window.setTimeout(() => router.push(`/projects/${projectId}`), 2000);
+        }
+      } catch {
+        // Sessizce tekrar dene — sunucu kuyruğu arka planda çalışıyor
+      }
+    }, GENERATION_POLL_MS);
+
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [status?.projectId, status?.done, pollStatus, router]);
 
   useEffect(() => {
     const messageTimer = window.setInterval(() => {
@@ -128,13 +151,12 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-1/2 top-0 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-emerald-500/20 blur-[120px]" />
         <div className="absolute bottom-0 right-0 h-[360px] w-[360px] rounded-full bg-lime-400/10 blur-[100px]" />
-        <GridOverlay />
       </div>
 
       <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-4 py-10 sm:px-6">
         <div className="mb-8 text-center lg:text-left">
           <Badge className="border-emerald-400/30 bg-emerald-500/10 text-emerald-200">
-            {phase === "done" ? "Tamamlandı" : "Dijital atölye çalışıyor"}
+            {phase === "done" ? "Tamamlandı" : "Arka planda üretiliyor"}
           </Badge>
           <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl">
             {status?.brandName
@@ -143,12 +165,12 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-emerald-100/80 sm:text-base">
             {phase === "done"
-              ? "Görseller hazır! Panele yönlendiriliyorsunuz..."
-              : "Gemini AI görsellerinizi oluşturuyor. Bu işlem birkaç dakika sürebilir."}
+              ? "Tüm görseller hazır! Panele yönlendiriliyorsunuz..."
+              : "Görseller sırayla üretiliyor. Bu sayfayı kapatabilirsiniz — hazır olanlar profilinizde görünür."}
           </p>
         </div>
 
-        <div className="grid items-center gap-8 lg:grid-cols-[0.95fr_1.05fr]">
+        <div className="grid items-start gap-8 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="space-y-5">
             <div className="rounded-[28px] border border-white/10 bg-white/5 p-5 backdrop-blur">
               <div className="mb-3 flex items-center justify-between text-sm">
@@ -165,37 +187,17 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
               {status ? (
                 <p className="mt-3 text-xs text-emerald-200/80">
                   {status.ready} / {status.total} görsel hazır
-                  {status.failed > 0 ? ` • ${status.failed} hata` : ""}
+                  {status.inProgress > 0 ? " • 1 görsel üretiliyor" : ""}
+                  {status.queued > 0 ? ` • ${status.queued} sırada` : ""}
                 </p>
               ) : null}
             </div>
 
-            {phase === "error" ? (
-              <div className="rounded-[28px] border border-red-400/30 bg-red-500/10 p-5">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-300" />
-                  <div>
-                    <p className="font-semibold text-red-100">Üretim durdu</p>
-                    <p className="mt-2 text-sm leading-6 text-red-100/80">{error}</p>
-                    <Button
-                      variant="secondary"
-                      className="mt-4"
-                      onClick={() => {
-                        isRunningRef.current = false;
-                        setPhase("starting");
-                        runPipeline();
-                      }}
-                    >
-                      Tekrar dene
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ) : phase === "done" ? (
+            {phase === "done" ? (
               <div className="rounded-[28px] border border-emerald-400/30 bg-emerald-500/10 p-5">
                 <div className="flex items-center gap-3">
                   <CheckCircle2 className="h-5 w-5 text-emerald-300" />
-                  <p className="font-semibold">Tüm görseller üretildi!</p>
+                  <p className="font-semibold">Üretim tamamlandı!</p>
                 </div>
               </div>
             ) : (
@@ -207,9 +209,7 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
                   exit={{ opacity: 0, y: -12 }}
                   className="rounded-[28px] border border-emerald-400/30 bg-emerald-500/10 p-5"
                 >
-                  <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">
-                    Şu an
-                  </p>
+                  <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">Şu an</p>
                   <p className="mt-2 flex items-center gap-2 text-xl font-semibold text-white">
                     <Loader2 className="h-5 w-5 animate-spin text-emerald-300" />
                     {GENERATING_MESSAGES[messageIndex]}
@@ -218,17 +218,41 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
               </AnimatePresence>
             )}
 
+            {readyJobs.length > 0 ? (
+              <div className="rounded-[28px] border border-white/10 bg-white/5 p-4">
+                <p className="mb-3 text-sm font-medium text-emerald-100">Hazır görseller</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {readyJobs.slice(0, 6).map((job) => (
+                    <div
+                      key={job.id}
+                      className="aspect-square overflow-hidden rounded-xl border border-emerald-400/20"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={job.image_url!}
+                        alt="Hazır post"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
             {status?.projectId ? (
-              <Link href={`/projects/${status.projectId}`}>
-                <Button variant="secondary" className="w-full sm:w-auto">
-                  Panele git
-                </Button>
-              </Link>
+              <Button
+                variant="secondary"
+                className="w-full sm:w-auto"
+                onClick={() => router.push(`/projects/${status.projectId}`)}
+              >
+                Profilde gör
+              </Button>
             ) : (
-              <Link href="/dashboard">
-                <Button variant="secondary" className="w-full sm:w-auto">
-                  Panele git
-                </Button>
+              <Link
+                href="/dashboard"
+                className="inline-flex h-11 items-center justify-center rounded-full bg-emerald-50 px-5 text-sm font-semibold text-emerald-700"
+              >
+                Panele git
               </Link>
             )}
           </div>
@@ -254,12 +278,6 @@ function WorkshopStage({
         animate={{ rotate: [0, 1.5, 0, -1.5, 0] }}
         transition={{ duration: 10, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
       />
-
-      <motion.div
-        className="absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-300/30"
-        animate={{ scale: [1, 1.08, 1], opacity: [0.35, 0.7, 0.35] }}
-        transition={{ duration: 2.4, repeat: Number.POSITIVE_INFINITY }}
-      />
       <motion.div
         className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-emerald-400 to-lime-300 shadow-[0_0_60px_rgba(52,211,153,0.45)]"
         animate={{ scale: activeIndex === 3 ? [1, 1.12, 1] : [1, 1.04, 1] }}
@@ -272,11 +290,9 @@ function WorkshopStage({
           ) : null}
         </div>
       </motion.div>
-
       {floatingPosts.map((label, postIndex) => {
         const angle = (postIndex / floatingPosts.length) * Math.PI * 2;
         const radius = 150;
-
         return (
           <motion.div
             key={label}
@@ -284,7 +300,6 @@ function WorkshopStage({
             animate={{
               x: Math.cos(angle + activeIndex * 0.4) * radius,
               y: Math.sin(angle + activeIndex * 0.4) * radius,
-              rotate: [0, 6, 0],
             }}
             transition={{
               duration: 3 + postIndex * 0.2,
@@ -299,18 +314,5 @@ function WorkshopStage({
         );
       })}
     </div>
-  );
-}
-
-function GridOverlay() {
-  return (
-    <div
-      className="absolute inset-0 opacity-[0.08]"
-      style={{
-        backgroundImage:
-          "linear-gradient(rgba(255,255,255,0.35) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.35) 1px, transparent 1px)",
-        backgroundSize: "40px 40px",
-      }}
-    />
   );
 }
