@@ -771,11 +771,6 @@ export function buildAutoSelectedDays(sector?: SectorKey, max = MAX_SELECTED_DAY
     }
   }
 
-  for (const category of FILL_PRIORITY) {
-    for (const day of specialDaysCatalog.filter((item) => item.category === category)) {
-      addEntryIfFits(result, day.id, 1, max);
-    }
-  }
-
+  // 30 güne otomatik doldurma kaldırıldı — sadece önerilen + sektörel günler.
   return result;
 }

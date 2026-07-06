@@ -144,10 +144,14 @@ export async function analyzeImageWithGemini(prompt: string, imageUrl: string) {
     throw new Error("GEMINI_API_KEY tanımlı değil");
   }
 
-  const imagePart = await imageUrlToPart(imageUrl);
-  if (!imagePart) {
+  const rawPart = await imageUrlToPart(imageUrl);
+  if (!rawPart?.inlineData) {
     throw new Error("Görsel analiz için yüklenemedi");
   }
+
+  const imagePart = {
+    inlineData: rawPart.inlineData,
+  } as import("@google/generative-ai").Part;
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const modelName = getGeminiTextModel();

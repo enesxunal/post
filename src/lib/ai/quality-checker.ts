@@ -2,6 +2,7 @@ import { analyzeImageWithGemini } from "@/lib/ai/providers/gemini";
 import { isPlaceholderImageUrl } from "@/lib/ai/image-provider";
 import { isGeminiConfigured } from "@/lib/ai/gemini-config";
 import { buildOccasionCreativeGuide } from "@/lib/ai/occasion-creative-guide";
+import { isLeanGenerationMode } from "@/lib/generation/generation-mode";
 import type { BrandCreativeBrief } from "@/lib/ai/brand-creative-director";
 import type { SpecialDayCategory } from "@/types/domain";
 
@@ -32,6 +33,10 @@ export async function checkGeneratedImageQuality(
       issues: ["Placeholder görsel — gerçek AI görseli üretilmemiş"],
       severity: "high",
     };
+  }
+
+  if (isLeanGenerationMode()) {
+    return fallbackPass;
   }
 
   if (!isGeminiConfigured()) {

@@ -215,8 +215,13 @@ function buildFallbackBrief(context: BrandContext, day?: SpecialDayContext): Bra
 export async function buildBrandCreativeBrief(
   context: BrandContext,
   day?: SpecialDayContext,
+  options?: { useGemini?: boolean },
 ): Promise<BrandCreativeBrief> {
   const fallback = buildFallbackBrief(context, day);
+
+  if (options?.useGemini === false) {
+    return fallback;
+  }
   const sectorMod = getSectorModifier(context.sector);
   const sectorLabel =
     sectors.find((item) => item.key === context.sector)?.label ?? context.customSector ?? "";

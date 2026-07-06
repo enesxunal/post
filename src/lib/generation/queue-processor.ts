@@ -1,4 +1,5 @@
 import { composeImagePrompt } from "@/lib/ai/prompt-composer";
+import { isLeanGenerationMode } from "@/lib/generation/generation-mode";
 import { getPromptLibraryEntry } from "@/lib/ai/prompt-library";
 import { generateCaption } from "@/lib/ai/caption-provider";
 import { generateImage, isPlaceholderImageUrl } from "@/lib/ai/image-provider";
@@ -233,7 +234,7 @@ export async function processOneQueuedJob(projectId: string) {
 
     const image = await generateImage(
       preview.prompt,
-      context.logoUrl ? [context.logoUrl] : [],
+      isLeanGenerationMode() || !context.logoUrl ? [] : [context.logoUrl],
       { aspectRatio: resolveAspectRatio(context.postFormat ?? "square") },
     );
 
