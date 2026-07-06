@@ -8,6 +8,7 @@ import {
   shouldRetryQualityCheck,
 } from "@/lib/ai/quality-checker";
 import { MAX_JOB_RETRIES } from "@/lib/config";
+import { consumeRevisionCredit } from "@/lib/jobs";
 import { projectToBrandContext } from "@/lib/generation/project-service";
 import { resolveAspectRatio } from "@/lib/image-formats";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -171,6 +172,100 @@ export async function getProjectStatusAdmin(projectId: string) {
     progress: total > 0 ? Math.round((ready / total) * 100) : 0,
     jobs: list,
   };
+}
+
+export async function regenerateGenerationJob(jobId: string, userId: string) {
+  const supabase = adminClient();
+
+  const { data: job } = await supabase
+    .from("generation_jobs")
+    .select("id, project_id, user_id, status, image_url")
+    .eq("id", jobId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!job) {
+    throw new Error("Görsel bulunamadı");
+  }
+
+  const isUnproduced = job.status === "failed" || !job.image_url;
+  const isRevision = job.status === "ready" && Boolean(job.image_url);
+
+  if (!isUnproduced && !isRevision) {
+    throw new Error("Bu görsel şu an yeniden üretilemez");
+  }
+
+  const { data: project } = await supabase
+    .from("projects")
+    .select("id, remaining_credits, bonus_credits_granted")
+    .eq("id", job.project_id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!project) {
+    throw new Error("Proje bulunamadı");
+  }
+
+  if (isRevision) {
+    const hasCredits =
+      project.remaining_credits > 0 || !project.bonus_credits_granted;
+    if (!hasCredits) {
+      throw new Error("Revizyon hakkınız kalmadı");
+    }
+
+    const credit = consumeRevisionCredit(
+      project.remaining_credits,
+      project.bonus_credits_granted,
+    );
+
+    await supabase
+      .from("projects")
+      .update({
+        remaining_credits: credit.remainingCredits,
+        bonus_credits_granted: credit.bonusCreditsGranted,
+        updated_at: nowIso(),
+      })
+      .eq("id", project.id);
+  }
+
+  const queueTime = new Date(0).toISOString();
+
+  await supabase
+    .from("projects")
+    .update({
+      generation_stopped_at: null,
+      status: "generating",
+      updated_at: nowIso(),
+    })
+    .eq("id", job.project_id);
+
+  await supabase
+    .from("generation_jobs")
+    .update({
+      status: "queued",
+      retry_count: 0,
+      image_url: null,
+      thumbnail_url: null,
+      caption_text: null,
+      hashtags: [],
+      error_message: null,
+      approved_at: null,
+      story_image_url: null,
+      story_status: null,
+      created_at: queueTime,
+      updated_at: nowIso(),
+    })
+    .eq("id", jobId);
+
+  await syncProjectStatus(job.project_id);
+  scheduleQueueProcessing(job.project_id);
+
+  const status = await getProjectStatusAdmin(job.project_id);
+  if (!status) {
+    throw new Error("Durum alınamadı");
+  }
+
+  return { ...status, focusJobId: jobId };
 }
 
 export async function stopProjectGeneration(projectId: string, userId: string) {

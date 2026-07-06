@@ -163,6 +163,36 @@ export function UserDashboard({
     }
   }
 
+  const canRetryGeneration = Boolean(
+    project &&
+      selectedJob &&
+      (selectedJob.status === "failed" || !selectedJob.imageUrl),
+  );
+
+  async function regeneratePost() {
+    if (!project || !selectedJob || !canRetryGeneration) return;
+
+    setActionLoading("regenerate");
+    try {
+      const response = await fetch("/api/generation/regenerate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: selectedJob.id }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(data.error ?? "Yeniden üretilemedi");
+
+      const dayName = encodeURIComponent(selectedJob.dayName);
+      router.push(
+        `/projects/${project.id}/generating?jobId=${selectedJob.id}&dayName=${dayName}`,
+      );
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Yeniden üretim hatası");
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,_#f8fffa_0%,_#f1f5f9_100%)]">
       <header className="border-b border-emerald-100 bg-white/90 backdrop-blur">
@@ -372,6 +402,11 @@ export function UserDashboard({
                         </h2>
                         <p className="text-sm text-slate-500">{selectedJob.dateLabel}</p>
                       </div>
+                      {selectedJob.status === "failed" && selectedJob.errorMessage ? (
+                        <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
+                          {selectedJob.errorMessage}
+                        </div>
+                      ) : null}
                       {selectedJob.caption ? (
                         <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
                           <div className="flex items-center justify-between gap-2">
@@ -452,10 +487,22 @@ export function UserDashboard({
                           <Download className="mr-2 h-4 w-4" />
                           İndir
                         </Button>
-                        <Button variant="outline" className="w-full">
-                          <RefreshCcw className="mr-2 h-4 w-4" />
-                          Yeniden üret
-                        </Button>
+                        {canRetryGeneration ? (
+                          <Button
+                            variant="outline"
+                            className="w-full"
+                            onClick={regeneratePost}
+                            disabled={actionLoading === "regenerate"}
+                          >
+                            <RefreshCcw
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                actionLoading === "regenerate" && "animate-spin",
+                              )}
+                            />
+                            Yeniden üret
+                          </Button>
+                        ) : null}
                       </div>
                       <Button variant="secondary" className="w-full">
                         <CalendarPlus2 className="mr-2 h-4 w-4" />

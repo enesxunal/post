@@ -1,8 +1,22 @@
 import { NextResponse } from "next/server";
 
-import { consumeRevisionCredit } from "@/lib/jobs";
+import { regenerateGenerationJob } from "@/lib/generation/queue-processor";
+import { requireSessionUser } from "@/lib/supabase/auth";
 
-export async function POST() {
-  const result = consumeRevisionCredit(0, false);
-  return NextResponse.json(result);
+export async function POST(request: Request) {
+  const user = await requireSessionUser("/login");
+
+  const body = (await request.json().catch(() => ({}))) as { jobId?: string };
+
+  if (!body.jobId) {
+    return NextResponse.json({ error: "jobId gerekli" }, { status: 400 });
+  }
+
+  try {
+    const status = await regenerateGenerationJob(body.jobId, user.id);
+    return NextResponse.json(status);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Yeniden üretilemedi";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
 }

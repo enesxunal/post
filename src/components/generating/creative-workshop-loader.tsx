@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -10,10 +10,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { GENERATING_MESSAGES, GENERATION_POLL_MS } from "@/lib/config";
 import { loadOnboardingDraft } from "@/lib/onboarding/draft";
+import { getSpecialDayById } from "@/lib/special-days-data";
+import { cn } from "@/lib/utils";
 
 const floatingPosts = ["29 Ekim", "Kandil", "Cuma", "Bayram", "Anneler Günü"];
 
-type GenerationPhase = "starting" | "running" | "done" | "stopped";
+const REGENERATE_MESSAGES = [
+  "Görsel brief'i hazırlanıyor...",
+  "Markanıza özel tasarım oluşturuluyor...",
+  "AI atölyesi çalışıyor...",
+  "Son dokunuşlar yapılıyor...",
+  "Görseliniz neredeyse hazır...",
+];
+
+type GenerationPhase = "starting" | "running" | "done" | "stopped" | "failed";
 
 type JobPreview = {
   id: string;
@@ -37,7 +47,11 @@ type GenerationStatus = {
 };
 
 type CreativeWorkshopLoaderProps = {
-  orderId: string;
+  orderId?: string;
+  mode?: "order" | "regenerate";
+  projectId?: string;
+  focusJobId?: string;
+  focusDayName?: string;
 };
 
 function saveActiveProjectId(projectId: string) {
@@ -48,15 +62,51 @@ function saveActiveProjectId(projectId: string) {
   }
 }
 
-export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps) {
+function getFocusJobProgress(job: JobPreview | undefined) {
+  if (!job) return 12;
+  if (job.status === "ready" && job.image_url) return 100;
+  if (job.status === "failed") return 8;
+  if (job.status === "queued") return 28;
+  if (["composing_prompt", "generating_image", "generating_caption"].includes(job.status)) {
+    return 72;
+  }
+  return 45;
+}
+
+export function CreativeWorkshopLoader({
+  orderId,
+  mode = "order",
+  projectId: initialProjectId,
+  focusJobId,
+  focusDayName,
+}: CreativeWorkshopLoaderProps) {
   const router = useRouter();
+  const isRegenerateMode = mode === "regenerate" && Boolean(initialProjectId);
   const [phase, setPhase] = useState<GenerationPhase>("starting");
   const [messageIndex, setMessageIndex] = useState(0);
   const [status, setStatus] = useState<GenerationStatus | null>(null);
   const [stopping, setStopping] = useState(false);
   const startedRef = useRef(false);
 
-  const progress = status?.progress ?? (phase === "starting" ? 5 : 0);
+  const focusJob = useMemo(
+    () => status?.jobs?.find((job) => job.id === focusJobId),
+    [status?.jobs, focusJobId],
+  );
+
+  const resolvedDayName = useMemo(() => {
+    if (focusDayName) return focusDayName;
+    if (focusJob?.type) {
+      return getSpecialDayById(focusJob.type)?.name ?? "Özel gün postu";
+    }
+    return "Özel gün postu";
+  }, [focusDayName, focusJob?.type]);
+
+  const messages = isRegenerateMode ? REGENERATE_MESSAGES : GENERATING_MESSAGES;
+
+  const progress = isRegenerateMode
+    ? getFocusJobProgress(focusJob)
+    : (status?.progress ?? (phase === "starting" ? 5 : 0));
+
   const readyJobs = status?.jobs?.filter((job) => job.status === "ready" && job.image_url) ?? [];
 
   const pollStatus = useCallback(async (projectId: string) => {
@@ -76,6 +126,41 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
     }).catch(() => undefined);
   }, []);
 
+  const applyStatus = useCallback(
+    (next: GenerationStatus) => {
+      setStatus(next);
+
+      if (isRegenerateMode && focusJobId) {
+        const target = next.jobs?.find((job) => job.id === focusJobId);
+        if (target?.status === "ready" && target.image_url) {
+          setPhase("done");
+          return;
+        }
+        if (target?.status === "failed" && next.inProgress === 0 && next.queued === 0) {
+          setPhase("failed");
+          return;
+        }
+        if (next.stopped) {
+          setPhase("stopped");
+          return;
+        }
+        setPhase("running");
+        return;
+      }
+
+      if (next.stopped) {
+        setPhase("stopped");
+        return;
+      }
+      if (next.done) {
+        setPhase("done");
+        return;
+      }
+      setPhase("running");
+    },
+    [focusJobId, isRegenerateMode],
+  );
+
   const stopGeneration = useCallback(async () => {
     if (!status?.projectId || stopping) return;
 
@@ -93,20 +178,38 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
       });
       const data = (await response.json()) as GenerationStatus & { error?: string };
       if (!response.ok) throw new Error(data.error ?? "Durdurulamadı");
-      setStatus(data);
-      setPhase("stopped");
+      applyStatus(data);
     } catch (error) {
       window.alert(error instanceof Error ? error.message : "Durdurulamadı");
     } finally {
       setStopping(false);
     }
-  }, [status?.projectId, stopping]);
+  }, [applyStatus, status?.projectId, stopping]);
 
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
 
     async function start() {
+      if (isRegenerateMode && initialProjectId) {
+        saveActiveProjectId(initialProjectId);
+        try {
+          const data = await pollStatus(initialProjectId);
+          applyStatus(data);
+          if (!data.done && !data.stopped) {
+            await kickQueue(initialProjectId);
+          }
+        } catch {
+          setPhase("running");
+        }
+        return;
+      }
+
+      if (!orderId) {
+        setPhase("running");
+        return;
+      }
+
       const draft = loadOnboardingDraft();
       if (!draft) {
         setPhase("running");
@@ -130,19 +233,20 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
       }
 
       saveActiveProjectId(startData.projectId);
-      setStatus(startData);
-      setPhase(startData.stopped ? "stopped" : startData.done ? "done" : "running");
+      applyStatus(startData);
 
-    if (!startData.done && !startData.stopped) {
+      if (!startData.done && !startData.stopped) {
         await kickQueue(startData.projectId);
       }
     }
 
     void start();
-  }, [orderId, kickQueue]);
+  }, [applyStatus, initialProjectId, isRegenerateMode, kickQueue, orderId, pollStatus]);
 
   useEffect(() => {
-    if (!status?.projectId || status.done || status.stopped) return;
+    if (!status?.projectId || phase === "done" || phase === "stopped" || phase === "failed") {
+      return;
+    }
 
     const projectId = status.projectId;
     let active = true;
@@ -151,13 +255,17 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
       try {
         const next = await pollStatus(projectId);
         if (!active) return;
-        setStatus(next);
-        if (next.stopped) {
-          setPhase("stopped");
+        applyStatus(next);
+
+        if (isRegenerateMode && focusJobId) {
+          const target = next.jobs?.find((job) => job.id === focusJobId);
+          if (target?.status === "ready" && target.image_url) {
+            window.setTimeout(() => router.push(`/projects/${projectId}`), 2200);
+          }
           return;
         }
+
         if (next.done) {
-          setPhase("done");
           window.setTimeout(() => router.push(`/projects/${projectId}`), 2000);
         }
       } catch {
@@ -169,14 +277,52 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
       active = false;
       window.clearInterval(timer);
     };
-  }, [status?.projectId, status?.done, status?.stopped, pollStatus, router]);
+  }, [
+    applyStatus,
+    focusJobId,
+    isRegenerateMode,
+    phase,
+    pollStatus,
+    router,
+    status?.projectId,
+  ]);
 
   useEffect(() => {
     const messageTimer = window.setInterval(() => {
-      setMessageIndex((current) => (current + 1) % GENERATING_MESSAGES.length);
+      setMessageIndex((current) => (current + 1) % messages.length);
     }, 2200);
     return () => window.clearInterval(messageTimer);
-  }, []);
+  }, [messages.length]);
+
+  const headline = isRegenerateMode
+    ? `${resolvedDayName} görseli yeniden üretiliyor`
+    : status?.brandName
+      ? `${status.brandName} için postlar üretiliyor`
+      : "Markanız için postlar üretiliyor";
+
+  const subtitle =
+    phase === "done"
+      ? isRegenerateMode
+        ? "Görsel hazır! Panele yönlendiriliyorsunuz..."
+        : "Tüm görseller hazır! Panele yönlendiriliyorsunuz..."
+      : phase === "failed"
+        ? "Görsel üretilemedi. Profilinizden tekrar deneyebilirsiniz."
+        : phase === "stopped"
+          ? "Üretim durduruldu. Hazır olan görseller profilinizde — kalanlar üretilmedi."
+          : isRegenerateMode
+            ? `${resolvedDayName} için özel tasarım hazırlanıyor. Bu sayfayı kapatabilirsiniz — hazır olunca profilinizde görünür.`
+            : "Görseller sırayla üretiliyor. Bu sayfayı kapatabilirsiniz — hazır olanlar profilinizde görünür.";
+
+  const badgeLabel =
+    phase === "done"
+      ? "Tamamlandı"
+      : phase === "failed"
+        ? "Üretilemedi"
+        : phase === "stopped"
+          ? "Durduruldu"
+          : isRegenerateMode
+            ? "Yeniden üretiliyor"
+            : "Arka planda üretiliyor";
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#04150d] text-white">
@@ -188,23 +334,11 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
       <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-4 py-10 sm:px-6">
         <div className="mb-8 text-center lg:text-left">
           <Badge className="border-emerald-400/30 bg-emerald-500/10 text-emerald-200">
-            {phase === "done"
-              ? "Tamamlandı"
-              : phase === "stopped"
-                ? "Durduruldu"
-                : "Arka planda üretiliyor"}
+            {badgeLabel}
           </Badge>
-          <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl">
-            {status?.brandName
-              ? `${status.brandName} için postlar üretiliyor`
-              : "Markanız için postlar üretiliyor"}
-          </h1>
+          <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl">{headline}</h1>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-emerald-100/80 sm:text-base">
-            {phase === "done"
-              ? "Tüm görseller hazır! Panele yönlendiriliyorsunuz..."
-              : phase === "stopped"
-                ? "Üretim durduruldu. Hazır olan görseller profilinizde — kalanlar üretilmedi."
-                : "Görseller sırayla üretiliyor. Bu sayfayı kapatabilirsiniz — hazır olanlar profilinizde görünür."}
+            {subtitle}
           </p>
         </div>
 
@@ -212,7 +346,9 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
           <div className="space-y-5">
             <div className="rounded-[28px] border border-white/10 bg-white/5 p-5 backdrop-blur">
               <div className="mb-3 flex items-center justify-between text-sm">
-                <span className="text-emerald-200">İlerleme</span>
+                <span className="text-emerald-200">
+                  {isRegenerateMode ? `${resolvedDayName} ilerlemesi` : "İlerleme"}
+                </span>
                 <span className="font-semibold">{progress}%</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-white/10">
@@ -224,9 +360,24 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
               </div>
               {status ? (
                 <p className="mt-3 text-xs text-emerald-200/80">
-                  {status.ready} / {status.total} görsel hazır
-                  {status.inProgress > 0 ? " • 1 görsel üretiliyor" : ""}
-                  {status.queued > 0 ? ` • ${status.queued} sırada` : ""}
+                  {isRegenerateMode ? (
+                    <>
+                      {focusJob?.status === "ready" && focusJob.image_url
+                        ? "Görsel hazır"
+                        : focusJob?.status === "failed"
+                          ? "Üretim başarısız"
+                          : focusJob?.status === "queued"
+                            ? "Sırada bekliyor"
+                            : "Şu an üretiliyor"}
+                      {status.brandName ? ` • ${status.brandName}` : ""}
+                    </>
+                  ) : (
+                    <>
+                      {status.ready} / {status.total} görsel hazır
+                      {status.inProgress > 0 ? " • 1 görsel üretiliyor" : ""}
+                      {status.queued > 0 ? ` • ${status.queued} sırada` : ""}
+                    </>
+                  )}
                 </p>
               ) : null}
             </div>
@@ -235,8 +386,29 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
               <div className="rounded-[28px] border border-emerald-400/30 bg-emerald-500/10 p-5">
                 <div className="flex items-center gap-3">
                   <CheckCircle2 className="h-5 w-5 text-emerald-300" />
-                  <p className="font-semibold">Üretim tamamlandı!</p>
+                  <p className="font-semibold">
+                    {isRegenerateMode
+                      ? `${resolvedDayName} görseli hazır!`
+                      : "Üretim tamamlandı!"}
+                  </p>
                 </div>
+                {isRegenerateMode && focusJob?.image_url ? (
+                  <div className="mt-4 overflow-hidden rounded-2xl border border-emerald-400/30">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={focusJob.image_url}
+                      alt={resolvedDayName}
+                      className="aspect-square w-full object-cover"
+                    />
+                  </div>
+                ) : null}
+              </div>
+            ) : phase === "failed" ? (
+              <div className="rounded-[28px] border border-red-400/30 bg-red-500/10 p-5">
+                <p className="font-semibold text-red-100">Görsel üretilemedi</p>
+                <p className="mt-2 text-sm text-red-100/80">
+                  Tekrar denemek için profile dönüp &quot;Yeniden üret&quot; butonunu kullanın.
+                </p>
               </div>
             ) : phase === "stopped" ? (
               <div className="rounded-[28px] border border-amber-400/30 bg-amber-500/10 p-5">
@@ -260,13 +432,13 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
                   <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">Şu an</p>
                   <p className="mt-2 flex items-center gap-2 text-xl font-semibold text-white">
                     <Loader2 className="h-5 w-5 animate-spin text-emerald-300" />
-                    {GENERATING_MESSAGES[messageIndex]}
+                    {messages[messageIndex]}
                   </p>
                 </motion.div>
               </AnimatePresence>
             )}
 
-            {readyJobs.length > 0 ? (
+            {!isRegenerateMode && readyJobs.length > 0 ? (
               <div className="rounded-[28px] border border-white/10 bg-white/5 p-4">
                 <p className="mb-3 text-sm font-medium text-emerald-100">Hazır görseller</p>
                 <div className="grid grid-cols-3 gap-2">
@@ -288,7 +460,7 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
             ) : null}
 
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-              {status?.projectId && phase !== "done" && phase !== "stopped" ? (
+              {status?.projectId && phase !== "done" && phase !== "stopped" && phase !== "failed" ? (
                 <Button
                   variant="outline"
                   className="w-full border-red-400/40 bg-red-500/10 text-red-100 hover:bg-red-500/20 sm:w-auto"
@@ -323,7 +495,12 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
             </div>
           </div>
 
-          <WorkshopStage activeIndex={messageIndex} readyCount={status?.ready ?? 0} />
+          <WorkshopStage
+            activeIndex={messageIndex}
+            readyCount={isRegenerateMode ? (focusJob?.image_url ? 1 : 0) : (status?.ready ?? 0)}
+            focusDayName={isRegenerateMode ? resolvedDayName : undefined}
+            focusImageUrl={isRegenerateMode ? focusJob?.image_url : undefined}
+          />
         </div>
       </div>
     </div>
@@ -333,10 +510,16 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
 function WorkshopStage({
   activeIndex,
   readyCount,
+  focusDayName,
+  focusImageUrl,
 }: {
   activeIndex: number;
   readyCount: number;
+  focusDayName?: string;
+  focusImageUrl?: string | null;
 }) {
+  const isFocused = Boolean(focusDayName);
+
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[520px]">
       <motion.div
@@ -345,35 +528,54 @@ function WorkshopStage({
         transition={{ duration: 10, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
       />
       <motion.div
-        className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-emerald-400 to-lime-300 shadow-[0_0_60px_rgba(52,211,153,0.45)]"
-        animate={{ scale: activeIndex === 3 ? [1, 1.12, 1] : [1, 1.04, 1] }}
+        className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full bg-gradient-to-br from-emerald-400 to-lime-300 shadow-[0_0_60px_rgba(52,211,153,0.45)]"
+        animate={{ scale: isFocused || activeIndex === 3 ? [1, 1.12, 1] : [1, 1.04, 1] }}
         transition={{ duration: 1.4, repeat: Number.POSITIVE_INFINITY }}
       >
-        <div className="flex h-full flex-col items-center justify-center text-sm font-bold text-emerald-950">
-          <span>AI</span>
-          {readyCount > 0 ? (
-            <span className="mt-1 text-[10px] font-semibold">{readyCount} hazır</span>
-          ) : null}
-        </div>
+        {focusImageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={focusImageUrl} alt={focusDayName} className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full flex-col items-center justify-center text-sm font-bold text-emerald-950">
+            <span>{isFocused ? "AI" : "AI"}</span>
+            {readyCount > 0 ? (
+              <span className="mt-1 text-[10px] font-semibold">{readyCount} hazır</span>
+            ) : isFocused ? (
+              <span className="mt-1 max-w-[72px] text-center text-[9px] font-semibold leading-tight">
+                {focusDayName}
+              </span>
+            ) : null}
+          </div>
+        )}
       </motion.div>
-      {floatingPosts.map((label, postIndex) => {
-        const angle = (postIndex / floatingPosts.length) * Math.PI * 2;
-        const radius = 150;
+      {(isFocused ? [focusDayName!] : floatingPosts).map((label, postIndex) => {
+        const angle = isFocused
+          ? -Math.PI / 2
+          : (postIndex / floatingPosts.length) * Math.PI * 2;
+        const radius = isFocused ? 0 : 150;
         return (
           <motion.div
             key={label}
             className="absolute left-1/2 top-1/2 w-28 -translate-x-1/2 -translate-y-1/2"
             animate={{
-              x: Math.cos(angle + activeIndex * 0.4) * radius,
-              y: Math.sin(angle + activeIndex * 0.4) * radius,
+              x: Math.cos(angle + (isFocused ? 0 : activeIndex * 0.4)) * radius,
+              y: Math.sin(angle + (isFocused ? 0 : activeIndex * 0.4)) * radius,
+              scale: isFocused ? [1, 1.05, 1] : 1,
             }}
             transition={{
-              duration: 3 + postIndex * 0.2,
+              duration: isFocused ? 1.6 : 3 + postIndex * 0.2,
               repeat: Number.POSITIVE_INFINITY,
               ease: "easeInOut",
             }}
           >
-            <div className="rounded-2xl border border-emerald-300/30 bg-[#0f2f22]/90 p-3 text-center text-xs font-medium shadow-lg backdrop-blur">
+            <div
+              className={cn(
+                "rounded-2xl border p-3 text-center text-xs font-medium shadow-lg backdrop-blur",
+                isFocused
+                  ? "border-emerald-300/50 bg-emerald-400/20 text-emerald-50"
+                  : "border-emerald-300/30 bg-[#0f2f22]/90",
+              )}
+            >
               {label}
             </div>
           </motion.div>
