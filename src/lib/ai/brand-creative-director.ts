@@ -1,5 +1,6 @@
 import { generateTextWithGemini } from "@/lib/ai/providers/gemini";
 import { isGeminiConfigured } from "@/lib/ai/gemini-config";
+import { buildOccasionCreativeGuide } from "@/lib/ai/occasion-creative-guide";
 import { sectorModifiers, sectors, styles } from "@/lib/mock-data";
 import type { BrandContext, SectorKey, SpecialDay } from "@/types/domain";
 
@@ -136,21 +137,44 @@ function buildFallbackHarmony(
   context: BrandContext,
   day?: SpecialDayContext,
   sectorMod?: ReturnType<typeof getSectorModifier>,
+  selectedHeadline?: string,
 ): Pick<BrandCreativeBrief, "dayHarmony" | "sceneComposition" | "sectorBlend"> {
   const dayName = day?.name ?? "özel gün";
   const sectorLabel =
     sectors.find((item) => item.key === context.sector)?.label ?? context.customSector ?? "KOBİ";
+  const occasionGuide = day
+    ? buildOccasionCreativeGuide({
+        id: day.name,
+        slug: day.name,
+        name: day.name,
+        category: day.category,
+        dateType: "fixed",
+        dateValue: "",
+        importance: "medium",
+        culturalContext: day.culturalContext,
+        popularUsages: [],
+        headlineAlternatives: day.headlineAlternatives,
+        captionIdeas: day.captionIdeas,
+        visualDirection: day.visualDirection,
+        avoidRules: day.avoidRules,
+        promptTemplate: "",
+        isDefaultSelected: false,
+      })
+    : null;
+  const headline = selectedHeadline ?? day?.headlineAlternatives[0] ?? dayName;
 
   return {
-    dayHarmony: `${context.brandName} (${sectorLabel}) için ${dayName} kutlaması: markanın ${sectorMod?.toneHints ?? "profesyonel"} tonu ile ${day?.culturalContext ?? "saygılı kutlama"} birleşmeli. Satış baskısı yok, güven ve samimiyet ön planda.`,
+    dayHarmony: `${context.brandName} (${sectorLabel}) için ${dayName}: ${occasionGuide?.soul ?? day?.culturalContext ?? "saygılı kutlama"}. Marka sektörü sadece ince aksan — özel günün ruhu öncelikli.`,
     sceneComposition: [
-      `Ön planda büyük Türkçe başlık: "${day?.headlineAlternatives[0] ?? dayName}".`,
-      `Arka plan ve dekor: ${day?.visualDirection ?? "modern kutlama"} + ${sectorMod?.visualCues ?? "sektöre uygun görsel ipuçları"}.`,
-      `Marka renkleri kompozisyonda doğal şekilde kullanılsın.`,
-      `${context.brandName} logosu köşede küçük ve net.`,
-      "Premium sosyal medya tasarımı, derinlik ve katman hissi.",
+      `Ana başlık (büyük, hatasız Türkçe): "${headline}".`,
+      `Sahne ruhu: ${occasionGuide?.visualMetaphors.slice(0, 2).join("; ") ?? day?.visualDirection ?? "kutlama"}.`,
+      `Kültürel öğeler: ${occasionGuide?.culturalElements.slice(0, 3).join(", ") ?? "konuya uygun dekor"}.`,
+      context.sector === "agency"
+        ? "Ajans markası: teknoloji gridi, chip veya hologram KULLANMA — özel gün atmosferi ana sahne."
+        : `Sektör ipucu (arka plan detayı): ${sectorMod?.visualCues ?? "profesyonel"}.`,
+      `${context.brandName} logosu köşede küçük. Sıcak, paylaşılabilir, kültürel olarak doğru kompozisyon.`,
     ].join(" "),
-    sectorBlend: `${sectorMod?.promptModifier ?? "professional local business"} estetiği, ${day?.category ?? "özel gün"} kategorisine uygun saygılı ton.`,
+    sectorBlend: `Özel gün kimliği önce (%65), marka aksanı sonra (%35). ${sectorMod?.promptModifier ?? "professional local business"} stili günün ruhuna uyumlanmalı.`,
   };
 }
 
@@ -233,12 +257,13 @@ export async function buildBrandCreativeBrief(
           : "Özel gün bilgisi yok",
         "",
         "=== KURALLAR ===",
-        "1) positioning: Müşterinin ne iş yaptığını yazım düzelterek 1-2 cümle profesyonel Türkçe.",
-        "2) dayHarmony: Bu markanın BU özel günle nasıl bir araya geleceğini 2 cümle anlat (marka + gün uyumu).",
-        "3) sceneComposition: Görsel AI için somut sahne tarifi — arka plan, dekor, ışık, kompozisyon, nerede başlık, nerede logo. Clip art yasak, premium tasarım.",
-        "4) sectorBlend: Sektör estetiği + özel gün ruhu nasıl birleşir.",
-        "5) subtextOnImage: Çoğu durumda null. Sadece çok kısa (max 4 kelime) ve yazımı garanti ise ver.",
-        "6) Müşterinin ham cümlesini görsele kopyalama — sadece brief'te kullan.",
+        "1) ÖNCELİK: Özel günün kültürel ruhu (%65). Marka sadece aksan (%35). Tech/ajans markalarında chip, grid, hologram YASAK.",
+        "2) positioning: Müşterinin ne iş yaptığını yazım düzelterek 1-2 cümle profesyonel Türkçe.",
+        "3) dayHarmony: Bu özel günün duygusal/kültürel anlamı + markanın nasıl bir araya geleceği. Ruhsuz şablon değil.",
+        "4) sceneComposition: Somut sahne — hangi dekor, hangi semboller, hangi atmosfer, nerede başlık/logo. Konu ilk bakışta anlaşılsın.",
+        "5) sectorBlend: Sektör estetiği günün ruhuna UYUMLANMALI; günün yerini almamalı.",
+        "6) subtextOnImage: Çoğu durumda null. İkincil cümle üretme — yazım hatası riski.",
+        "7) Müşterinin ham cümlesini görsele kopyalama.",
         "",
         "JSON dön:",
         JSON.stringify({

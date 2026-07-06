@@ -249,7 +249,9 @@ export async function processOneQueuedJob(projectId: string) {
       expectedHeadline: preview.headline,
       brandName: context.brandName,
       brandBrief: preview.brandBrief,
-      isNationalDay: day?.category === "national",
+      dayName: day?.name,
+      dayCategory: day?.category,
+      culturalContext: day?.culturalContext,
     });
 
     if (shouldRetryQualityCheck(quality)) {

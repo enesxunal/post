@@ -1,4 +1,8 @@
 import { sectorModifiers, sectors, styles } from "@/lib/mock-data";
+import {
+  appendOccasionGuideSections,
+  occasionAvoidList,
+} from "@/lib/ai/occasion-creative-guide";
 import { buildFormatPromptLine, buildSafeZonePrompt } from "@/lib/image-formats";
 import type { BrandContext, PostFormat, PromptBuildingBlocks, SpecialDay } from "@/types/domain";
 
@@ -53,19 +57,6 @@ function fillMasterTemplate(
     .replaceAll("{selected_headline}", headline);
 }
 
-function appendNationalDayRequirements(sections: string[], day: SpecialDay) {
-  if (day.category !== "national") return;
-
-  sections.push(
-    "",
-    "=== TURKISH NATIONAL DAY (MANDATORY) ===",
-    "- Include a tasteful, accurate Turkish flag motif (red field, white star and crescent) in the composition.",
-    "- Prominent red-white national palette; proud, respectful, celebratory — NOT sci-fi, NOT abstract tech blocks.",
-    "- Spell Turkish correctly: use \"Ağustos\" (with ğ), never \"Áğostus\", \"Agustos\" or ASCII approximations.",
-    "- The occasion must be instantly recognizable as a Turkish national holiday post.",
-  );
-}
-
 function appendBuildingBlocks(sections: string[], blocks?: PromptBuildingBlocks) {
   if (!blocks) return;
 
@@ -76,7 +67,8 @@ function appendBuildingBlocks(sections: string[], blocks?: PromptBuildingBlocks)
   if (blocks.brandPersonalizationRules.length) {
     sections.push(
       "",
-      "=== BRAND PERSONALIZATION (each brand must look unique) ===",
+      "=== BRAND PERSONALIZATION ===",
+      "Different brands must look unique — BUT the special day identity always leads the composition.",
       ...blocks.brandPersonalizationRules.map((rule) => `- ${rule}`),
     );
   }
@@ -88,7 +80,7 @@ function appendBuildingBlocks(sections: string[], blocks?: PromptBuildingBlocks)
 
 /**
  * Özel gün veri seti + marka bağlamını tek final görsel promptta birleştirir.
- * Aynı özel günü seçen farklı markalar farklı kompozisyon ve başlık alır.
+ * Önce konunun ruhu, sonra marka aksanı — jenerik tech şablon yasak.
  */
 export function composePrompt(
   day: SpecialDay,
@@ -100,31 +92,24 @@ export function composePrompt(
   const style = styles.find((item) => item.key === context.visualStyle);
   const blocks = day.promptBuildingBlocks;
   const colors = brandColors(context);
+  const isTechHeavySector = context.sector === "agency";
 
   const sections: string[] = [
-    "You are an award-winning Turkish social media art director. Create ONE premium branded post.",
+    "You are an award-winning Turkish social media art director who deeply understands Turkish culture and special days.",
+    "Create ONE emotionally resonant, occasion-authentic branded post — NOT a soulless corporate tech template.",
     buildFormatPromptLine(postFormat),
     buildSafeZonePrompt("post", postFormat),
   ];
 
+  appendOccasionGuideSections(sections, day, context);
+
   if (day.masterPromptTemplate?.trim()) {
     sections.push("", fillMasterTemplate(day.masterPromptTemplate, context, headline));
-  } else {
-    sections.push(
-      "",
-      `Create a custom Turkish social media post for: ${day.name}`,
-      `Brand: ${context.brandName}`,
-      `Sector: ${resolveSectorLabel(context)}`,
-      `Brand description: ${context.brandDescription ?? "yerel KOBİ işletmesi"}`,
-      `Primary brand color: ${colors}`,
-      `Visual style: ${resolveStyleLabel(context)}`,
-      `Logo: ${context.logoUrl ?? "müşteri logosu sağlanacak"}`,
-    );
   }
 
   sections.push(
     "",
-    "=== EVENT CULTURAL CONTEXT ===",
+    "=== EVENT CULTURAL CONTEXT (read and embody) ===",
     day.culturalContext,
     "",
     "=== EVENT VISUAL DIRECTION ===",
@@ -132,50 +117,48 @@ export function composePrompt(
   );
 
   appendBuildingBlocks(sections, blocks);
-  appendNationalDayRequirements(sections, day);
 
   sections.push(
     "",
-    "=== ON-IMAGE HEADLINE (exact Turkish spelling) ===",
+    "=== ON-IMAGE HEADLINE (copy EXACTLY, perfect Turkish) ===",
     `"${headline}"`,
-    `Headline pool (tone reference; pick similar if needed): ${day.headlineAlternatives.join(" | ")}`,
+    `Alternative headlines (reference only): ${day.headlineAlternatives.join(" | ")}`,
     "",
-    "=== BRAND SECTOR & DESCRIPTION ===",
+    "=== BRAND ACCENT (secondary — do not dominate) ===",
+    `Brand: ${context.brandName}`,
     `Sector: ${resolveSectorLabel(context)}`,
-    sector?.promptModifier ? `Sector language: ${sector.promptModifier}` : "",
-    sector?.visualCues ? `Sector visual cues: ${sector.visualCues}` : "",
-    `Brand description (brief only — do NOT paste as visible text): ${context.brandDescription ?? "yerel işletme"}`,
+    isTechHeavySector
+      ? "Tech/agency brand: use ONLY subtle color accents. NO chips, grids, holograms, or UI panels as main scene."
+      : sector?.promptModifier
+        ? `Sector language (accent only): ${sector.promptModifier}`
+        : "",
+    sector?.visualCues && !isTechHeavySector
+      ? `Subtle sector cue (background detail only): ${sector.visualCues}`
+      : "",
+    `Brand colors as accents: ${colors}`,
+    `Style preference (adapt to occasion): ${resolveStyleLabel(context)} — ${style?.promptModifier ?? ""}`,
     "",
-    "=== BRAND COLOR & STYLE ===",
-    `Primary colors (balanced, not overwhelming): ${colors}`,
-    `Visual style: ${resolveStyleLabel(context)}`,
-    style?.promptModifier ? `Style direction: ${style.promptModifier}` : "",
-    "",
-    "=== LOGO USAGE RULES ===",
-    "Place the uploaded brand logo cleanly and proportionally in the composition.",
-    "Preserve the logo exactly — do NOT redraw, translate, bend, blur, crop or distort it.",
-    context.logoUrl ? `Logo reference: ${context.logoUrl}` : "",
+    "=== LOGO ===",
+    "Small, clean logo in corner. Never distort.",
+    context.logoUrl ? `Logo: ${context.logoUrl}` : "",
     "",
     "=== CAPTION INSPIRATION (NOT on image) ===",
-    day.captionIdeas.slice(0, 3).join(" | ") || "Warm professional Turkish caption tone.",
+    day.captionIdeas.slice(0, 3).join(" | "),
     "",
     "=== QUALITY BAR ===",
-    "Premium agency-made Turkish KOBİ social media design.",
-    "Rich layered composition — never clip art, stick figures or amateur doodles.",
-    "Each brand must feel custom-made; avoid generic holiday templates.",
+    "Premium Turkish KOBİ social media — warm, culturally aware, shareable.",
+    "Rich composition with emotional depth. Never clip art or amateur doodles.",
   );
 
   const avoidItems = [
+    ...occasionAvoidList(day),
     ...(blocks?.avoid ?? []),
     day.avoidRules,
     sector?.avoidRules,
+    isTechHeavySector ? "tech grid floor, microchip, holographic UI, cyberpunk" : "",
     "misspelled Turkish",
-    "Áğostus",
-    "Agustos without ğ",
-    "sci-fi abstract blocks instead of national holiday",
-    "missing Turkish flag on national day",
-    "customer description as visible text",
-    "generic identical template for all brands",
+    "extra subtext sentences",
+    "customer description on image",
     "distorted logo",
     "watermark",
   ]
@@ -183,11 +166,9 @@ export function composePrompt(
     .flatMap((item) => item!.split(",").map((part) => part.trim()))
     .filter(Boolean);
 
-  const negativePrompt = [...new Set(avoidItems)].join(", ");
-
   return {
     prompt: sections.filter(Boolean).join("\n"),
     headline,
-    negativePrompt,
+    negativePrompt: [...new Set(avoidItems)].join(", "),
   };
 }

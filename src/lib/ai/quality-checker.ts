@@ -1,6 +1,8 @@
 import { analyzeImageWithGemini } from "@/lib/ai/providers/gemini";
 import { isGeminiConfigured } from "@/lib/ai/gemini-config";
+import { buildOccasionCreativeGuide } from "@/lib/ai/occasion-creative-guide";
 import type { BrandCreativeBrief } from "@/lib/ai/brand-creative-director";
+import type { SpecialDayCategory } from "@/types/domain";
 
 export type QualityCheckResult = {
   passed: boolean;
@@ -8,13 +10,19 @@ export type QualityCheckResult = {
   severity: "low" | "medium" | "high";
 };
 
-export async function checkGeneratedImageQuality(input: {
+export type QualityCheckContext = {
   imageUrl: string;
   expectedHeadline: string;
   brandName: string;
   brandBrief?: BrandCreativeBrief;
-  isNationalDay?: boolean;
-}): Promise<QualityCheckResult> {
+  dayName?: string;
+  dayCategory?: SpecialDayCategory;
+  culturalContext?: string;
+};
+
+export async function checkGeneratedImageQuality(
+  input: QualityCheckContext,
+): Promise<QualityCheckResult> {
   const fallbackPass: QualityCheckResult = { passed: true, issues: [], severity: "low" };
 
   if (!isGeminiConfigured()) {
@@ -22,36 +30,53 @@ export async function checkGeneratedImageQuality(input: {
   }
 
   const allowedSubtext = input.brandBrief?.subtextOnImage;
+  const occasionGuide =
+    input.dayName && input.dayCategory
+      ? buildOccasionCreativeGuide({
+          id: input.dayName,
+          slug: input.dayName,
+          name: input.dayName,
+          category: input.dayCategory,
+          dateType: "fixed",
+          dateValue: "",
+          importance: "medium",
+          culturalContext: input.culturalContext ?? "",
+          popularUsages: [],
+          headlineAlternatives: [input.expectedHeadline],
+          captionIdeas: [],
+          visualDirection: "",
+          avoidRules: "",
+          promptTemplate: "",
+          isDefaultSelected: false,
+        })
+      : null;
 
   try {
     const text = await analyzeImageWithGemini(
       [
-        "Sen Türk sosyal medya görsel kalite kontrol uzmanısın. Müşteriye sunulmadan önce görseli reddet veya onayla.",
+        "Sen Türk sosyal medya görsel kalite kontrol uzmanısın. Ruhsuz, konudan kopuk veya yazım hatalı görselleri REDDET.",
         "",
-        `Marka adı (doğru yazım): "${input.brandName}"`,
-        `Beklenen ana başlık: "${input.expectedHeadline}"`,
+        `Özel gün: ${input.dayName ?? "bilinmiyor"} (${input.dayCategory ?? "?"})`,
+        input.culturalContext ? `Kültürel bağlam: ${input.culturalContext}` : "",
+        occasionGuide ? `Beklenen ruh: ${occasionGuide.soul}` : "",
+        `Marka: "${input.brandName}"`,
+        `Beklenen başlık (birebir): "${input.expectedHeadline}"`,
         allowedSubtext
           ? `İzin verilen tek ikincil metin: "${allowedSubtext}"`
-          : "İkincil metin/slogan/hizmet açıklaması OLMAMALI — sadece başlık + marka adı.",
-        input.brandBrief?.positioning
-          ? `Marka konumlandırma (görselde paragraf olarak YAZILMAMALI): ${input.brandBrief.positioning}`
-          : "",
+          : "İkincil metin/cümle OLMAMALI — sadece başlık + logo.",
         "",
-        "KONTROL LİSTESİ:",
-        "1) Türkçe yazım hatası var mı? (ör: Çözülmeri, E-Ticaret yanlış yazım)",
-        "2) Marka adı doğru yazılmış mı?",
-        "3) İzin verilmeyen slogan, hizmet listesi veya uzun alt cümle var mı?",
-        "4) Clip art, stick figure, amatör çizim, çocuk karakteri çizimi var mı?",
-        "5) Görsel çok basit mi (düz arka plan + tek kelime)?",
-        "6) Metin okunmuyor mu, logo bozuk mu?",
-        input.isNationalDay
-          ? "7) Milli bayram görseli: Türk bayrağı (kırmızı-beyaz ay-yıldız) var mı? Bilim kurgu/soyut blok estetiği uygun mu?"
-          : "",
-        input.isNationalDay
-          ? "8) Başlıkta Türkçe yazım doğru mu? (ör: Ağustos — Áğostus veya Agustos YANLIŞ)"
-          : "",
+        "KONTROL:",
+        "1) Türkçe yazım hatası? (ye/ve, yalda/yılda, yanınızdaız, Çözüllmeri, Áğostos, Agustos)",
+        "2) Başlık beklenenle uyumlu ve doğru mu?",
+        "3) İzinsiz alt slogan veya müşteri açıklaması var mı?",
+        "4) Clip art / amatör çizim?",
+        "5) Görsel RUHSUZ mu? (soğuk tech grid, hologram, chip, cyberpunk — özel güne uymuyorsa REDDET)",
+        "6) Özel gün ilk bakışta anlaşılıyor mu? Konuya uygun dekor/sembol var mı?",
+        "7) Milli bayramda bayrak veya güçlü kırmızı-beyaz kimlik var mı?",
+        "8) Bayram/kandilde sıcak manevi atmosfer var mı? (holografik hilal REDDET)",
+        "9) Logo bozuk mu?",
         "",
-        "passed=false yap: yazım hatası, clip art, izinsiz alt metin, amatör/basit görsel.",
+        "passed=false: yazım hatası, ruhsuz jenerik tech şablon, konudan kopukluk, izinsiz metin.",
         'JSON: {"passed":true,"issues":[],"severity":"low"}',
       ].join("\n"),
       input.imageUrl,
