@@ -1,8 +1,8 @@
 import { composeImagePrompt } from "@/lib/ai/prompt-composer";
-import { isLeanGenerationMode } from "@/lib/generation/generation-mode";
 import { getPromptLibraryEntry } from "@/lib/ai/prompt-library";
 import { generateCaption } from "@/lib/ai/caption-provider";
 import { generateImage, isPlaceholderImageUrl } from "@/lib/ai/image-provider";
+import { applyLogoOverlay } from "@/lib/ai/logo-pipeline";
 import {
   checkGeneratedImageQuality,
   shouldRetryQualityCheck,
@@ -401,15 +401,17 @@ export async function processOneQueuedJob(projectId: string) {
       .update({ status: "generating_image", prompt: preview.prompt, updated_at: nowIso() })
       .eq("id", nextJob.id);
 
-    const image = await generateImage(
-      preview.prompt,
-      isLeanGenerationMode() || !context.logoUrl ? [] : [context.logoUrl],
-      { aspectRatio: resolveAspectRatio(context.postFormat ?? "square") },
-    );
+    const image = await generateImage(preview.prompt, [], {
+      aspectRatio: resolveAspectRatio(context.postFormat ?? "square"),
+    });
 
     if (isPlaceholderImageUrl(image.imageUrl)) {
       throw new Error("Görsel üretilemedi (placeholder döndü)");
     }
+
+    const finalImageUrl = context.logoUrl
+      ? await applyLogoOverlay(image.imageUrl, context.logoUrl)
+      : image.imageUrl;
 
     await supabase
       .from("generation_jobs")
@@ -419,13 +421,14 @@ export async function processOneQueuedJob(projectId: string) {
     const day = await getPromptLibraryEntry(dayId);
 
     const quality = await checkGeneratedImageQuality({
-      imageUrl: image.imageUrl,
+      imageUrl: finalImageUrl,
       expectedHeadline: preview.headline,
       brandName: context.brandName,
       brandBrief: preview.brandBrief,
       dayName: day?.name,
       dayCategory: day?.category,
       culturalContext: day?.culturalContext,
+      logoComposited: Boolean(context.logoUrl),
     });
 
     if (shouldRetryQualityCheck(quality)) {
@@ -466,8 +469,8 @@ export async function processOneQueuedJob(projectId: string) {
       .from("generation_jobs")
       .update({
         status: "ready",
-        image_url: image.imageUrl,
-        thumbnail_url: image.thumbnailUrl,
+        image_url: finalImageUrl,
+        thumbnail_url: finalImageUrl,
         caption_text: caption?.caption ?? null,
         hashtags: caption?.hashtags ?? [],
         provider: image.provider,

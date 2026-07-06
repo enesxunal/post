@@ -156,9 +156,12 @@ export function OnboardingWizard() {
                       </Field>
                       <Field label="Logo yükleme">
                         <Input
-                          placeholder="Şimdilik logo URL veya dosya yolu"
+                          placeholder="Logo linki (PNG, JPG veya SVG desteklenir)"
                           {...form.register("logoUrl")}
                         />
+                        <p className="mt-1.5 text-xs text-slate-500">
+                          SVG logolar otomatik dönüştürülüp görsele eklenir.
+                        </p>
                       </Field>
                       <Field label="Marka renkleri">
                         <BrandColorSelector

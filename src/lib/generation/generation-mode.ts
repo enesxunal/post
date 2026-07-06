@@ -9,9 +9,9 @@ export function generationApiProfile() {
   if (LEAN_GENERATION_MODE) {
     return {
       mode: "lean" as const,
-      callsPerPost: "1 görsel (+1 caption varsa)",
+      callsPerPost: "1 görsel + 1 yazım QC (+1 caption varsa)",
       brandBrief: false,
-      visionQualityCheck: false,
+      visionQualityCheck: "essential",
       maxRetries: 1,
     };
   }

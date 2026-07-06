@@ -1,4 +1,5 @@
 import { GEMINI_DEFAULTS, getGeminiApiKey, getGeminiImageModel } from "@/lib/ai/gemini-config";
+import { rasterizeLogo } from "@/lib/ai/logo-pipeline";
 
 type GeminiPart = {
   text?: string;
@@ -10,10 +11,21 @@ async function imageUrlToPart(url: string): Promise<GeminiPart | null> {
     if (url.startsWith("data:")) {
       const match = url.match(/^data:([^;]+);base64,(.+)$/);
       if (!match) return null;
+
+      let mimeType = match[1];
+      let data = match[2];
+
+      if (mimeType.includes("svg")) {
+        const raster = await rasterizeLogo(url);
+        if (!raster) return null;
+        mimeType = "image/png";
+        data = raster.toString("base64");
+      }
+
       return {
         inlineData: {
-          mimeType: match[1],
-          data: match[2],
+          mimeType,
+          data,
         },
       };
     }
@@ -21,8 +33,16 @@ async function imageUrlToPart(url: string): Promise<GeminiPart | null> {
     const response = await fetch(url);
     if (!response.ok) return null;
 
-    const mimeType = response.headers.get("content-type") ?? "image/png";
-    const buffer = Buffer.from(await response.arrayBuffer());
+    let mimeType = response.headers.get("content-type") ?? "image/png";
+    let buffer = Buffer.from(await response.arrayBuffer());
+
+    if (mimeType.includes("svg") || url.toLowerCase().includes(".svg")) {
+      const raster = await rasterizeLogo(url);
+      if (!raster) return null;
+      mimeType = "image/png";
+      buffer = Buffer.from(raster);
+    }
+
     return {
       inlineData: {
         mimeType,

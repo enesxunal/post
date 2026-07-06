@@ -138,9 +138,18 @@ export function composePrompt(
     `Brand colors as accents: ${colors}`,
     `Style preference (adapt to occasion): ${resolveStyleLabel(context)} — ${style?.promptModifier ?? ""}`,
     "",
-    "=== LOGO ===",
-    "Small, clean logo in corner. Never distort.",
-    context.logoUrl ? `Logo: ${context.logoUrl}` : "",
+    context.logoUrl
+      ? [
+          "=== LOGO (otomatik bindirilecek) ===",
+          "The customer logo will be placed automatically in the top-right corner AFTER generation.",
+          "DO NOT draw, invent, approximate, or redraw any logo or brand mark.",
+          "Leave a clean empty safe zone in the top-right (~20% width, ~15% height) without text or busy graphics.",
+        ].join("\n")
+      : [
+          "=== LOGO ===",
+          "Small, clean logo in corner. Never distort.",
+          context.logoUrl ? `Logo: ${context.logoUrl}` : "",
+        ].join("\n"),
     "",
     "=== CAPTION INSPIRATION (NOT on image) ===",
     day.captionIdeas.slice(0, 3).join(" | "),
