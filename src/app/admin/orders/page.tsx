@@ -1,5 +1,5 @@
-import { AdminOverview } from "@/components/admin/admin-overview";
+import { AdminOrdersPanel } from "@/components/admin/admin-orders-panel";
 
 export default function AdminOrdersPage() {
-  return <AdminOverview />;
+  return <AdminOrdersPanel />;
 }

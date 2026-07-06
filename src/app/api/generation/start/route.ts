@@ -5,6 +5,7 @@ import {
   getProjectStatus,
 } from "@/lib/generation/project-service";
 import type { OnboardingDraft } from "@/lib/onboarding/draft";
+import { isOrderPaid, userHasPaidOrder } from "@/lib/orders/service";
 import { requireSessionUser } from "@/lib/supabase/auth";
 
 export async function POST(request: Request) {
@@ -31,8 +32,23 @@ export async function POST(request: Request) {
     );
   }
 
+  const orderId = body.orderId ?? body.draft.orderId;
+  const paymentOk = orderId
+    ? await isOrderPaid(orderId, user.id)
+    : await userHasPaidOrder(user.id);
+
+  if (!paymentOk) {
+    return NextResponse.json(
+      {
+        error:
+          "Ödeme henüz onaylanmadı. EFT yaptıysanız admin onayını bekleyin veya kart ile ödeyin.",
+      },
+      { status: 402 },
+    );
+  }
+
   try {
-    const created = await createProjectWithJobs(user.id, body.draft, body.orderId);
+    const created = await createProjectWithJobs(user.id, body.draft, orderId);
     const status = await getProjectStatus(created.projectId, user.id);
     return NextResponse.json({ ...created, ...status });
   } catch (error) {

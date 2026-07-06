@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { markOrderPaid } from "@/lib/orders/service";
 import {
   getToslaEnvironment,
   isToslaConfigured,
@@ -39,9 +40,10 @@ export async function POST(request: Request) {
   }
 
   await handlePaymentSuccess(orderId);
+  await markOrderPaid(orderId, "tosla");
 
   return NextResponse.redirect(
-    `${appUrl()}/success?orderId=${encodeURIComponent(orderId)}`,
+    `${appUrl()}/orders/${encodeURIComponent(orderId)}/generating`,
     { status: 303 },
   );
 }

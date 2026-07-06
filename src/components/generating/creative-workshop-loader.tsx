@@ -53,10 +53,12 @@ export function CreativeWorkshopLoader({ orderId }: CreativeWorkshopLoaderProps)
         throw new Error("Marka bilgileri bulunamadı. Onboarding adımını tekrar tamamlayın.");
       }
 
+      const draftWithOrder = { ...draft, orderId };
+
       const startResponse = await fetch("/api/generation/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ draft: { ...draft, orderId }, orderId }),
+        body: JSON.stringify({ draft: { ...draftWithOrder, orderId }, orderId }),
       });
 
       const startData = (await startResponse.json()) as GenerationStatus & {

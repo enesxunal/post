@@ -216,6 +216,10 @@ for update using (auth.uid() = user_id);
 create policy "users can read own orders" on orders
 for select using (auth.uid() = user_id);
 
+drop policy if exists "users can insert own orders" on orders;
+create policy "users can insert own orders" on orders
+for insert with check (auth.uid() = user_id);
+
 create policy "users can read own jobs" on generation_jobs
 for select using (auth.uid() = user_id);
 

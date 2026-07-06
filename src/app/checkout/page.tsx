@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { CheckoutPayButton } from "@/components/checkout/checkout-pay-button";
+import { CheckoutPayment } from "@/components/checkout/checkout-payment";
 import { BASE_PACKAGE_PRICE } from "@/lib/config";
 import { addonOptions } from "@/lib/mock-data";
 import { formatCurrency } from "@/lib/utils";
@@ -12,16 +12,12 @@ export default function CheckoutPage() {
         <Card className="space-y-5">
           <Badge>Ödeme özetiniz</Badge>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-            Güvenli ödeme
+            Ödeme yöntemi seçin
           </h1>
           <p className="text-sm leading-7 text-slate-600">
-            Tosla İşim Sanal POS ile 3D Secure ödeme yapılır. Ödeme tamamlanınca
-            post üretim süreci başlar.
+            Havale/EFT ile ödeyebilir veya kredi kartı ile anında ödeme yapabilirsiniz.
+            EFT ödemeleri admin onayından sonra tasarım üretimi başlar.
           </p>
-          <div className="rounded-3xl border border-emerald-100 bg-emerald-50/60 p-4 text-sm text-emerald-800">
-            Kart bilgileriniz Tosla güvenli ödeme sayfasında girilir; sitemizde
-            saklanmaz.
-          </div>
         </Card>
 
         <Card className="space-y-4">
@@ -39,7 +35,7 @@ export default function CheckoutPage() {
               </div>
             ))}
           </div>
-          <CheckoutPayButton amount={BASE_PACKAGE_PRICE} />
+          <CheckoutPayment amount={BASE_PACKAGE_PRICE} />
         </Card>
       </div>
     </div>
