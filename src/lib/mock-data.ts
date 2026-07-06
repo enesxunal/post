@@ -24,7 +24,7 @@ export const addonOptions: AddonOption[] = [
   {
     key: "story",
     label: "Story paketi",
-    description: "Aynı özel günler için 9:16 story versiyonları.",
+    description: "Feed postu onayladıktan sonra aynı tasarımdan 1080×1920 story üretilir.",
     price: STORY_ADDON_PRICE,
   },
   {

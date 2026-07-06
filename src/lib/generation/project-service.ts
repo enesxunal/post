@@ -3,7 +3,7 @@ import { expandSelectedDaysForJobs } from "@/lib/selected-days";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ensureUserProfile } from "@/lib/supabase/profiles";
-import type { AddonKey, BrandContext, SectorKey, VisualStyle } from "@/types/domain";
+import type { AddonKey, BrandContext, PostFormat, SectorKey, VisualStyle } from "@/types/domain";
 
 const META_SEPARATOR = "\n<!--POST_META:";
 
@@ -13,6 +13,7 @@ export function encodeProjectMeta(draft: OnboardingDraft) {
     purchasedAddons: draft.purchasedAddons,
     customSector: draft.customSector,
     selectedDays: draft.selectedDays,
+    postFormat: draft.postFormat ?? "square",
   };
   const userText = draft.brandDescription?.trim() ?? "";
   return `${userText}${META_SEPARATOR}${JSON.stringify(meta)}-->`;
@@ -26,6 +27,7 @@ export function decodeProjectMeta(brandDescription: string | null) {
       purchasedAddons: [] as AddonKey[],
       customSector: undefined as string | undefined,
       selectedDays: [] as OnboardingDraft["selectedDays"],
+      postFormat: "square" as PostFormat,
     };
   }
 
@@ -38,6 +40,7 @@ export function decodeProjectMeta(brandDescription: string | null) {
       purchasedAddons?: AddonKey[];
       customSector?: string;
       selectedDays?: OnboardingDraft["selectedDays"];
+      postFormat?: PostFormat;
     };
 
     return {
@@ -46,6 +49,7 @@ export function decodeProjectMeta(brandDescription: string | null) {
       purchasedAddons: parsed.purchasedAddons ?? [],
       customSector: parsed.customSector,
       selectedDays: parsed.selectedDays ?? [],
+      postFormat: (parsed.postFormat ?? "square") as PostFormat,
     };
   } catch {
     return {
@@ -54,6 +58,7 @@ export function decodeProjectMeta(brandDescription: string | null) {
       purchasedAddons: [],
       customSector: undefined,
       selectedDays: [],
+      postFormat: "square" as PostFormat,
     };
   }
 }
@@ -81,6 +86,7 @@ export function projectToBrandContext(project: {
     logoUrl: project.logo_url ?? undefined,
     selectedDayIds: meta.selectedDays.map((day) => day.dayId),
     purchasedAddons: meta.purchasedAddons,
+    postFormat: meta.postFormat,
   };
 }
 

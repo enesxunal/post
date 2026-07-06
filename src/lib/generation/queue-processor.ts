@@ -7,6 +7,7 @@ import {
 } from "@/lib/ai/quality-checker";
 import { MAX_JOB_RETRIES } from "@/lib/config";
 import { projectToBrandContext } from "@/lib/generation/project-service";
+import { resolveAspectRatio } from "@/lib/image-formats";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { scheduleQueueProcessing } from "@/lib/generation/schedule-queue";
@@ -232,6 +233,7 @@ export async function processOneQueuedJob(projectId: string) {
     const image = await generateImage(
       preview.prompt,
       context.logoUrl ? [context.logoUrl] : [],
+      { aspectRatio: resolveAspectRatio(context.postFormat ?? "square") },
     );
 
     await supabase

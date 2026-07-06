@@ -1,7 +1,8 @@
 import { sectorModifiers, styles } from "@/lib/mock-data";
 import { buildBrandCreativeBrief } from "@/lib/ai/brand-creative-director";
 import { getPromptLibraryEntry } from "@/lib/ai/prompt-library";
-import type { BrandContext, PromptPreview } from "@/types/domain";
+import { buildFormatPromptLine, buildSafeZonePrompt } from "@/lib/image-formats";
+import type { BrandContext, PostFormat, PromptPreview } from "@/types/domain";
 
 export async function composeImagePrompt(
   context: BrandContext,
@@ -23,8 +24,12 @@ export async function composeImagePrompt(
     ? `İkincil kısa metin (küçük puntoda, başlığın altında): "${brief.subtextOnImage}" — yazımı aynen koru.`
     : "İkincil metin, slogan, hizmet açıklaması veya tagline EKLEME. Sadece başlık + marka adı yeterli.";
 
+  const postFormat: PostFormat = context.postFormat ?? "square";
+
   const prompt = [
-    "TASK: Design a premium Turkish Instagram square post (1080x1080) for a real small business brand.",
+    "TASK: Design a premium Turkish Instagram post for a real small business brand.",
+    buildFormatPromptLine(postFormat),
+    buildSafeZonePrompt("post", postFormat),
     "",
     "=== SPECIAL DAY ===",
     `Occasion: ${day?.name ?? "Turkish special day"}`,

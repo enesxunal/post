@@ -1,5 +1,6 @@
 import { UserDashboard } from "@/components/dashboard/user-dashboard";
 import { DashboardLiveRefresh } from "@/components/dashboard/dashboard-live-refresh";
+import { decodeProjectMeta } from "@/lib/generation/project-service";
 import { mapGenerationJobsForDashboard } from "@/lib/generation/map-jobs";
 import { requireSessionUser } from "@/lib/supabase/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -11,20 +12,23 @@ export default async function DashboardPage() {
   const { data: projects } = await supabase
     .from("projects")
     .select(
-      "id, brand_name, primary_color, visual_style, remaining_credits, bonus_credits_granted, status, created_at",
+      "id, brand_name, brand_description, primary_color, visual_style, remaining_credits, bonus_credits_granted, status, created_at",
     )
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(1);
 
   const project = projects?.[0] ?? null;
+  const meta = project ? decodeProjectMeta(project.brand_description) : null;
 
   let jobs: ReturnType<typeof mapGenerationJobsForDashboard> = [];
 
   if (project) {
     const { data: generationJobs } = await supabase
       .from("generation_jobs")
-      .select("id, status, type, caption_text, image_url, created_at, error_message")
+      .select(
+        "id, status, type, caption_text, image_url, created_at, error_message, approved_at, story_image_url, story_status, hashtags",
+      )
       .eq("project_id", project.id)
       .order("created_at", { ascending: true });
 
@@ -57,7 +61,7 @@ export default async function DashboardPage() {
         postsTotal: jobs.length || 30,
         postsReady: jobs.filter((job) => job.status === "ready").length,
         postsGenerating: jobs.filter((job) => job.status === "generating" || job.status === "queued").length,
-        addons: [],
+        addons: meta?.purchasedAddons.map((key) => key) ?? [],
         memberSince,
       }}
       project={
@@ -73,6 +77,8 @@ export default async function DashboardPage() {
           : null
       }
       jobs={jobs}
+      postFormat={meta?.postFormat ?? "square"}
+      hasStoryAddon={meta?.purchasedAddons.includes("story") ?? false}
       />
     </>
   );

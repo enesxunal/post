@@ -133,6 +133,9 @@ create table if not exists generation_jobs (
   hashtags jsonb not null default '[]'::jsonb,
   error_message text,
   retry_count integer not null default 0,
+  approved_at timestamptz,
+  story_image_url text,
+  story_status text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

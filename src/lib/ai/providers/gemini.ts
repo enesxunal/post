@@ -39,6 +39,7 @@ async function imageUrlToPart(url: string): Promise<Part | null> {
 export async function generateImageWithGemini(
   prompt: string,
   inputImageUrls: string[] = [],
+  options?: { aspectRatio?: string },
 ) {
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
@@ -63,7 +64,7 @@ export async function generateImageWithGemini(
     generationConfig: {
       responseModalities: ["IMAGE"],
       imageConfig: {
-        aspectRatio: GEMINI_DEFAULTS.aspectRatio,
+        aspectRatio: options?.aspectRatio ?? GEMINI_DEFAULTS.aspectRatio,
       },
     } as Record<string, unknown>,
   });

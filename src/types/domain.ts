@@ -41,6 +41,8 @@ export type JobStatus =
 
 export type AddonKey = "caption" | "story" | "calendar";
 
+export type PostFormat = "square" | "landscape-1350x1080";
+
 export interface SelectedDayEntry {
   dayId: string;
   /** Cuma mesajları için 1-4; diğer günlerde varsayılan 1. */
@@ -102,6 +104,7 @@ export interface BrandContext {
   logoUrl?: string;
   selectedDayIds: string[];
   purchasedAddons: AddonKey[];
+  postFormat?: PostFormat;
 }
 
 export interface PromptPreview {

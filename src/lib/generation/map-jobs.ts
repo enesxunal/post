@@ -25,6 +25,10 @@ export function mapGenerationJobsForDashboard(
     image_url: string | null;
     created_at: string;
     error_message?: string | null;
+    approved_at?: string | null;
+    story_image_url?: string | null;
+    story_status?: string | null;
+    hashtags?: string[] | null;
   }>,
 ) {
   return jobs.map((job, index) => {
@@ -36,7 +40,11 @@ export function mapGenerationJobsForDashboard(
       status: mapJobStatus(job.status),
       imageIndex: index,
       caption: job.caption_text,
+      hashtags: job.hashtags ?? [],
       imageUrl: job.image_url,
+      approvedAt: job.approved_at,
+      storyImageUrl: job.story_image_url,
+      storyStatus: job.story_status,
       gradient: gradients[index % gradients.length],
       errorMessage: job.error_message,
     };

@@ -13,6 +13,7 @@ export interface OnboardingDraft {
   selectedDays: SelectedDayEntry[];
   purchasedAddons: AddonKey[];
   orderId?: string;
+  postFormat?: import("@/types/domain").PostFormat;
 }
 
 export function saveOnboardingDraft(draft: OnboardingDraft) {

@@ -2,16 +2,20 @@ import { resolveImageProvider } from "@/lib/ai/gemini-config";
 import { generateImageWithGemini } from "@/lib/ai/providers/gemini";
 import { generateImageMock } from "@/lib/ai/providers/mock";
 
+export type ImageGenerationOptions = {
+  aspectRatio?: string;
+};
+
 export async function generateImage(
   prompt: string,
   inputImageUrls: string[] = [],
-  options?: Record<string, string | number | boolean>,
+  options?: ImageGenerationOptions,
 ) {
   const provider = resolveImageProvider();
 
   if (provider === "gemini") {
     try {
-      return await generateImageWithGemini(prompt, inputImageUrls);
+      return await generateImageWithGemini(prompt, inputImageUrls, options);
     } catch (error) {
       console.error("Gemini image generation failed, falling back to mock:", error);
     }
@@ -28,10 +32,10 @@ export async function generateImage(
 export async function regenerateImage(
   previousImageUrl: string,
   prompt: string,
-  options?: Record<string, string | number | boolean>,
+  options?: ImageGenerationOptions,
 ) {
   return generateImage(
-    `${prompt}\nRevize et; önceki görseli referans al.`,
+    `${prompt}\nUse the reference image as the primary visual source. Preserve brand identity and message.`,
     previousImageUrl ? [previousImageUrl] : [],
     options,
   );

@@ -5,6 +5,8 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CalendarPlus2,
+  CheckCircle2,
+  Copy,
   Download,
   ImageIcon,
   LayoutGrid,
@@ -19,6 +21,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { getPostFormatLabel, getPreviewAspectClass } from "@/lib/image-formats";
+import type { PostFormat } from "@/types/domain";
 import { cn } from "@/lib/utils";
 
 const statusMap = {
@@ -63,7 +67,11 @@ export type DashboardJob = {
   status: string;
   imageIndex: number;
   caption: string | null;
+  hashtags?: string[];
   imageUrl?: string | null;
+  approvedAt?: string | null;
+  storyImageUrl?: string | null;
+  storyStatus?: string | null;
   gradient: string;
   errorMessage?: string | null;
 };
@@ -72,6 +80,8 @@ type UserDashboardProps = {
   user: DashboardProfile;
   project: DashboardProject | null;
   jobs: DashboardJob[];
+  postFormat?: PostFormat;
+  hasStoryAddon?: boolean;
   emptyMessage?: string;
 };
 
@@ -79,6 +89,8 @@ export function UserDashboard({
   user: profile,
   project,
   jobs,
+  postFormat = "square",
+  hasStoryAddon = false,
   emptyMessage,
 }: UserDashboardProps) {
   const router = useRouter();
@@ -86,9 +98,12 @@ export function UserDashboard({
   const [tab, setTab] = useState<DashboardTab>("gallery");
   const [selectedJobId, setSelectedJobId] = useState(jobs[0]?.id);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [copiedCaption, setCopiedCaption] = useState(false);
 
   const selectedJob = jobs.find((job) => job.id === selectedJobId) ?? jobs[0];
   const remainingCredits = project?.remainingCredits ?? 0;
+  const previewAspect = getPreviewAspectClass(postFormat);
 
   async function handleLogout() {
     if (!supabase) {
@@ -100,6 +115,52 @@ export function UserDashboard({
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
+  }
+
+  async function copyCaption() {
+    if (!selectedJob?.caption) return;
+    const tags = selectedJob.hashtags?.length ? `\n\n${selectedJob.hashtags.join(" ")}` : "";
+    await navigator.clipboard.writeText(`${selectedJob.caption}${tags}`);
+    setCopiedCaption(true);
+    window.setTimeout(() => setCopiedCaption(false), 2000);
+  }
+
+  async function approvePost() {
+    if (!selectedJob) return;
+    setActionLoading("approve");
+    try {
+      const response = await fetch("/api/generation/approve-post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: selectedJob.id }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(data.error ?? "Onay başarısız");
+      router.refresh();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Onay hatası");
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function generateStory() {
+    if (!selectedJob) return;
+    setActionLoading("story");
+    try {
+      const response = await fetch("/api/generation/story", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: selectedJob.id }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(data.error ?? "Story üretilemedi");
+      router.refresh();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Story hatası");
+    } finally {
+      setActionLoading(null);
+    }
   }
 
   return (
@@ -205,7 +266,8 @@ export function UserDashboard({
                     Özel gün postlarınız
                   </h1>
                   <p className="mt-1 text-sm text-slate-600">
-                    Hazır görselleri indirin, caption görüntüleyin veya yeniden üretin.
+                    Hazır görselleri indirin, caption kopyalayın veya story üretin.
+                    <span className="ml-1 text-emerald-700">Format: {getPostFormatLabel(postFormat)}</span>
                   </p>
                 </div>
                 {jobs.length > 0 ? (
@@ -252,7 +314,7 @@ export function UserDashboard({
                               : "border-emerald-100",
                           )}
                         >
-                          <div className="relative aspect-square">
+                          <div className={cn("relative", previewAspect)}>
                             {job.imageUrl ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
@@ -287,7 +349,7 @@ export function UserDashboard({
                   {selectedJob ? (
                     <Card className="h-fit space-y-4 p-5 lg:sticky lg:top-6">
                       <p className="text-sm font-medium text-slate-500">Seçili post</p>
-                      <div className="relative aspect-square overflow-hidden rounded-[24px]">
+                      <div className={cn("relative overflow-hidden rounded-[24px]", previewAspect)}>
                         {selectedJob.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
@@ -312,16 +374,79 @@ export function UserDashboard({
                       </div>
                       {selectedJob.caption ? (
                         <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
-                          <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">
-                            Caption
-                          </p>
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">
+                              Caption
+                            </p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-8 px-3 text-xs"
+                              onClick={copyCaption}
+                            >
+                              <Copy className="mr-1.5 h-3.5 w-3.5" />
+                              {copiedCaption ? "Kopyalandı" : "Kopyala"}
+                            </Button>
+                          </div>
                           <p className="mt-2 text-sm leading-6 text-slate-700">
                             {selectedJob.caption}
                           </p>
+                          {selectedJob.hashtags?.length ? (
+                            <p className="mt-2 text-sm text-emerald-700">
+                              {selectedJob.hashtags.join(" ")}
+                            </p>
+                          ) : null}
                         </div>
                       ) : (
                         <p className="text-sm text-slate-500">Caption henüz hazır değil.</p>
                       )}
+
+                      {selectedJob.status === "ready" && !selectedJob.approvedAt ? (
+                        <Button
+                          className="w-full"
+                          onClick={approvePost}
+                          disabled={actionLoading === "approve"}
+                        >
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                          Postu onayla
+                        </Button>
+                      ) : selectedJob.approvedAt ? (
+                        <Badge className="w-fit border-emerald-200 bg-emerald-50 text-emerald-700">
+                          Post onaylandı
+                        </Badge>
+                      ) : null}
+
+                      {hasStoryAddon && selectedJob.approvedAt ? (
+                        <div className="space-y-3 rounded-2xl border border-violet-100 bg-violet-50/40 p-4">
+                          <p className="text-sm font-medium text-slate-800">Story (1080×1920)</p>
+                          {selectedJob.storyImageUrl ? (
+                            <div className="relative aspect-[9/16] max-h-64 overflow-hidden rounded-xl">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={selectedJob.storyImageUrl}
+                                alt="Story"
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <p className="text-xs text-slate-500">
+                              Feed postu onaylandı. Aynı tasarımdan story üretin.
+                            </p>
+                          )}
+                          {!selectedJob.storyImageUrl ? (
+                            <Button
+                              variant="secondary"
+                              className="w-full"
+                              onClick={generateStory}
+                              disabled={actionLoading === "story"}
+                            >
+                              <Sparkles className="mr-2 h-4 w-4" />
+                              Story boyutu üret
+                            </Button>
+                          ) : null}
+                        </div>
+                      ) : null}
+
                       <div className="grid grid-cols-2 gap-2">
                         <Button variant="outline" className="w-full">
                           <Download className="mr-2 h-4 w-4" />

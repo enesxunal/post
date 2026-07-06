@@ -31,7 +31,8 @@ import {
 } from "@/lib/config";
 import { formatCurrency } from "@/lib/utils";
 import { saveOnboardingDraft } from "@/lib/onboarding/draft";
-import type { AddonKey, SectorKey, VisualStyle } from "@/types/domain";
+import { PostFormatSelector } from "@/components/onboarding/post-format-selector";
+import type { AddonKey, PostFormat, SectorKey, VisualStyle } from "@/types/domain";
 
 const schema = z.object({
   brandName: z.string().min(2, "İşletme adı gerekli."),
@@ -62,6 +63,7 @@ export function OnboardingWizard() {
   const [step, setStep] = useState(0);
   const [selectedDays, setSelectedDays] = useState<SelectedDayEntry[]>(getDefaultSelectedDays());
   const [selectedAddons, setSelectedAddons] = useState<AddonKey[]>([]);
+  const [postFormat, setPostFormat] = useState<PostFormat>("square");
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -245,6 +247,8 @@ export function OnboardingWizard() {
                         </p>
                       </Card>
 
+                      <PostFormatSelector value={postFormat} onChange={setPostFormat} />
+
                       <div className="space-y-3">
                         {addonOptions.map((addon) => (
                           <Card key={addon.key} className="flex items-center justify-between gap-4 p-5">
@@ -287,6 +291,7 @@ export function OnboardingWizard() {
                                 visualStyle: values.visualStyle as VisualStyle,
                                 selectedDays,
                                 purchasedAddons: selectedAddons,
+                                postFormat,
                               });
                               router.push("/checkout");
                             }}

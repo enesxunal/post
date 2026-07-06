@@ -1,5 +1,6 @@
 import { UserDashboard } from "@/components/dashboard/user-dashboard";
 import { DashboardLiveRefresh } from "@/components/dashboard/dashboard-live-refresh";
+import { decodeProjectMeta } from "@/lib/generation/project-service";
 import { mapGenerationJobsForDashboard } from "@/lib/generation/map-jobs";
 import { requireSessionUser } from "@/lib/supabase/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -16,7 +17,7 @@ export default async function ProjectDetailPage({
   const { data: project } = await supabase
     .from("projects")
     .select(
-      "id, brand_name, primary_color, visual_style, remaining_credits, bonus_credits_granted, status, created_at, user_id",
+      "id, brand_name, brand_description, primary_color, visual_style, remaining_credits, bonus_credits_granted, status, created_at, user_id",
     )
     .eq("id", projectId)
     .eq("user_id", user.id)
@@ -48,9 +49,13 @@ export default async function ProjectDetailPage({
     );
   }
 
+  const meta = decodeProjectMeta(project.brand_description);
+
   const { data: generationJobs } = await supabase
     .from("generation_jobs")
-    .select("id, status, type, caption_text, image_url, created_at, error_message")
+    .select(
+      "id, status, type, caption_text, image_url, created_at, error_message, approved_at, story_image_url, story_status, hashtags",
+    )
     .eq("project_id", project.id)
     .order("created_at", { ascending: true });
 
@@ -65,34 +70,36 @@ export default async function ProjectDetailPage({
         isGenerating={postsGenerating > 0 || project.status === "generating"}
       />
       <UserDashboard
-      user={{
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        businessName: project.brand_name,
-        sector: "—",
-        visualStyle: project.visual_style,
-        primaryColor: project.primary_color,
-        logoInitial: project.brand_name.charAt(0).toUpperCase(),
-        packageName: "Ana Paket",
-        postsTotal: jobs.length,
-        postsReady: jobs.filter((job) => job.status === "ready").length,
-        postsGenerating,
-        addons: [],
-        memberSince: new Date(project.created_at).toLocaleDateString("tr-TR", {
-          month: "long",
-          year: "numeric",
-        }),
-      }}
-      project={{
-        id: project.id,
-        brandName: project.brand_name,
-        primaryColor: project.primary_color,
-        visualStyle: project.visual_style,
-        remainingCredits: project.remaining_credits,
-        bonusCreditsGranted: project.bonus_credits_granted,
-      }}
-      jobs={jobs}
+        user={{
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          businessName: project.brand_name,
+          sector: "—",
+          visualStyle: project.visual_style,
+          primaryColor: project.primary_color,
+          logoInitial: project.brand_name.charAt(0).toUpperCase(),
+          packageName: "Ana Paket",
+          postsTotal: jobs.length,
+          postsReady: jobs.filter((job) => job.status === "ready").length,
+          postsGenerating,
+          addons: meta.purchasedAddons,
+          memberSince: new Date(project.created_at).toLocaleDateString("tr-TR", {
+            month: "long",
+            year: "numeric",
+          }),
+        }}
+        project={{
+          id: project.id,
+          brandName: project.brand_name,
+          primaryColor: project.primary_color,
+          visualStyle: project.visual_style,
+          remainingCredits: project.remaining_credits,
+          bonusCreditsGranted: project.bonus_credits_granted,
+        }}
+        jobs={jobs}
+        postFormat={meta.postFormat}
+        hasStoryAddon={meta.purchasedAddons.includes("story")}
       />
     </>
   );
