@@ -1,0 +1,74 @@
+[
+  {
+    "key": "modern",
+    "name": "Modern",
+    "description": "Temiz, çağdaş, sosyal medya odaklı ve güncel dijital tasarım dili. Çoğu KOBİ için güvenli varsayılan stil.",
+    "visual_cues": "Clean, contemporary, social-first layout, fresh digital aesthetic, balanced whitespace, modern shapes, subtle gradients, polished Instagram-ready design.",
+    "typography_hints": "Kalın ama zarif başlık, okunabilir modern sans-serif hissi, net hiyerarşi, kısa mesajı öne çıkaran typographic balance.",
+    "composition_hints": "Merkezde güçlü başlık, kenarlarda güvenli boşluk, marka logosu görünür ama dengeli, modern kart/shape/gradient kullanımı.",
+    "color_hints": "Marka rengini ana vurgu olarak kullan. Beyaz, açık gri, soft gradient ve temiz kontrastlarla destekle.",
+    "best_for": ["genel KOBİ", "güzellik salonu", "kafe/restoran", "emlak", "e-ticaret", "ajans", "klinik"],
+    "avoid_rules": ["eski broşür tasarımı", "aşırı gölge", "karmaşık arka plan", "çok fazla ikon", "okunması zor metin", "amatör Canva şablonu hissi"],
+    "prompt_modifier": "Use a modern, clean and contemporary social-media-first design style. Create a polished Instagram post with balanced whitespace, clear hierarchy, subtle modern shapes and strong readability. The design should feel current, professional and easy to share."
+  },
+  {
+    "key": "minimal",
+    "name": "Minimal",
+    "description": "Az öğe, bol boşluk, rafine tipografi ve sade ama kaliteli görünüm isteyen markalar için.",
+    "visual_cues": "Minimal, spacious, refined typography, elegant whitespace, restrained visual elements, calm premium simplicity, clean editorial layout.",
+    "typography_hints": "Az metin, büyük nefes alan başlık, ince veya rafine sans-serif/serif hissi, sade hiyerarşi.",
+    "composition_hints": "Tek odak noktası kullan. Gereksiz dekorları kaldır. Logo ve başlık arasında bol boşluk bırak. Mesajı sakin ve net ver.",
+    "color_hints": "Beyaz, krem, açık gri, siyah, marka renginin çok ölçülü kullanımı. Düşük doygunluk ve yumuşak kontrast.",
+    "best_for": ["premium markalar", "güzellik salonu", "takı/aksesuar", "mimarlık", "hukuk", "diyetisyen", "klinik"],
+    "avoid_rules": ["kalabalık kompozisyon", "çok renkli arka plan", "fazla ikon", "büyük indirim rozeti", "gürültülü desen", "fazla metin", "aşırı süsleme"],
+    "prompt_modifier": "Use a minimal and spacious design style with refined typography and generous whitespace. Keep the composition calm, elegant and uncluttered. Use only a few visual elements and make the message feel premium through simplicity."
+  },
+  {
+    "key": "corporate",
+    "name": "Kurumsal",
+    "description": "Güven, ciddiyet, düzen ve profesyonellik gerektiren işletmeler için resmi ama sıkıcı olmayan kurumsal stil.",
+    "visual_cues": "Trustworthy, formal, polished corporate feel, structured grid, clean business layout, professional brand presence, serious and credible visual tone.",
+    "typography_hints": "Net, güçlü, kurumsal başlık; fazla oyunlu olmayan tipografi; yüksek okunabilirlik; düzenli hiyerarşi.",
+    "composition_hints": "Grid tabanlı düzen, logo için net alan, başlık ve alt mesaj için dengeli yerleşim, aşırı dekorasyondan kaçın.",
+    "color_hints": "Lacivert, beyaz, gri, koyu yeşil, siyah, kurumsal mavi tonları. Marka rengini kontrollü vurgu olarak kullan.",
+    "best_for": ["diş kliniği", "hukuk bürosu", "muhasebe/finans", "emlak", "eğitim kurumu", "inşaat/mimarlık", "B2B hizmet firmaları"],
+    "avoid_rules": ["fazla samimi/mizahi dil", "neon renk kalabalığı", "amatör ikonlar", "clip art", "aşırı yuvarlak eğlenceli şekiller", "ucuz sunum şablonu hissi", "fazla agresif satış dili"],
+    "prompt_modifier": "Use a polished corporate design style that feels trustworthy, formal and professional. Apply a structured grid, clean spacing and credible business aesthetics. The result should look suitable for a serious small business or professional service provider."
+  },
+  {
+    "key": "friendly",
+    "name": "Samimi",
+    "description": "Yerel işletme sıcaklığı, mahalle esnafı güveni ve ulaşılabilir marka tonu isteyen işletmeler için.",
+    "visual_cues": "Warm, approachable, neighborhood business tone, friendly local brand feeling, soft shapes, inviting atmosphere, human and sincere mood.",
+    "typography_hints": "Okunaklı, yumuşak ve sıcak başlık; çok resmi olmayan ama profesyonel görünen yazı karakteri hissi.",
+    "composition_hints": "Yuvarlatılmış kartlar, sıcak arka planlar, davetkâr boşluklar, markayı yakın ve erişilebilir gösteren düzen.",
+    "color_hints": "Sıcak beyaz, krem, soft yeşil, açık sarı, pastel tonlar, doğal kahve/bej tonları. Marka rengini sıcaklaştır.",
+    "best_for": ["kafe/restoran", "çiçekçi/hediye", "veteriner", "eğitim kurumu", "yerel hizmet", "butik/mağaza", "kuaför/berber"],
+    "avoid_rules": ["fazla resmi kurumsal görünüm", "soğuk hastane hissi", "agresif kontrast", "sert siyah ağırlıklı tasarım", "aşırı çocukça clip art", "amatör el ilanı havası"],
+    "prompt_modifier": "Use a warm, friendly and approachable local-business design style. Make the post feel sincere, welcoming and human while still looking professional. Use soft shapes, warm tones and a neighborhood business charm."
+  },
+  {
+    "key": "premium",
+    "name": "Premium",
+    "description": "Ajans kalitesinde, şık, değerli ve yüksek algılı görünmek isteyen markalar için lüks esintili tasarım dili.",
+    "visual_cues": "Luxury-inspired, elegant, agency-quality design, premium textures, refined lighting, sophisticated composition, high-end brand aesthetic.",
+    "typography_hints": "Şık, güçlü ve rafine başlık; premium serif/sans-serif hissi; az ama etkili metin; kaliteli hiyerarşi.",
+    "composition_hints": "Az öğeyle yüksek kalite algısı ver. Işık, doku, gradient veya materyal hissini kontrollü kullan. Logo prestijli görünmeli.",
+    "color_hints": "Siyah, beyaz, krem, altın, zümrüt yeşili, lacivert, bordo, rose gold ve marka renginin derin tonları.",
+    "best_for": ["güzellik salonu", "takı/aksesuar", "butik/mağaza", "otel/turizm", "mimarlık", "ajans", "fotoğraf stüdyosu", "premium hizmet markaları"],
+    "avoid_rules": ["ucuz altın efekt", "aşırı parlama", "fazla lüks abartısı", "stok lüks fotoğraf hissi", "karmaşık kompozisyon", "çok fazla metin", "kalitesiz doku"],
+    "prompt_modifier": "Use a premium, elegant and agency-quality design style. Create a refined composition with sophisticated typography, tasteful textures and a high-end brand feeling. Avoid cheap luxury effects or overdecorated visuals."
+  },
+  {
+    "key": "vibrant",
+    "name": "Renkli / enerjik",
+    "description": "Dikkat çekmek, sosyal medyada hızlı fark edilmek ve daha canlı bir marka enerjisi göstermek isteyen işletmeler için.",
+    "visual_cues": "Energetic, vibrant, high-contrast social design, bold color blocks, dynamic shapes, lively composition, scroll-stopping visual energy.",
+    "typography_hints": "Güçlü, büyük, dikkat çekici başlık; kısa ve net mesaj; sosyal medya akışında okunabilir yüksek kontrast.",
+    "composition_hints": "Dinamik şekiller, hareket hissi, daha cesur renk alanları, yüksek kontrast ama düzenli layout. Mesaj kaybolmamalı.",
+    "color_hints": "Canlı marka rengi, tamamlayıcı kontrast renkler, yeşil, turuncu, mavi, pembe, sarı gibi enerjik tonlar. Renkler çarpışmamalı.",
+    "best_for": ["spor salonu", "kafe/restoran", "e-ticaret", "butik/mağaza", "kampanya dönemleri", "genç hedef kitle", "reklam ajansı"],
+    "avoid_rules": ["renk karmaşası", "okunmayan metin", "aşırı neon", "ucuz festival afişi", "fazla sticker", "kalabalık kompozisyon", "marka rengini tamamen bastıran palet"],
+    "prompt_modifier": "Use a vibrant and energetic social media design style with bold color accents, dynamic shapes and high contrast. Make it eye-catching in a feed while keeping the message readable and professionally composed."
+  }
+]

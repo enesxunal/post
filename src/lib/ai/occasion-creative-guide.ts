@@ -1,4 +1,4 @@
-import { styles } from "@/lib/mock-data";
+import { resolveStyleName } from "@/lib/styles/seed-data";
 import type { BrandContext, SpecialDay, SpecialDayCategory } from "@/types/domain";
 
 export type OccasionCreativeGuide = {
@@ -183,8 +183,7 @@ export function buildOccasionCreativeGuide(day: SpecialDay): OccasionCreativeGui
 }
 
 export function buildStyleBalanceRule(day: SpecialDay, context: BrandContext): string {
-  const style = styles.find((item) => item.key === context.visualStyle);
-  const styleName = style?.name ?? context.visualStyle;
+  const styleName = resolveStyleName(context.visualStyle);
 
   return [
     "=== OCCASION-FIRST HIERARCHY (CRITICAL) ===",

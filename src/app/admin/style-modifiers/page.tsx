@@ -1,5 +1,5 @@
-import { StyleModifiersPanel } from "@/components/admin/modifier-panels";
+import { StyleRulesEditor } from "@/components/admin/style-rules-editor";
 
 export default function AdminStyleModifiersPage() {
-  return <StyleModifiersPanel />;
+  return <StyleRulesEditor />;
 }

@@ -4,7 +4,7 @@ export type VisualStyle =
   | "corporate"
   | "friendly"
   | "premium"
-  | "colorful";
+  | "vibrant";
 
 export type SectorKey =
   | "beauty"
@@ -17,6 +17,17 @@ export type SectorKey =
   | "fitness"
   | "nutrition"
   | "agency"
+  | "veterinary"
+  | "law"
+  | "accounting"
+  | "hotel"
+  | "photography"
+  | "construction"
+  | "cleaning"
+  | "flower-gift"
+  | "barber"
+  | "jewelry"
+  | "ecommerce"
   | "other";
 
 export type SpecialDayCategory =
@@ -83,6 +94,20 @@ export interface SpecialDay {
   isDefaultSelected: boolean;
 }
 
+export interface SectorRule {
+  key: SectorKey;
+  name: string;
+  description: string;
+  visualCues: string;
+  toneHints: string;
+  compositionHints: string;
+  colorHints: string;
+  suitableElements: string[];
+  avoidRules: string[];
+  promptModifier: string;
+}
+
+/** @deprecated SectorRule kullanın */
 export interface SectorModifier {
   key: SectorKey;
   name: string;
@@ -93,6 +118,27 @@ export interface SectorModifier {
   promptModifier: string;
 }
 
+export interface StyleRule {
+  key: VisualStyle;
+  name: string;
+  description: string;
+  visualCues: string;
+  typographyHints: string;
+  compositionHints: string;
+  colorHints: string;
+  bestFor: string[];
+  avoidRules: string[];
+  promptModifier: string;
+}
+
+/** Onboarding kartları — sadece isim + kısa açıklama */
+export interface StyleOption {
+  key: VisualStyle;
+  name: string;
+  description: string;
+}
+
+/** @deprecated StyleRule / StyleOption kullanın */
 export interface StyleModifier {
   key: VisualStyle;
   name: string;

@@ -1,8 +1,11 @@
 import { generateTextWithGemini } from "@/lib/ai/providers/gemini";
 import { isGeminiConfigured } from "@/lib/ai/gemini-config";
 import { buildOccasionCreativeGuide } from "@/lib/ai/occasion-creative-guide";
-import { sectorModifiers, sectors, styles } from "@/lib/mock-data";
-import type { BrandContext, SectorKey, SpecialDay } from "@/types/domain";
+import { formatSectorRuleForBrief } from "@/lib/sectors/build-sector-prompt";
+import { getSectorOptionsFromSeed, getSectorRule } from "@/lib/sectors/repository";
+import { formatStyleRuleForBrief } from "@/lib/styles/build-style-prompt";
+import { getStyleRuleFromSeed, resolveStyleName } from "@/lib/styles/seed-data";
+import type { BrandContext, SectorKey, SectorRule, SpecialDay, StyleRule } from "@/types/domain";
 
 export type SpecialDayContext = Pick<
   SpecialDay,
@@ -102,10 +105,6 @@ const SECTOR_FALLBACK: Partial<
   },
 };
 
-function getSectorModifier(sector: SectorKey) {
-  return sectorModifiers.find((item) => item.key === sector);
-}
-
 function refineRawDescription(raw: string, brandName: string, sector: SectorKey): string {
   const trimmed = raw.trim();
   if (!trimmed) {
@@ -136,12 +135,14 @@ function refineRawDescription(raw: string, brandName: string, sector: SectorKey)
 function buildFallbackHarmony(
   context: BrandContext,
   day?: SpecialDayContext,
-  sectorMod?: ReturnType<typeof getSectorModifier>,
+  sectorRule?: SectorRule,
   selectedHeadline?: string,
 ): Pick<BrandCreativeBrief, "dayHarmony" | "sceneComposition" | "sectorBlend"> {
   const dayName = day?.name ?? "özel gün";
   const sectorLabel =
-    sectors.find((item) => item.key === context.sector)?.label ?? context.customSector ?? "KOBİ";
+    getSectorOptionsFromSeed().find((item) => item.key === context.sector)?.label ??
+    context.customSector ??
+    "KOBİ";
   const occasionGuide = day
     ? buildOccasionCreativeGuide({
         id: day.name,
@@ -163,31 +164,46 @@ function buildFallbackHarmony(
     : null;
   const headline = selectedHeadline ?? day?.headlineAlternatives[0] ?? dayName;
 
+  const sectorAccent =
+    sectorRule?.suitableElements.slice(0, 2).join(", ") ?? sectorRule?.visualCues ?? "profesyonel";
+
   return {
     dayHarmony: `${context.brandName} (${sectorLabel}) için ${dayName}: ${occasionGuide?.soul ?? day?.culturalContext ?? "saygılı kutlama"}. Marka sektörü sadece ince aksan — özel günün ruhu öncelikli.`,
     sceneComposition: [
       `Ana başlık (büyük, hatasız Türkçe): "${headline}".`,
       `Sahne ruhu: ${occasionGuide?.visualMetaphors.slice(0, 2).join("; ") ?? day?.visualDirection ?? "kutlama"}.`,
       `Kültürel öğeler: ${occasionGuide?.culturalElements.slice(0, 3).join(", ") ?? "konuya uygun dekor"}.`,
+      `Renk ve kompozisyon: ${sectorRule?.colorHints ?? "marka rengine uyumlu"}. ${sectorRule?.compositionHints ?? ""}`.trim(),
       context.sector === "agency"
-        ? "Ajans markası: teknoloji gridi, chip veya hologram KULLANMA — özel gün atmosferi ana sahne."
-        : `Sektör ipucu (arka plan detayı): ${sectorMod?.visualCues ?? "profesyonel"}.`,
+        ? "Ajans markası: katmanlı premium dijital estetik kullanılabilir — özel gün atmosferi ana sahne."
+        : `Sektör aksanı (arka plan detayı): ${sectorAccent}.`,
       `${context.brandName} logosu köşede küçük. Sıcak, paylaşılabilir, kültürel olarak doğru kompozisyon.`,
     ].join(" "),
-    sectorBlend: `Özel gün kimliği önce (%65), marka aksanı sonra (%35). ${sectorMod?.promptModifier ?? "professional local business"} stili günün ruhuna uyumlanmalı.`,
+    sectorBlend: [
+      `Özel gün kimliği önce (%65), marka aksanı sonra (%35).`,
+      sectorRule?.promptModifier ?? "professional local business",
+      sectorRule ? `Ton: ${sectorRule.toneHints}.` : "",
+      "Aynı gün farklı sektörlerde farklı his vermeli — bu sektörün estetiği günün ruhuna uyumlanmalı.",
+    ]
+      .filter(Boolean)
+      .join(" "),
   };
 }
 
-function buildFallbackBrief(context: BrandContext, day?: SpecialDayContext): BrandCreativeBrief {
-  const sectorMod = getSectorModifier(context.sector);
+function buildFallbackBrief(
+  context: BrandContext,
+  day?: SpecialDayContext,
+  sectorRule?: SectorRule,
+  styleRule?: StyleRule,
+): BrandCreativeBrief {
   const sectorDefaults = SECTOR_FALLBACK[context.sector] ?? SECTOR_FALLBACK.other!;
-  const style = styles.find((item) => item.key === context.visualStyle);
+  const styleRuleResolved = styleRule ?? getStyleRuleFromSeed(context.visualStyle);
   const refinedRaw = refineRawDescription(
     context.brandDescription ?? "",
     context.brandName,
     context.sector,
   );
-  const harmony = buildFallbackHarmony(context, day, sectorMod);
+  const harmony = buildFallbackHarmony(context, day, sectorRule);
 
   const positioning =
     refinedRaw.length > 10
@@ -196,8 +212,15 @@ function buildFallbackBrief(context: BrandContext, day?: SpecialDayContext): Bra
 
   return {
     positioning,
-    toneOfVoice: `${sectorMod?.toneHints ?? sectorDefaults.tone}, ${style?.description ?? "modern"}`,
-    visualDirection: `${sectorDefaults.visual}. ${day?.visualDirection ?? ""}`.trim(),
+    toneOfVoice: `${sectorRule?.toneHints ?? sectorDefaults.tone}, ${styleRuleResolved?.description ?? "modern"}`,
+    visualDirection: [
+      sectorRule?.visualCues ?? sectorDefaults.visual,
+      sectorRule?.colorHints ? `Renk: ${sectorRule.colorHints}` : "",
+      day?.visualDirection ?? "",
+    ]
+      .filter(Boolean)
+      .join(". ")
+      .trim(),
     visualQuality:
       "Ajans kalitesinde premium sosyal medya tasarımı: katmanlı kompozisyon, okunaklı tipografi, gerçekçi veya üst düzey illüstrasyon — asla clip art veya amatör çizim değil.",
     subtextOnImage: null,
@@ -205,7 +228,7 @@ function buildFallbackBrief(context: BrandContext, day?: SpecialDayContext): Bra
       "Görselde YALNIZCA büyük kutlama başlığı + köşede küçük marka adı/logo. Müşterinin ham cümlesini, hizmet listesini veya uzun sloganı görsele yazma.",
     avoidOnImage: [
       ...UNIVERSAL_AVOID,
-      ...(sectorMod?.avoidRules ? [sectorMod.avoidRules] : []),
+      ...(sectorRule?.avoidRules ?? []),
       ...(day?.avoidRules ? [day.avoidRules] : []),
     ],
     ...harmony,
@@ -215,17 +238,20 @@ function buildFallbackBrief(context: BrandContext, day?: SpecialDayContext): Bra
 export async function buildBrandCreativeBrief(
   context: BrandContext,
   day?: SpecialDayContext,
-  options?: { useGemini?: boolean },
+  options?: { useGemini?: boolean; sectorRule?: SectorRule; styleRule?: StyleRule },
 ): Promise<BrandCreativeBrief> {
-  const fallback = buildFallbackBrief(context, day);
+  const sectorRule = options?.sectorRule ?? (await getSectorRule(context.sector));
+  const styleRule = options?.styleRule ?? getStyleRuleFromSeed(context.visualStyle);
+  const fallback = buildFallbackBrief(context, day, sectorRule, styleRule);
 
   if (options?.useGemini === false) {
     return fallback;
   }
-  const sectorMod = getSectorModifier(context.sector);
   const sectorLabel =
-    sectors.find((item) => item.key === context.sector)?.label ?? context.customSector ?? "";
-  const styleLabel = styles.find((item) => item.key === context.visualStyle)?.name ?? context.visualStyle;
+    getSectorOptionsFromSeed().find((item) => item.key === context.sector)?.label ??
+    context.customSector ??
+    "";
+  const styleLabel = resolveStyleName(context.visualStyle);
   const rawInput = context.brandDescription?.trim() || "Müşteri kısa veya eksik bilgi verdi";
 
   if (!isGeminiConfigured()) {
@@ -245,9 +271,12 @@ export async function buildBrandCreativeBrief(
         `Müşterinin ham cümlesi: "${rawInput}"`,
         `Görsel stil tercihi: ${styleLabel}`,
         `Marka renkleri: ${(context.brandColors?.length ? context.brandColors : [context.primaryColor]).join(", ")}`,
-        sectorMod
-          ? `Sektör görsel ipuçları: ${sectorMod.visualCues}. Ton: ${sectorMod.toneHints}. Kaçınılacak: ${sectorMod.avoidRules}.`
-          : "",
+        "",
+        "=== SEKTÖR KURALLARI (tüm alanları brief'e yansıt — aynı gün farklı sektörlerde farklı his) ===",
+        sectorRule ? formatSectorRuleForBrief(sectorRule) : "Sektör kuralı yok",
+        "",
+        "=== STİL KURALLARI (tüm alanları brief'e yansıt — aynı gün farklı stillerde farklı his) ===",
+        styleRule ? formatStyleRuleForBrief(styleRule) : "Stil kuralı yok",
         "",
         "=== ÖZEL GÜN ===",
         day
@@ -266,9 +295,10 @@ export async function buildBrandCreativeBrief(
         "2) positioning: Müşterinin ne iş yaptığını yazım düzelterek 1-2 cümle profesyonel Türkçe.",
         "3) dayHarmony: Bu özel günün duygusal/kültürel anlamı + markanın nasıl bir araya geleceği. Ruhsuz şablon değil.",
         "4) sceneComposition: Somut sahne — hangi dekor, hangi semboller, hangi atmosfer, nerede başlık/logo. Konu ilk bakışta anlaşılsın.",
-        "5) sectorBlend: Sektör estetiği günün ruhuna UYUMLANMALI; günün yerini almamalı.",
+        "5) sectorBlend: Sektör estetiği (description, visual, tone, composition, color, elements) günün ruhuna UYUMLANMALI; günün yerini almamalı.",
         "6) subtextOnImage: Çoğu durumda null. İkincil cümle üretme — yazım hatası riski.",
         "7) Müşterinin ham cümlesini görsele kopyalama.",
+        "8) Örnek: 29 Ekim güzellik salonunda zarif premium soft kırmızı-beyaz; kafede sıcak kahve/masa; diş kliniğinde temiz hijyenik; ajansda modern katmanlı premium.",
         "",
         "JSON dön:",
         JSON.stringify({

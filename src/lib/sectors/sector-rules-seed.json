@@ -1,0 +1,593 @@
+[
+  {
+    "key": "beauty_salon",
+    "name": "Güzellik salonu",
+    "description": "Güzellik salonları, kuaförler, estetik merkezleri, cilt bakım ve kişisel bakım işletmeleri için şık, zarif ve premium sosyal medya dili.",
+    "visual_cues": "Elegant, feminine, polished, premium beauty aesthetic, soft lighting, clean skincare/beauty atmosphere, refined textures, smooth gradients, elegant product and salon details.",
+    "tone_hints": "Zarif, sıcak, güven veren, bakımlı, modern ve estetik odaklı. Fazla iddialı veya medikal vaat içermeyen bir dil.",
+    "composition_hints": "Bol boşluk, zarif tipografi, temiz çerçeve, yumuşak ışık, marka rengini pastel veya premium tonlarda kullan. Logo görünür ama tasarımı domine etmesin.",
+    "color_hints": "Pudra, krem, beyaz, altın, rose, soft pink, nude, pastel yeşil, premium siyah-beyaz kombinasyonları.",
+    "suitable_elements": [
+      "soft beauty textures",
+      "skincare bottles",
+      "elegant salon interior",
+      "flowers",
+      "silk fabric",
+      "clean mirror details",
+      "subtle glow effects",
+      "minimal beauty icons"
+    ],
+    "avoid_rules": [
+      "aşırı karmaşa",
+      "düşük kalite makyaj görünümleri",
+      "abartılı yüz filtreleri",
+      "rahatsız edici medikal işlem görselleri",
+      "ucuz kuaför afişi hissi",
+      "çok fazla metin",
+      "bozuk insan yüzleri veya eller"
+    ],
+    "prompt_modifier": "Adapt the design for a premium beauty salon brand. Use elegant, feminine and polished visual language. Keep the layout clean, refined and social-media-ready. The result should feel like a professional agency-made post for a modern beauty business, not a generic template."
+  },
+  {
+    "key": "cafe_restaurant",
+    "name": "Kafe / restoran",
+    "description": "Kafeler, restoranlar, pastaneler, kahveciler ve yerel yeme-içme işletmeleri için sıcak, davetkâr ve iştah açıcı görsel dil.",
+    "visual_cues": "Warm, inviting, appetizing, cozy, local cafe atmosphere, soft natural light, table details, coffee, dessert, fresh food, friendly hospitality feeling.",
+    "tone_hints": "Samimi, davetkâr, neşeli, mahalle işletmesi sıcaklığında ama kaliteli. Fazla agresif satış dili olmamalı.",
+    "composition_hints": "Yakın plan ürün hissi, masa üstü detaylar, sıcak ışık, okunabilir başlık, sosyal medyada iştah açıcı görünüm. Boş alan bırak ve markayı doğal konumlandır.",
+    "color_hints": "Kahve tonları, krem, sıcak beyaz, amber, zeytin yeşili, bordo, doğal ahşap tonları.",
+    "suitable_elements": [
+      "coffee cup",
+      "latte art",
+      "dessert plate",
+      "warm table setup",
+      "restaurant interior",
+      "fresh ingredients",
+      "cozy lighting",
+      "steam effect"
+    ],
+    "avoid_rules": [
+      "kirli masa",
+      "karanlık sahne",
+      "yapay yiyecekler",
+      "plastik gibi görünen yemek",
+      "aşırı stok fotoğraf hissi",
+      "dağınık tabaklar",
+      "çok agresif indirim afişi"
+    ],
+    "prompt_modifier": "Adapt the design for a warm cafe or restaurant brand. Make the post feel cozy, appetizing and inviting. Use natural food and beverage cues without making the scene messy. The design should make customers feel welcomed and curious to visit."
+  },
+  {
+    "key": "dental_clinic",
+    "name": "Diş kliniği",
+    "description": "Diş klinikleri ve ağız-diş sağlığı merkezleri için temiz, güvenilir, hijyenik ve profesyonel görsel dil.",
+    "visual_cues": "Clean, trustworthy, hygienic, professional, bright clinic atmosphere, soft medical minimalism, calm confidence, polished healthcare branding.",
+    "tone_hints": "Güven veren, sakin, kurumsal, temiz ve profesyonel. Tedavi vaadi veya tıbbi iddia içermeyen saygılı dil.",
+    "composition_hints": "Aydınlık arka plan, temiz tipografi, çok sade ikon veya klinik detayları. İnsan yüzü kullanılıyorsa doğal ve güven veren olmalı.",
+    "color_hints": "Beyaz, açık mavi, mint yeşili, soft gri, lacivert, temiz pastel tonlar. Aşırı mavi hastane hissinden kaçın.",
+    "suitable_elements": [
+      "clean smile silhouette",
+      "minimal dental icon",
+      "bright clinic background",
+      "soft abstract medical shapes",
+      "hygienic white surfaces",
+      "gentle light reflections"
+    ],
+    "avoid_rules": [
+      "rahatsız edici medikal detay",
+      "aşırı mavi ton",
+      "kan, iğne, operasyon sahnesi",
+      "abartılı diş öncesi/sonrası",
+      "korkutucu klinik atmosfer",
+      "tıbbi başarı iddiası",
+      "bozuk diş veya ağız görseli"
+    ],
+    "prompt_modifier": "Adapt the design for a dental clinic. Keep the visual clean, bright, trustworthy and professional. Avoid disturbing medical imagery. The post should feel safe, hygienic and reassuring for patients."
+  },
+  {
+    "key": "real_estate",
+    "name": "Emlak ofisi",
+    "description": "Emlak ofisleri, gayrimenkul danışmanları ve yatırım odaklı yerel işletmeler için modern, güven veren ve profesyonel şehir/lifestyle dili.",
+    "visual_cues": "Corporate, confident, modern, real estate lifestyle, city view, home details, architecture, clean premium business aesthetic.",
+    "tone_hints": "Güven veren, profesyonel, kararlı, danışmanlık hissi taşıyan bir dil. Aşırı lüks veya yapay zenginlik vurgusu olmamalı.",
+    "composition_hints": "Modern bina detayları, şehir silüeti, sade emlak/lifestyle atmosferi, net başlık, güçlü ama abartısız marka görünürlüğü.",
+    "color_hints": "Lacivert, beyaz, gri, altın, koyu yeşil, siyah, bej ve kurumsal tonlar.",
+    "suitable_elements": [
+      "modern apartment exterior",
+      "city skyline",
+      "home interior detail",
+      "key silhouette",
+      "architectural lines",
+      "premium business card style",
+      "subtle map/grid elements"
+    ],
+    "avoid_rules": [
+      "stok fotoğraf hissi",
+      "aşırı lüks abartısı",
+      "sahte zenginlik imajı",
+      "ucuz ilan afişi",
+      "karmaşık fiyat/ilan detayı",
+      "fazla parlak altın efekt",
+      "güven zedeleyen kalitesiz bina görüntüsü"
+    ],
+    "prompt_modifier": "Adapt the design for a real estate office. Use a confident, modern and trustworthy business aesthetic with subtle city or home-related visuals. The design should feel professional and credible, not like a cheap property ad."
+  },
+  {
+    "key": "digital_agency",
+    "name": "Reklam ajansı / yazılım ajansı",
+    "description": "Reklam ajansları, yazılım ajansları, dijital pazarlama ekipleri, web tasarım ve teknoloji hizmetleri için premium dijital ajans estetiği.",
+    "visual_cues": "Premium digital agency, corporate tech aesthetic, sophisticated layered design, glassmorphism, gradients, abstract UI panels, creative strategy mood.",
+    "tone_hints": "Akıllı, modern, yaratıcı, stratejik ve profesyonel. Amatör startup şablonu gibi durmamalı.",
+    "composition_hints": "Katmanlı UI kartları, soyut dijital elementler, temiz grid, premium gradient, güçlü tipografi. Logo modern şekilde entegre edilmeli.",
+    "color_hints": "Emerald, siyah, beyaz, elektrik mavi, mor, neon yeşil, koyu lacivert, gradient geçişler.",
+    "suitable_elements": [
+      "abstract UI cards",
+      "code snippets",
+      "marketing dashboard shapes",
+      "creative grid",
+      "digital particles",
+      "glass panels",
+      "subtle 3D elements"
+    ],
+    "avoid_rules": [
+      "clip art",
+      "stick figures",
+      "amatör çizim",
+      "yazım hatalı alt slogan",
+      "fazla karışık dashboard",
+      "ucuz teknoloji afişi",
+      "aşırı neon karmaşası"
+    ],
+    "prompt_modifier": "Adapt the design for a premium digital agency or software agency. Use sophisticated digital visuals, layered composition and a modern tech-brand aesthetic. The result should look strategic, sharp and high-end."
+  },
+  {
+    "key": "education",
+    "name": "Eğitim kurumu / kurs",
+    "description": "Kurslar, okullar, özel eğitim kurumları, dil kursları ve akademiler için güven veren, ilham verici ve temiz eğitim markası dili.",
+    "visual_cues": "Inspiring, trustworthy, educational brand aesthetic, bright learning atmosphere, books, notebooks, soft classroom details, confident academic feeling.",
+    "tone_hints": "İlham veren, güvenilir, umutlu, gelişim odaklı ve ailelere hitap eden sıcak profesyonel dil.",
+    "composition_hints": "Okunaklı başlık, temiz akademik düzen, sade ikonlar, çok çocukça olmayan ama pozitif eğitim atmosferi.",
+    "color_hints": "Mavi, yeşil, sarı detaylar, beyaz, pastel tonlar, akademik lacivert.",
+    "suitable_elements": [
+      "books",
+      "notebook",
+      "pencil",
+      "graduation cap",
+      "classroom light",
+      "abstract learning icons",
+      "friendly academic pattern"
+    ],
+    "avoid_rules": [
+      "karmaşık infografik",
+      "aşırı çocuksu clip art",
+      "kalabalık sınıf karmaşası",
+      "stok öğrenci fotoğrafı hissi",
+      "başarı garantisi iddiası",
+      "çok fazla yazı"
+    ],
+    "prompt_modifier": "Adapt the design for an education brand. Make it inspiring, trustworthy and clear. Use learning-related details subtly and avoid childish clip-art unless the brand is explicitly for children."
+  },
+  {
+    "key": "boutique_store",
+    "name": "Butik / mağaza",
+    "description": "Butikler, yerel mağazalar, moda, takı, aksesuar ve perakende işletmeleri için şık, ürün odaklı ve modern retail estetiği.",
+    "visual_cues": "Stylish boutique retail, elegant product-forward design, fashion-inspired composition, clean premium shopping mood, curated display aesthetic.",
+    "tone_hints": "Şık, sıcak, trend odaklı, zarif ve satın alma isteği uyandıran ama ucuz indirim dili kullanmayan ton.",
+    "composition_hints": "Ürün vitrini hissi, temiz kampanya alanı, moda/retail detayları, elegant typographic hierarchy.",
+    "color_hints": "Bej, siyah, beyaz, pastel tonlar, rose, altın, sezon renkleri.",
+    "suitable_elements": [
+      "boutique display",
+      "shopping bag",
+      "fabric texture",
+      "accessory detail",
+      "minimal product pedestal",
+      "hanger silhouette",
+      "elegant retail pattern"
+    ],
+    "avoid_rules": [
+      "ucuz indirim afişi hissi",
+      "kalitesiz ürün görseli",
+      "aşırı stok model pozu",
+      "çok fazla fiyat etiketi",
+      "karışık vitrin",
+      "pazar yeri afişi gibi görünüm"
+    ],
+    "prompt_modifier": "Adapt the design for a stylish boutique or local retail store. Use elegant, product-forward composition with a fashionable and polished social media look. Avoid cheap discount poster aesthetics."
+  },
+  {
+    "key": "fitness_gym",
+    "name": "Spor salonu",
+    "description": "Spor salonları, pilates stüdyoları, personal training markaları ve fitness işletmeleri için enerjik, motive edici ve dinamik görsel dil.",
+    "visual_cues": "Energetic athletic fitness brand aesthetic, dynamic movement, clean gym atmosphere, motivational yet modern sports visuals.",
+    "tone_hints": "Enerjik, motive edici, güçlü, pozitif. Aşırı agresif veya vücut baskısı oluşturan dil kullanılmamalı.",
+    "composition_hints": "Dinamik çizgiler, hareket hissi, güçlü başlık, spor atmosferi ama karanlık ve kas şovu odaklı olmadan.",
+    "color_hints": "Siyah, beyaz, neon yeşil, kırmızı, turuncu, elektrik mavi, koyu gri.",
+    "suitable_elements": [
+      "fitness equipment",
+      "motion lines",
+      "athletic silhouette",
+      "clean gym interior",
+      "energy gradients",
+      "sport texture",
+      "minimal dumbbell icon"
+    ],
+    "avoid_rules": [
+      "aşırı agresif vücut imgeleri",
+      "karanlık sahne",
+      "steroid/bodybuilding abartısı",
+      "vücut utandırıcı dil",
+      "terli rahatsız edici yakın plan",
+      "kalitesiz spor afişi"
+    ],
+    "prompt_modifier": "Adapt the design for a modern fitness or gym brand. Make it energetic, motivating and dynamic without using aggressive body imagery. The post should feel strong, clean and positive."
+  },
+  {
+    "key": "dietitian_health",
+    "name": "Diyetisyen / sağlık",
+    "description": "Diyetisyenler, sağlıklı yaşam danışmanları, fizyoterapi dışı wellness markaları ve sağlıklı beslenme işletmeleri için temiz, güvenilir, doğal wellness estetiği.",
+    "visual_cues": "Clean wellness nutrition aesthetic, trustworthy health tone, fresh ingredients, balanced lifestyle, soft natural light, calm wellbeing mood.",
+    "tone_hints": "Güvenilir, dengeli, pozitif, sağlıklı yaşam odaklı. Tıbbi tedavi iddiası veya hızlı sonuç vaadi yok.",
+    "composition_hints": "Ferah arka plan, doğal gıda dokuları, temiz başlık, sakin görsel denge, marka rengiyle soft vurgu.",
+    "color_hints": "Yeşil, beyaz, krem, açık sarı, doğal toprak tonları, soft mavi.",
+    "suitable_elements": [
+      "fresh vegetables",
+      "fruit bowl",
+      "water glass",
+      "wellness plate",
+      "leaf pattern",
+      "soft kitchen light",
+      "minimal nutrition icons"
+    ],
+    "avoid_rules": [
+      "tıbbi iddia",
+      "rahatsız edici görsel",
+      "öncesi/sonrası beden görselleri",
+      "mucize zayıflama vaadi",
+      "aşırı klinik atmosfer",
+      "kalori takıntısı hissi"
+    ],
+    "prompt_modifier": "Adapt the design for a dietitian or wellness health brand. Use fresh, clean and trustworthy nutrition visuals. Avoid medical claims, body-shaming, miracle results or disturbing health imagery."
+  },
+  {
+    "key": "auto_service",
+    "name": "Oto servis",
+    "description": "Oto servisler, ekspertiz, lastik, bakım, detailing ve araç hizmetleri için güvenilir, profesyonel ve teknik ama temiz görsel dil.",
+    "visual_cues": "Professional automotive service, trustworthy mechanical brand, clean garage, polished car details, technical precision, modern workshop feel.",
+    "tone_hints": "Güven veren, net, profesyonel, ustalık ve kalite hissi taşıyan dil. Dağınık veya kirli sanayi görünümü olmamalı.",
+    "composition_hints": "Araç detayları, temiz servis ortamı, metalik doku, net başlık, güçlü marka yerleşimi.",
+    "color_hints": "Siyah, gri, metalik, lacivert, kırmızı vurgu, sarı detay, beyaz.",
+    "suitable_elements": [
+      "clean car detail",
+      "wheel/tire close-up",
+      "garage light",
+      "tool silhouette",
+      "metal texture",
+      "headlight reflection",
+      "technical grid"
+    ],
+    "avoid_rules": [
+      "kirli garaj",
+      "karanlık sahne",
+      "yağlı dağınık ortam",
+      "bozuk araç görüntüsü",
+      "ucuz sanayi afişi",
+      "aşırı agresif yarış teması"
+    ],
+    "prompt_modifier": "Adapt the design for a professional automotive service brand. Use clean mechanical visuals, polished car details and a trustworthy workshop atmosphere. Avoid dirty garage scenes or low-quality repair imagery."
+  },
+  {
+    "key": "veterinary",
+    "name": "Veteriner kliniği",
+    "description": "Veteriner klinikleri, pet shoplar ve evcil hayvan hizmetleri için sıcak, güvenilir, sevimli ama profesyonel görsel dil.",
+    "visual_cues": "Warm trustworthy pet care aesthetic, friendly animals, clean clinic, soft lighting, caring and gentle mood.",
+    "tone_hints": "Şefkatli, güven veren, sıcak, samimi ve hayvan dostu. Aşırı komik veya çocukça olmamalı.",
+    "composition_hints": "Temiz pet care atmosferi, yumuşak renkler, sevimli ama kaliteli hayvan görselleri, okunabilir başlık.",
+    "color_hints": "Mint yeşili, beyaz, soft mavi, krem, pastel sarı, doğal tonlar.",
+    "suitable_elements": [
+      "cat and dog silhouettes",
+      "paw pattern",
+      "clean vet clinic",
+      "pet care icons",
+      "soft blanket texture",
+      "friendly animal portrait"
+    ],
+    "avoid_rules": [
+      "hasta veya yaralı hayvan görseli",
+      "rahatsız edici medikal detay",
+      "aşırı çocuksu clip art",
+      "kalitesiz hayvan yüzü",
+      "korkutucu klinik sahnesi"
+    ],
+    "prompt_modifier": "Adapt the design for a veterinary or pet care brand. Make it warm, gentle, trustworthy and friendly while keeping a professional clinic-quality look. Avoid injured animals or disturbing medical visuals."
+  },
+  {
+    "key": "law_office",
+    "name": "Hukuk bürosu",
+    "description": "Avukatlar ve hukuk büroları için ciddi, güvenilir, sade ve kurumsal görsel dil.",
+    "visual_cues": "Professional law office aesthetic, trust, clarity, authority, minimal corporate design, elegant legal symbolism.",
+    "tone_hints": "Ciddi, saygılı, güven veren, net ve kurumsal. Mizahi veya fazla renkli ton kullanılmamalı.",
+    "composition_hints": "Minimal tipografi, koyu kurumsal renkler, ölçülü semboller, fazla görsel kalabalık olmadan otorite hissi.",
+    "color_hints": "Lacivert, siyah, beyaz, gri, altın detay, koyu yeşil.",
+    "suitable_elements": [
+      "subtle scales of justice",
+      "law book texture",
+      "office desk detail",
+      "minimal columns",
+      "corporate pattern",
+      "premium typography"
+    ],
+    "avoid_rules": [
+      "mahkeme drama sahnesi",
+      "aşırı klişe tokmak görseli",
+      "mizahi dil",
+      "ucuz hukuk afişi",
+      "garanti sonuç vaadi",
+      "fazla altın/parlak efekt"
+    ],
+    "prompt_modifier": "Adapt the design for a law office. Keep it serious, trustworthy, minimal and professional. Use legal symbolism subtly and avoid dramatic or cliché courtroom visuals."
+  },
+  {
+    "key": "accounting_finance",
+    "name": "Muhasebe / finans danışmanlığı",
+    "description": "Muhasebeciler, mali müşavirler ve finans danışmanları için düzenli, güvenilir, hesaplı ve kurumsal görsel dil.",
+    "visual_cues": "Clean financial advisory aesthetic, organized documents, trust, clarity, business professionalism, subtle data visuals.",
+    "tone_hints": "Güvenilir, düzenli, net, profesyonel. Fazla teknik veya korkutucu vergi dili kullanılmamalı.",
+    "composition_hints": "Temiz grid, iş dokümanı detayları, sade grafikler, güven veren başlık düzeni.",
+    "color_hints": "Lacivert, yeşil, beyaz, gri, koyu mavi, kurumsal tonlar.",
+    "suitable_elements": [
+      "clean documents",
+      "calculator silhouette",
+      "subtle chart lines",
+      "business desk",
+      "organized folders",
+      "financial grid"
+    ],
+    "avoid_rules": [
+      "karmaşık tablo/grafik",
+      "korkutucu vergi evrakı hissi",
+      "fazla para görseli",
+      "amatör ofis görüntüsü",
+      "çok fazla küçük yazı"
+    ],
+    "prompt_modifier": "Adapt the design for an accounting or finance advisory brand. Make it organized, trustworthy and professional with subtle business and financial details. Avoid cluttered charts or intimidating tax imagery."
+  },
+  {
+    "key": "hotel_tourism",
+    "name": "Otel / turizm",
+    "description": "Oteller, butik oteller, turizm acenteleri ve konaklama işletmeleri için davetkâr, ferah, tatil/lifestyle odaklı görsel dil.",
+    "visual_cues": "Inviting hospitality aesthetic, travel lifestyle, bright vacation mood, premium but warm hotel/tourism visuals.",
+    "tone_hints": "Davetkâr, huzurlu, keyifli, misafirperver ve kaliteli. Aşırı lüks veya yapay turistik stok hissi olmamalı.",
+    "composition_hints": "Ferah manzara, otel detayları, sıcak ışık, rahatlık hissi, temiz başlık ve logo yerleşimi.",
+    "color_hints": "Deniz mavisi, beyaz, bej, güneş sarısı, zeytin yeşili, soft turkuaz.",
+    "suitable_elements": [
+      "hotel room detail",
+      "sea or nature view",
+      "travel suitcase",
+      "breakfast table",
+      "poolside light",
+      "map texture",
+      "sunset gradient"
+    ],
+    "avoid_rules": [
+      "aşırı stok tatil fotoğrafı",
+      "kalabalık turist sahnesi",
+      "ucuz tur afişi",
+      "abartılı lüks",
+      "bulanık manzara",
+      "kirli oda/detay"
+    ],
+    "prompt_modifier": "Adapt the design for a hotel or tourism brand. Make it inviting, bright and hospitality-oriented. Use travel/lifestyle details subtly and avoid generic stock-tourism poster aesthetics."
+  },
+  {
+    "key": "photography_studio",
+    "name": "Fotoğraf stüdyosu",
+    "description": "Fotoğrafçılar, video prodüksiyon ekipleri ve kreatif stüdyolar için estetik, görsel kaliteyi öne çıkaran yaratıcı dil.",
+    "visual_cues": "Creative photography studio aesthetic, premium visual composition, lens/light details, editorial mood, polished creative brand feel.",
+    "tone_hints": "Yaratıcı, estetik, kaliteli, duygusal veya premium. Görsel kalite markanın ana vaadi gibi hissetmeli.",
+    "composition_hints": "Işık-gölge dengesi, lens/parıltı detayları, sade ama etkileyici kompozisyon, editorial hava.",
+    "color_hints": "Siyah, beyaz, krem, altın ışık, koyu gri, pastel veya sinematik tonlar.",
+    "suitable_elements": [
+      "camera lens",
+      "studio light",
+      "photo frame",
+      "soft bokeh",
+      "editorial layout",
+      "film texture",
+      "light flare"
+    ],
+    "avoid_rules": [
+      "amatör kamera clip art",
+      "düşük çözünürlük hissi",
+      "fazla efekt",
+      "karmaşık kolaj",
+      "stok fotoğrafçı pozu",
+      "ucuz düğün afişi"
+    ],
+    "prompt_modifier": "Adapt the design for a photography or creative studio brand. Make the visual composition refined, editorial and premium. Use light, lens or framing details subtly."
+  },
+  {
+    "key": "construction_architecture",
+    "name": "İnşaat / mimarlık",
+    "description": "Mimarlık ofisleri, inşaat firmaları, iç mimarlar ve yapı markaları için modern, güven veren, çizgisel ve premium görsel dil.",
+    "visual_cues": "Modern architectural aesthetic, clean structural lines, blueprint details, premium materials, confident construction brand feel.",
+    "tone_hints": "Güvenilir, modern, güçlü, estetik ve profesyonel. Aşırı şantiye veya kirli yapı hissi olmamalı.",
+    "composition_hints": "Mimari çizgiler, plan/blueprint dokusu, modern bina detayları, net başlık, kurumsal boşluk.",
+    "color_hints": "Gri, beyaz, siyah, lacivert, bej, beton tonları, altın veya yeşil vurgu.",
+    "suitable_elements": [
+      "architectural lines",
+      "blueprint texture",
+      "modern facade",
+      "interior detail",
+      "construction grid",
+      "material texture",
+      "minimal ruler/compass icon"
+    ],
+    "avoid_rules": [
+      "kirli şantiye",
+      "aşırı stok bina",
+      "kalitesiz render",
+      "ucuz müteahhit afişi",
+      "fazla karmaşık plan",
+      "abartılı lüks villa"
+    ],
+    "prompt_modifier": "Adapt the design for an architecture or construction brand. Use clean lines, structural elegance and professional confidence. Avoid dirty construction sites or cheap real-estate-style visuals."
+  },
+  {
+    "key": "cleaning_services",
+    "name": "Temizlik hizmetleri",
+    "description": "Ev/ofis temizlik firmaları, kuru temizleme ve hijyen hizmetleri için ferah, hijyenik, parlak ve güven veren görsel dil.",
+    "visual_cues": "Fresh clean service aesthetic, sparkling hygiene, bright interiors, trustworthy local service, crisp and airy visuals.",
+    "tone_hints": "Temiz, güvenilir, ferah, pratik, profesyonel. Aşırı kimyasal veya rahatsız edici kir görüntüleri olmamalı.",
+    "composition_hints": "Beyaz boşluk, parlak yüzeyler, temizlik hissi veren ışık, sade başlık ve güven veren marka yerleşimi.",
+    "color_hints": "Beyaz, açık mavi, mint, yeşil, soft gri, turkuaz.",
+    "suitable_elements": [
+      "sparkle effect",
+      "clean window",
+      "fresh towel",
+      "minimal spray bottle",
+      "bright room",
+      "water droplet",
+      "clean surface"
+    ],
+    "avoid_rules": [
+      "çok kirli görüntü",
+      "rahatsız edici leke yakın planı",
+      "aşırı kimyasal hissi",
+      "ucuz temizlik afişi",
+      "karanlık oda",
+      "dağınık ev görüntüsü"
+    ],
+    "prompt_modifier": "Adapt the design for a professional cleaning service brand. Make it bright, fresh, hygienic and trustworthy. Use subtle sparkle and clean surface cues without showing unpleasant dirt."
+  },
+  {
+    "key": "flower_gift",
+    "name": "Çiçekçi / hediye",
+    "description": "Çiçekçiler, hediyelik eşya mağazaları ve butik hediye markaları için duygusal, zarif, renkli ve özel gün odaklı görsel dil.",
+    "visual_cues": "Elegant floral and gift aesthetic, emotional, colorful, premium bouquet details, soft romantic or celebratory mood.",
+    "tone_hints": "Duygusal, sıcak, nazik, özel gün ruhuna uygun. Çok basit hediye afişi gibi görünmemeli.",
+    "composition_hints": "Çiçek dokuları, paket detayları, yumuşak ışık, özel gün mesajını öne çıkaran zarif düzen.",
+    "color_hints": "Pembe, kırmızı, krem, yeşil, lavanta, pastel tonlar, altın detay.",
+    "suitable_elements": [
+      "bouquet",
+      "gift box",
+      "ribbon",
+      "floral pattern",
+      "soft petals",
+      "celebration detail",
+      "romantic light"
+    ],
+    "avoid_rules": [
+      "yapay plastik çiçek hissi",
+      "aşırı kalabalık buket",
+      "ucuz hediye afişi",
+      "fazla kırmızı-pembe karmaşası",
+      "kalitesiz paket görüntüsü"
+    ],
+    "prompt_modifier": "Adapt the design for a flower or gift brand. Make it emotional, elegant and special-day-oriented with tasteful floral or gift details. Avoid cheap gift-shop poster aesthetics."
+  },
+  {
+    "key": "barber_hairdresser",
+    "name": "Berber / kuaför",
+    "description": "Berberler, kuaförler ve saç bakım işletmeleri için stil sahibi, modern, bakımlı ve profesyonel görsel dil.",
+    "visual_cues": "Stylish grooming aesthetic, modern barber/hairdresser visuals, clean salon tools, polished hair care atmosphere.",
+    "tone_hints": "Stil sahibi, güven veren, modern, bakımlı, yerel işletme samimiyetinde ama profesyonel.",
+    "composition_hints": "Saç/berber ekipmanları, salon dokusu, temiz ve şık başlık düzeni, marka rengine uygun vurgu.",
+    "color_hints": "Siyah, beyaz, gri, krem, altın, kırmızı vurgu, koyu yeşil.",
+    "suitable_elements": [
+      "comb and scissors",
+      "barber pole detail",
+      "salon mirror",
+      "hair texture",
+      "clean grooming tools",
+      "premium chair detail"
+    ],
+    "avoid_rules": [
+      "düşük kalite saç modeli",
+      "bozuk yüz/saç",
+      "kirli salon",
+      "ucuz berber afişi",
+      "aşırı parlak efekt",
+      "karmaşık arka plan"
+    ],
+    "prompt_modifier": "Adapt the design for a barber or hairdresser brand. Make it stylish, polished and modern with clean grooming or salon details. Avoid cheap local poster aesthetics."
+  },
+  {
+    "key": "jewelry_accessories",
+    "name": "Takı / aksesuar",
+    "description": "Takı, aksesuar, kuyum, bijuteri ve el yapımı ürün markaları için zarif, yakın plan, premium ve parıltılı görsel dil.",
+    "visual_cues": "Elegant jewelry/accessory aesthetic, premium close-up, subtle sparkle, refined luxury, product-focused composition.",
+    "tone_hints": "Zarif, değerli, şık, özel ve premium. Aşırı gösterişli veya sahte lüks olmamalı.",
+    "composition_hints": "Yakın plan detay, minimal arka plan, ışık yansıması, elegant typography, ürün hissi ön planda.",
+    "color_hints": "Altın, gümüş, siyah, krem, beyaz, nude, zümrüt yeşili, koyu lacivert.",
+    "suitable_elements": [
+      "jewelry close-up",
+      "silk fabric",
+      "subtle sparkle",
+      "gift box",
+      "minimal pedestal",
+      "soft reflection",
+      "premium texture"
+    ],
+    "avoid_rules": [
+      "sahte plastik takı hissi",
+      "aşırı parıltı",
+      "ucuz kuyumcu afişi",
+      "kalitesiz ürün yakın planı",
+      "çok fazla altın efekt",
+      "karmaşık vitrin"
+    ],
+    "prompt_modifier": "Adapt the design for a jewelry or accessories brand. Use refined, premium and product-forward visuals with subtle sparkle and elegant spacing. Avoid fake luxury or cheap retail poster style."
+  },
+  {
+    "key": "ecommerce",
+    "name": "E-ticaret markası",
+    "description": "Online mağazalar, D2C markalar, pazaryeri satıcıları ve küçük e-ticaret işletmeleri için modern, satışa destek olan ama kaliteli görsel dil.",
+    "visual_cues": "Modern ecommerce brand aesthetic, clean product showcase, digital shopping cues, polished promotional design.",
+    "tone_hints": "Net, satın almaya teşvik eden, modern, güven veren. Çok agresif indirim veya pazaryeri karmaşası olmamalı.",
+    "composition_hints": "Ürün odaklı alan, kampanya mesajı için temiz boşluk, modern UI/alışveriş detayları, net CTA hissi.",
+    "color_hints": "Marka rengine göre esnek; beyaz, siyah, yeşil, mavi, turuncu vurgu, modern gradientler.",
+    "suitable_elements": [
+      "product display",
+      "shopping bag icon",
+      "delivery box detail",
+      "clean ecommerce card",
+      "discount badge but subtle",
+      "mobile shopping UI"
+    ],
+    "avoid_rules": [
+      "ucuz pazar yeri afişi",
+      "çok fazla fiyat etiketi",
+      "aşırı büyük indirim yazısı",
+      "kalitesiz ürün render",
+      "karmaşık kolaj",
+      "stok alışveriş sepeti klişesi"
+    ],
+    "prompt_modifier": "Adapt the design for a modern ecommerce brand. Make it product-forward, clean and conversion-friendly without looking like a cheap marketplace banner."
+  },
+  {
+    "key": "local_service",
+    "name": "Diğer KOBİ / yerel hizmet",
+    "description": "Genel küçük işletmeler, hizmet sağlayıcılar ve yerel markalar için temiz, güvenilir, modern ve anlaşılır görsel dil.",
+    "visual_cues": "Professional small business, clean modern local brand, trustworthy, friendly, simple social media design.",
+    "tone_hints": "Net, samimi, güven veren, yerel işletme sıcaklığında ama amatör olmayan dil.",
+    "composition_hints": "Temiz layout, okunabilir başlık, marka rengi vurgusu, sade arka plan, güven veren genel işletme estetiği.",
+    "color_hints": "Marka rengine göre temiz kombinasyonlar; beyaz, açık gri, yeşil, lacivert ve pastel tonlar.",
+    "suitable_elements": [
+      "abstract local business shapes",
+      "friendly service icons",
+      "clean office detail",
+      "community feeling",
+      "subtle pattern",
+      "brand color blocks"
+    ],
+    "avoid_rules": [
+      "clip art",
+      "amatör tasarım",
+      "fazla metin",
+      "ucuz broşür hissi",
+      "kalitesiz stok fotoğraf",
+      "karışık renk kullanımı"
+    ],
+    "prompt_modifier": "Adapt the design for a professional small local business. Keep it clean, modern, trustworthy and easy to understand. Avoid amateur clip-art, clutter and excessive text."
+  }
+]

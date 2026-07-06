@@ -8,8 +8,10 @@ import {
 import type {
   AddonOption,
   SectorModifier,
-  StyleModifier,
+  StyleOption,
 } from "@/types/domain";
+import { getSectorOptionsFromSeed, getSectorRulesFromSeed } from "@/lib/sectors/seed-data";
+import { getStyleOptionsFromSeed } from "@/lib/styles/seed-data";
 import { specialDaysCatalog } from "@/lib/special-days-data";
 
 export { specialDaysCatalog as specialDays };
@@ -35,161 +37,19 @@ export const addonOptions: AddonOption[] = [
   },
 ];
 
-export const sectors = [
-  { key: "beauty", label: "Güzellik salonu" },
-  { key: "cafe", label: "Kafe / restoran" },
-  { key: "dental", label: "Diş kliniği" },
-  { key: "real-estate", label: "Emlak ofisi" },
-  { key: "education", label: "Eğitim kurumu / kurs" },
-  { key: "boutique", label: "Butik / mağaza" },
-  { key: "auto-service", label: "Oto servis" },
-  { key: "fitness", label: "Spor salonu" },
-  { key: "nutrition", label: "Diyetisyen / fizyoterapi" },
-  { key: "agency", label: "Reklam ajansı / hizmet firması" },
-  { key: "other", label: "Diğer" },
-] as const;
+export const sectors = getSectorOptionsFromSeed();
 
-export const styles: StyleModifier[] = [
-  {
-    key: "modern",
-    name: "Modern",
-    description: "Temiz, çağdaş, sosyal medya dostu.",
-    promptModifier: "clean, contemporary, social-first layout",
-  },
-  {
-    key: "minimal",
-    name: "Minimal",
-    description: "Az metin, bol boşluk, sade tasarım.",
-    promptModifier: "minimal, spacious, refined typography",
-  },
-  {
-    key: "corporate",
-    name: "Kurumsal",
-    description: "Güven veren, ciddi ve profesyonel.",
-    promptModifier: "trustworthy, formal, polished corporate feel",
-  },
-  {
-    key: "friendly",
-    name: "Samimi",
-    description: "Sıcak, küçük işletme dostu.",
-    promptModifier: "warm, approachable, neighborhood business tone",
-  },
-  {
-    key: "premium",
-    name: "Premium",
-    description: "Şık, kaliteli, ajans havasında.",
-    promptModifier: "luxury-inspired, elegant, agency-quality design",
-  },
-  {
-    key: "colorful",
-    name: "Renkli / enerjik",
-    description: "Daha canlı, dikkat çekici.",
-    promptModifier: "energetic, vibrant, high-contrast social design",
-  },
-];
+export const sectorModifiers: SectorModifier[] = getSectorRulesFromSeed().map((rule) => ({
+  key: rule.key,
+  name: rule.name,
+  description: rule.description,
+  visualCues: rule.visualCues,
+  toneHints: rule.toneHints,
+  avoidRules: rule.avoidRules.join(", "),
+  promptModifier: rule.promptModifier,
+}));
 
-export const sectorModifiers: SectorModifier[] = [
-  {
-    key: "beauty",
-    name: "Güzellik salonu",
-    description: "Premium bakım ve estetik odaklı işletmeler.",
-    visualCues: "soft lighting, skincare textures, feminine balance",
-    toneHints: "zarif, bakımlı, güven veren",
-    avoidRules: "aşırı karmaşa, düşük kalite makyaj görünümleri",
-    promptModifier: "elegant, feminine, polished, clean beauty aesthetic",
-  },
-  {
-    key: "cafe",
-    name: "Kafe / restoran",
-    description: "Sıcak, iştah açıcı, samimi mekanlar.",
-    visualCues: "coffee steam, cozy seating, appetizing serving",
-    toneHints: "sıcak, davetkar, iştah açıcı",
-    avoidRules: "kirli masa, karanlık sahne, yapay yiyecekler",
-    promptModifier: "warm, inviting, appetizing, cozy",
-  },
-  {
-    key: "dental",
-    name: "Diş kliniği",
-    description: "Hijyen ve güven odaklı sağlık işletmeleri.",
-    visualCues: "white surfaces, subtle clinical accents, clean smiles",
-    toneHints: "temiz, profesyonel, güvenilir",
-    avoidRules: "rahatsız edici medikal detay, aşırı mavi ton",
-    promptModifier: "clean, trustworthy, hygienic, professional",
-  },
-  {
-    key: "real-estate",
-    name: "Emlak ofisi",
-    description: "Şehirli, güven veren gayrimenkul hizmetleri.",
-    visualCues: "modern architecture, city outlines, premium living",
-    toneHints: "kendinden emin, modern, kurumsal",
-    avoidRules: "stok fotoğraf hissi, aşırı lüks abartısı",
-    promptModifier: "corporate, confident, modern, city lifestyle feel",
-  },
-  {
-    key: "agency",
-    name: "Reklam ajansı / yazılım ajansı",
-    description: "Kurumsal web, e-ticaret ve dijital çözüm ajansları.",
-    visualCues: "subtle tech grid, UI accents, depth, layered premium layout",
-    toneHints: "kurumsal, güven veren, teknoloji odaklı, premium",
-    avoidRules: "clip art, stick figures, amatör çizim, yazım hatalı alt slogan",
-    promptModifier:
-      "premium digital agency, corporate tech aesthetic, sophisticated layered design",
-  },
-  {
-    key: "education",
-    name: "Eğitim kurumu",
-    description: "Okul, kurs ve eğitim hizmetleri.",
-    visualCues: "books, learning symbols, bright hopeful tones",
-    toneHints: "ilham veren, güvenilir, umut dolu",
-    avoidRules: "karmaşık infografik, aşırı çocuksu clip art",
-    promptModifier: "inspiring, trustworthy, educational brand aesthetic",
-  },
-  {
-    key: "boutique",
-    name: "Butik / mağaza",
-    description: "Perakende ve moda odaklı mağazalar.",
-    visualCues: "product showcase, elegant retail styling",
-    toneHints: "şık, davetkar, trend",
-    avoidRules: "ucuz indirim afişi hissi, kalitesiz ürün görseli",
-    promptModifier: "stylish boutique retail, elegant product-forward design",
-  },
-  {
-    key: "fitness",
-    name: "Spor salonu",
-    description: "Fitness ve spor hizmetleri.",
-    visualCues: "dynamic movement, energy, athletic environment",
-    toneHints: "enerjik, motive edici",
-    avoidRules: "aşırı agresif vücut imgeleri, karanlık sahne",
-    promptModifier: "energetic athletic fitness brand aesthetic",
-  },
-  {
-    key: "nutrition",
-    name: "Diyetisyen / sağlık",
-    description: "Beslenme ve sağlıklı yaşam danışmanlığı.",
-    visualCues: "fresh ingredients, wellness, clean health imagery",
-    toneHints: "sağlıklı, bilimsel, güven veren",
-    avoidRules: "tıbbi iddia, rahatsız edici görsel",
-    promptModifier: "clean wellness nutrition aesthetic, trustworthy health tone",
-  },
-  {
-    key: "auto-service",
-    name: "Oto servis",
-    description: "Araç bakım ve servis hizmetleri.",
-    visualCues: "automotive details, garage professionalism",
-    toneHints: "güvenilir, çözüm odaklı",
-    avoidRules: "kirli garaj, karanlık sahne",
-    promptModifier: "professional automotive service, trustworthy mechanical brand",
-  },
-  {
-    key: "other",
-    name: "Diğer KOBİ",
-    description: "Genel küçük işletmeler.",
-    visualCues: "clean local business, approachable professional",
-    toneHints: "samimi, profesyonel",
-    avoidRules: "clip art, amatör tasarım, fazla metin",
-    promptModifier: "professional small business, clean modern local brand",
-  },
-];
+export const styles: StyleOption[] = getStyleOptionsFromSeed();
 
 export const metrics = {
   basePrice: BASE_PACKAGE_PRICE,

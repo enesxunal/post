@@ -1,4 +1,5 @@
-import { sectorModifiers, styles } from "@/lib/mock-data";
+import { sectorModifiers } from "@/lib/mock-data";
+import { getStyleRulesFromSeed } from "@/lib/styles/seed-data";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
@@ -27,19 +28,21 @@ export function SectorModifiersPanel() {
 }
 
 export function StyleModifiersPanel() {
+  const styles = getStyleRulesFromSeed();
+
   return (
     <div>
       <Badge>Stil</Badge>
       <h1 className="mt-3 text-3xl font-semibold text-slate-950">Stil Kuralları</h1>
       <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">
-        Modern, minimal, kurumsal ve premium tonlar. İlk sürümde kod içinden yönetiliyor.
+        Modern, minimal, kurumsal ve premium tonlar. Düzenleme için Stil Kuralları sayfasını kullanın.
       </p>
 
       <div className="mt-8 grid gap-4 md:grid-cols-2">
         {styles.map((style) => (
           <Card key={style.key} className="p-5">
             <CardTitle>{style.name}</CardTitle>
-            <CardDescription className="mt-2">{style.promptModifier}</CardDescription>
+            <CardDescription className="mt-2">{style.description}</CardDescription>
           </Card>
         ))}
       </div>

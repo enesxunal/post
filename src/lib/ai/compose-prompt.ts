@@ -1,10 +1,20 @@
-import { sectorModifiers, sectors, styles } from "@/lib/mock-data";
+import { appendSectorRuleSections, sectorAvoidList } from "@/lib/sectors/build-sector-prompt";
+import { getSectorOptionsFromSeed } from "@/lib/sectors/seed-data";
+import { appendStyleRuleSections, styleAvoidList } from "@/lib/styles/build-style-prompt";
+import { resolveStyleName } from "@/lib/styles/seed-data";
 import {
   appendOccasionGuideSections,
   occasionAvoidList,
 } from "@/lib/ai/occasion-creative-guide";
 import { buildFormatPromptLine, buildSafeZonePrompt } from "@/lib/image-formats";
-import type { BrandContext, PostFormat, PromptBuildingBlocks, SpecialDay } from "@/types/domain";
+import type {
+  BrandContext,
+  PostFormat,
+  PromptBuildingBlocks,
+  SectorRule,
+  SpecialDay,
+  StyleRule,
+} from "@/types/domain";
 
 export type ComposePromptResult = {
   prompt: string;
@@ -20,7 +30,6 @@ function hashSeed(value: string): number {
   return hash;
 }
 
-/** Aynı gün, farklı marka → farklı başlık alternatifi. */
 export function pickHeadlineForBrand(day: SpecialDay, context: BrandContext): string {
   const pool = day.headlineAlternatives;
   if (!pool.length) return day.name;
@@ -29,13 +38,8 @@ export function pickHeadlineForBrand(day: SpecialDay, context: BrandContext): st
 }
 
 function resolveSectorLabel(context: BrandContext): string {
-  const sector = sectors.find((item) => item.key === context.sector);
+  const sector = getSectorOptionsFromSeed().find((item) => item.key === context.sector);
   return sector?.label ?? context.customSector ?? context.sector;
-}
-
-function resolveStyleLabel(context: BrandContext): string {
-  const style = styles.find((item) => item.key === context.visualStyle);
-  return style?.name ?? context.visualStyle;
 }
 
 function brandColors(context: BrandContext): string {
@@ -52,7 +56,7 @@ function fillMasterTemplate(
     .replaceAll("{sector}", resolveSectorLabel(context))
     .replaceAll("{brand_description}", context.brandDescription ?? "yerel KOBİ işletmesi")
     .replaceAll("{primary_color}", brandColors(context))
-    .replaceAll("{visual_style}", resolveStyleLabel(context))
+    .replaceAll("{visual_style}", resolveStyleName(context.visualStyle))
     .replaceAll("{logo_url}", context.logoUrl ?? "müşteri logosu sağlanacak")
     .replaceAll("{selected_headline}", headline);
 }
@@ -61,7 +65,7 @@ function appendBuildingBlocks(sections: string[], blocks?: PromptBuildingBlocks)
   if (!blocks) return;
 
   if (blocks.eventBrief) {
-    sections.push("", "=== EVENT BRIEF ===", blocks.eventBrief);
+    sections.push("", "=== EVENT MESSAGE PURPOSE ===", blocks.eventBrief);
   }
 
   if (blocks.brandPersonalizationRules.length) {
@@ -74,33 +78,74 @@ function appendBuildingBlocks(sections: string[], blocks?: PromptBuildingBlocks)
   }
 
   if (blocks.visualRules.length) {
-    sections.push("", "=== VISUAL RULES ===", ...blocks.visualRules.map((rule) => `- ${rule}`));
+    sections.push("", "=== OCCASION VISUAL RULES ===", ...blocks.visualRules.map((rule) => `- ${rule}`));
   }
 }
 
-/**
- * Özel gün veri seti + marka bağlamını tek final görsel promptta birleştirir.
- * Önce konunun ruhu, sonra marka aksanı — jenerik tech şablon yasak.
- */
+function appendAvoidSection(
+  sections: string[],
+  day: SpecialDay,
+  blocks: PromptBuildingBlocks | undefined,
+  sectorRule: SectorRule | undefined,
+  styleRule: StyleRule | undefined,
+) {
+  const avoidItems = [
+    ...occasionAvoidList(day),
+    ...(blocks?.avoid ?? []),
+    day.avoidRules,
+    ...(sectorRule ? sectorAvoidList(sectorRule) : []),
+    ...(styleRule ? styleAvoidList(styleRule) : []),
+    sectorRule?.key === "agency"
+      ? ""
+      : "tech grid floor, microchip, holographic UI, cyberpunk as main scene",
+    "misspelled Turkish",
+    "extra subtext sentences",
+    "customer description on image",
+    "distorted logo",
+    "watermark",
+    "clip art",
+    "amatör çizim",
+  ]
+    .filter(Boolean)
+    .flatMap((item) => item!.split(",").map((part) => part.trim()))
+    .filter(Boolean);
+
+  sections.push(
+    "",
+    "=== THINGS TO AVOID (layer 6 — hard constraints) ===",
+    ...[...new Set(avoidItems)].map((item) => `- ${item}`),
+  );
+
+  return [...new Set(avoidItems)].join(", ");
+}
+
 export function composePrompt(
   day: SpecialDay,
   context: BrandContext,
   postFormat: PostFormat = context.postFormat ?? "square",
+  sectorRule?: SectorRule,
+  styleRule?: StyleRule,
 ): ComposePromptResult {
   const headline = pickHeadlineForBrand(day, context);
-  const sector = sectorModifiers.find((item) => item.key === context.sector);
-  const style = styles.find((item) => item.key === context.visualStyle);
   const blocks = day.promptBuildingBlocks;
   const colors = brandColors(context);
-  const isTechHeavySector = context.sector === "agency";
 
   const sections: string[] = [
     "You are an award-winning Turkish social media art director who deeply understands Turkish culture and special days.",
     "Create ONE emotionally resonant, occasion-authentic branded post — NOT a soulless corporate tech template.",
     buildFormatPromptLine(postFormat),
     buildSafeZonePrompt("post", postFormat),
+    "",
+    "PROMPT LAYER ORDER (do not let style or sector erase the occasion):",
+    "1) Special day cultural context & message purpose",
+    "2) Brand sector visual rules",
+    "3) Selected style design language",
+    "4) Brand colors, description & logo usage",
+    "5) On-image headline from the message pool",
+    "6) Things to avoid",
   ];
 
+  // Layer 1 — özel gün
   appendOccasionGuideSections(sections, day, context);
 
   if (day.masterPromptTemplate?.trim()) {
@@ -109,75 +154,65 @@ export function composePrompt(
 
   sections.push(
     "",
-    "=== EVENT CULTURAL CONTEXT (read and embody) ===",
+    "=== LAYER 1: EVENT CULTURAL CONTEXT & MESSAGE PURPOSE ===",
     day.culturalContext,
     "",
-    "=== EVENT VISUAL DIRECTION ===",
+    "Visual direction for this occasion:",
     day.visualDirection,
   );
 
   appendBuildingBlocks(sections, blocks);
 
+  // Layer 2 — sektör
+  if (sectorRule) {
+    appendSectorRuleSections(sections, sectorRule, context);
+  }
+
+  // Layer 3 — stil
+  if (styleRule) {
+    appendStyleRuleSections(sections, styleRule, context);
+  }
+
+  // Layer 4 — marka
   sections.push(
     "",
-    "=== ON-IMAGE HEADLINE (copy EXACTLY, perfect Turkish) ===",
-    `"${headline}"`,
-    `Alternative headlines (reference only): ${day.headlineAlternatives.join(" | ")}`,
-    "",
-    "=== BRAND ACCENT (secondary — do not dominate) ===",
+    "=== LAYER 4: BRAND IDENTITY ===",
     `Brand: ${context.brandName}`,
-    `Sector: ${resolveSectorLabel(context)}`,
-    isTechHeavySector
-      ? "Tech/agency brand: use ONLY subtle color accents. NO chips, grids, holograms, or UI panels as main scene."
-      : sector?.promptModifier
-        ? `Sector language (accent only): ${sector.promptModifier}`
-        : "",
-    sector?.visualCues && !isTechHeavySector
-      ? `Subtle sector cue (background detail only): ${sector.visualCues}`
-      : "",
-    `Brand colors as accents: ${colors}`,
-    `Style preference (adapt to occasion): ${resolveStyleLabel(context)} — ${style?.promptModifier ?? ""}`,
+    `Sector label: ${resolveSectorLabel(context)}`,
+    `Brand description: ${context.brandDescription ?? "yerel KOBİ işletmesi"}`,
+    `Brand colors (accents, blend with occasion + style): ${colors}`,
     "",
     context.logoUrl
       ? [
-          "=== LOGO (otomatik bindirilecek) ===",
+          "Logo usage:",
           "The customer logo will be placed automatically in the top-right corner AFTER generation.",
           "DO NOT draw, invent, approximate, or redraw any logo or brand mark.",
           "Leave a clean empty safe zone in the top-right (~20% width, ~15% height) without text or busy graphics.",
         ].join("\n")
-      : [
-          "=== LOGO ===",
-          "Small, clean logo in corner. Never distort.",
-          context.logoUrl ? `Logo: ${context.logoUrl}` : "",
-        ].join("\n"),
+      : "Logo: none provided — do not invent a logo.",
+  );
+
+  // Layer 5 — başlık / caption havuzu
+  sections.push(
     "",
-    "=== CAPTION INSPIRATION (NOT on image) ===",
+    "=== LAYER 5: ON-IMAGE HEADLINE (copy EXACTLY, perfect Turkish) ===",
+    `"${headline}"`,
+    `Alternative headlines (reference only): ${day.headlineAlternatives.join(" | ")}`,
+    "",
+    "Caption inspiration (NOT on image):",
     day.captionIdeas.slice(0, 3).join(" | "),
     "",
     "=== QUALITY BAR ===",
     "Premium Turkish KOBİ social media — warm, culturally aware, shareable.",
-    "Rich composition with emotional depth. Never clip art or amateur doodles.",
+    "The same special day MUST look different across styles AND sectors.",
+    "Modern ≠ minimal ≠ corporate ≠ friendly ≠ premium ≠ vibrant.",
   );
 
-  const avoidItems = [
-    ...occasionAvoidList(day),
-    ...(blocks?.avoid ?? []),
-    day.avoidRules,
-    sector?.avoidRules,
-    isTechHeavySector ? "tech grid floor, microchip, holographic UI, cyberpunk" : "",
-    "misspelled Turkish",
-    "extra subtext sentences",
-    "customer description on image",
-    "distorted logo",
-    "watermark",
-  ]
-    .filter(Boolean)
-    .flatMap((item) => item!.split(",").map((part) => part.trim()))
-    .filter(Boolean);
+  const negativePrompt = appendAvoidSection(sections, day, blocks, sectorRule, styleRule);
 
   return {
     prompt: sections.filter(Boolean).join("\n"),
     headline,
-    negativePrompt: [...new Set(avoidItems)].join(", "),
+    negativePrompt,
   };
 }

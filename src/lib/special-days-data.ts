@@ -723,6 +723,17 @@ export const SECTOR_SPECIAL_DAY_IDS: Partial<Record<SectorKey, string[]>> = {
   fitness: ["world-physio-day", "summer-season", "new-year"],
   nutrition: ["world-physio-day", "womens-day"],
   agency: ["new-season", "black-friday", "year-end-campaign"],
+  veterinary: ["world-vet-day", "animal-protection-day"],
+  law: ["lawyers-day"],
+  accounting: ["accountants-day", "year-end-campaign"],
+  hotel: ["tourism-week", "summer-season", "new-season"],
+  photography: ["new-season", "valentines-day", "womens-day"],
+  construction: ["architects-day", "new-season"],
+  cleaning: ["new-season", "winter-campaign"],
+  "flower-gift": ["valentines-day", "mothers-day", "womens-day"],
+  barber: ["fathers-day", "womens-day"],
+  jewelry: ["valentines-day", "mothers-day", "womens-day"],
+  ecommerce: ["black-friday", "year-end-campaign", "new-season"],
   other: ["new-season", "black-friday"],
 };
 

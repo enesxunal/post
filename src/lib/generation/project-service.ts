@@ -3,6 +3,7 @@ import { expandSelectedDaysForJobs } from "@/lib/selected-days";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ensureUserProfile } from "@/lib/supabase/profiles";
+import { normalizeStyleKey } from "@/lib/styles/style-key-map";
 import type { AddonKey, BrandContext, PostFormat, SectorKey, VisualStyle } from "@/types/domain";
 
 const META_SEPARATOR = "\n<!--POST_META:";
@@ -82,7 +83,7 @@ export function projectToBrandContext(project: {
     brandColors: meta.brandColors.length
       ? meta.brandColors
       : [project.primary_color],
-    visualStyle: project.visual_style as VisualStyle,
+    visualStyle: normalizeStyleKey(project.visual_style),
     logoUrl: project.logo_url ?? undefined,
     selectedDayIds: meta.selectedDays.map((day) => day.dayId),
     purchasedAddons: meta.purchasedAddons,

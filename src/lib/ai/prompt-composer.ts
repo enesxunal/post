@@ -2,6 +2,8 @@ import { composePrompt } from "@/lib/ai/compose-prompt";
 import { buildBrandCreativeBrief } from "@/lib/ai/brand-creative-director";
 import { getPromptLibraryEntry } from "@/lib/ai/prompt-library";
 import { isLeanGenerationMode } from "@/lib/generation/generation-mode";
+import { getStyleRule } from "@/lib/styles/repository";
+import { getSectorRule } from "@/lib/sectors/repository";
 import type { BrandContext, PromptPreview } from "@/types/domain";
 
 export async function composeImagePrompt(
@@ -10,6 +12,8 @@ export async function composeImagePrompt(
 ): Promise<PromptPreview> {
   const day = await getPromptLibraryEntry(dayId);
   const lean = isLeanGenerationMode();
+  const sectorRule = await getSectorRule(context.sector);
+  const styleRule = await getStyleRule(context.visualStyle);
 
   const dayContext = day
     ? {
@@ -25,10 +29,12 @@ export async function composeImagePrompt(
 
   const brief = await buildBrandCreativeBrief(context, dayContext, {
     useGemini: !lean,
+    sectorRule,
+    styleRule,
   });
 
   const composed = day
-    ? composePrompt(day, context)
+    ? composePrompt(day, context, context.postFormat ?? "square", sectorRule, styleRule)
     : {
         headline: "Özel Gün",
         prompt: `Premium Turkish social post for ${context.brandName}.`,

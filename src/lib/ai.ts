@@ -1,4 +1,5 @@
-import { specialDays, sectorModifiers, styles } from "@/lib/mock-data";
+import { specialDays, sectorModifiers } from "@/lib/mock-data";
+import { getStyleRuleFromSeed } from "@/lib/styles/seed-data";
 import type { BrandContext, PromptPreview, SpecialDay } from "@/types/domain";
 
 export function buildBrandContext(input: BrandContext) {
@@ -16,7 +17,7 @@ export function getPromptLibraryEntry(dayId: string): SpecialDay | undefined {
 export function composeImagePrompt(context: BrandContext, dayId: string): PromptPreview {
   const day = getPromptLibraryEntry(dayId);
   const sector = sectorModifiers.find((item) => item.key === context.sector);
-  const style = styles.find((item) => item.key === context.visualStyle);
+  const style = getStyleRuleFromSeed(context.visualStyle);
 
   const headline =
     day?.headlineAlternatives[0] ?? `${context.brandName} için özel gün paylaşımı`;
@@ -40,6 +41,7 @@ export function composeImagePrompt(context: BrandContext, dayId: string): Prompt
 
   const negativePrompt = [
     day?.avoidRules,
+    ...(style?.avoidRules ?? []),
     "avoid unreadable Turkish",
     "avoid distorted flags",
     "avoid distorted religious symbols",

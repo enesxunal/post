@@ -28,6 +28,7 @@ type JobPreview = {
   id: string;
   status: string;
   type: string;
+  error_message?: string | null;
 };
 
 type GenerationStatus = {
@@ -391,7 +392,9 @@ export function CreativeWorkshopLoader({
                       {focusJob?.status === "ready"
                         ? "Görsel hazır"
                         : focusJob?.status === "failed"
-                          ? "Üretim başarısız"
+                          ? focusJob.error_message
+                            ? `Üretim başarısız: ${focusJob.error_message}`
+                            : "Üretim başarısız"
                           : focusJob?.status === "queued"
                             ? "Sırada bekliyor"
                             : "Şu an üretiliyor"}
@@ -432,6 +435,9 @@ export function CreativeWorkshopLoader({
             ) : phase === "failed" ? (
               <div className="rounded-[28px] border border-red-400/30 bg-red-500/10 p-5">
                 <p className="font-semibold text-red-100">Görsel üretilemedi</p>
+                {focusJob?.error_message ? (
+                  <p className="mt-2 text-sm leading-6 text-red-100/90">{focusJob.error_message}</p>
+                ) : null}
                 <p className="mt-2 text-sm text-red-100/80">
                   Tekrar denemek için profile dönüp &quot;Yeniden üret&quot; butonunu kullanın.
                 </p>
