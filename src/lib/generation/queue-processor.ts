@@ -1,3 +1,4 @@
+import { composeImagePrompt } from "@/lib/ai/prompt-composer";
 import { getPromptLibraryEntry } from "@/lib/ai/prompt-library";
 import { generateCaption } from "@/lib/ai/caption-provider";
 import { generateImage } from "@/lib/ai/image-provider";
