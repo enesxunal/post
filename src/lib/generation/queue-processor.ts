@@ -1,7 +1,7 @@
 import { composeImagePrompt } from "@/lib/ai/prompt-composer";
 import { getPromptLibraryEntry } from "@/lib/ai/prompt-library";
 import { generateCaption } from "@/lib/ai/caption-provider";
-import { generateImage } from "@/lib/ai/image-provider";
+import { generateImage, isPlaceholderImageUrl } from "@/lib/ai/image-provider";
 import {
   checkGeneratedImageQuality,
   shouldRetryQualityCheck,
@@ -237,6 +237,10 @@ export async function processOneQueuedJob(projectId: string) {
       { aspectRatio: resolveAspectRatio(context.postFormat ?? "square") },
     );
 
+    if (isPlaceholderImageUrl(image.imageUrl)) {
+      throw new Error("Görsel üretilemedi (placeholder döndü)");
+    }
+
     await supabase
       .from("generation_jobs")
       .update({ status: "generating_caption", updated_at: nowIso() })
@@ -296,7 +300,7 @@ export async function processOneQueuedJob(projectId: string) {
         thumbnail_url: image.thumbnailUrl,
         caption_text: caption?.caption ?? null,
         hashtags: caption?.hashtags ?? [],
-        provider: "gemini",
+        provider: image.provider,
         error_message: null,
         updated_at: nowIso(),
       })

@@ -1,4 +1,5 @@
 import { analyzeImageWithGemini } from "@/lib/ai/providers/gemini";
+import { isPlaceholderImageUrl } from "@/lib/ai/image-provider";
 import { isGeminiConfigured } from "@/lib/ai/gemini-config";
 import { buildOccasionCreativeGuide } from "@/lib/ai/occasion-creative-guide";
 import type { BrandCreativeBrief } from "@/lib/ai/brand-creative-director";
@@ -24,6 +25,14 @@ export async function checkGeneratedImageQuality(
   input: QualityCheckContext,
 ): Promise<QualityCheckResult> {
   const fallbackPass: QualityCheckResult = { passed: true, issues: [], severity: "low" };
+
+  if (isPlaceholderImageUrl(input.imageUrl)) {
+    return {
+      passed: false,
+      issues: ["Placeholder görsel — gerçek AI görseli üretilmemiş"],
+      severity: "high",
+    };
+  }
 
   if (!isGeminiConfigured()) {
     return fallbackPass;

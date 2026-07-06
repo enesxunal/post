@@ -1,10 +1,15 @@
-import { resolveImageProvider } from "@/lib/ai/gemini-config";
+import { resolveImageProvider, isGeminiConfigured } from "@/lib/ai/gemini-config";
 import { generateImageWithGemini } from "@/lib/ai/providers/gemini";
 import { generateImageMock } from "@/lib/ai/providers/mock";
 
 export type ImageGenerationOptions = {
   aspectRatio?: string;
 };
+
+export function isPlaceholderImageUrl(url: string | null | undefined): boolean {
+  if (!url) return true;
+  return url.includes("placehold.co") || url.includes("text=AI+Post");
+}
 
 export async function generateImage(
   prompt: string,
@@ -14,16 +19,19 @@ export async function generateImage(
   const provider = resolveImageProvider();
 
   if (provider === "gemini") {
-    try {
-      return await generateImageWithGemini(prompt, inputImageUrls, options);
-    } catch (error) {
-      console.error("Gemini image generation failed, falling back to mock:", error);
-    }
+    return generateImageWithGemini(prompt, inputImageUrls, options);
   }
 
   if (provider === "nano-banana" && process.env.IMAGE_PROVIDER_API_KEY) {
     // TODO: connect Nano Banana image API
     void options;
+  }
+
+  // Mock yalnızca yerel geliştirmede — canlıda Gemini yoksa hata ver
+  if (isGeminiConfigured() || process.env.VERCEL === "1") {
+    throw new Error(
+      "Görsel üretilemedi: IMAGE_PROVIDER=gemini ayarlı ama Gemini görsel API yanıt vermedi.",
+    );
   }
 
   return generateImageMock(prompt, inputImageUrls, options);

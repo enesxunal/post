@@ -1,13 +1,11 @@
-import { GoogleGenerativeAI, type Part } from "@google/generative-ai";
+import { GEMINI_DEFAULTS, getGeminiApiKey, getGeminiImageModel } from "@/lib/ai/gemini-config";
 
-import {
-  GEMINI_DEFAULTS,
-  getGeminiApiKey,
-  getGeminiImageModel,
-  getGeminiTextModel,
-} from "@/lib/ai/gemini-config";
+type GeminiPart = {
+  text?: string;
+  inlineData?: { mimeType: string; data: string };
+};
 
-async function imageUrlToPart(url: string): Promise<Part | null> {
+async function imageUrlToPart(url: string): Promise<GeminiPart | null> {
   try {
     if (url.startsWith("data:")) {
       const match = url.match(/^data:([^;]+);base64,(.+)$/);
@@ -36,50 +34,50 @@ async function imageUrlToPart(url: string): Promise<Part | null> {
   }
 }
 
-export async function generateImageWithGemini(
-  prompt: string,
-  inputImageUrls: string[] = [],
-  options?: { aspectRatio?: string },
+type GeminiGenerateResponse = {
+  candidates?: Array<{
+    content?: { parts?: GeminiPart[] };
+  }>;
+  error?: { message?: string };
+};
+
+/** Gemini REST API ile görsel üretimi — SDK'daki responseModalities sorunlarını aşar. */
+async function generateImageViaRest(
+  modelName: string,
+  apiKey: string,
+  parts: GeminiPart[],
+  aspectRatio: string,
 ) {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY tanımlı değil");
-  }
-
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const modelName = getGeminiImageModel();
-  const model = genAI.getGenerativeModel({ model: modelName });
-
-  const parts: Part[] = [{ text: prompt }];
-
-  for (const imageUrl of inputImageUrls) {
-    const imagePart = await imageUrlToPart(imageUrl);
-    if (imagePart) {
-      parts.push(imagePart);
-    }
-  }
-
-  const result = await model.generateContent({
-    contents: [{ role: "user", parts }],
-    generationConfig: {
-      responseModalities: ["IMAGE"],
-      imageConfig: {
-        aspectRatio: options?.aspectRatio ?? GEMINI_DEFAULTS.aspectRatio,
-      },
-    } as Record<string, unknown>,
-  });
-
-  const responseParts = result.response.candidates?.[0]?.content?.parts ?? [];
-  const imagePart = responseParts.find(
-    (part) => "inlineData" in part && Boolean(part.inlineData?.data),
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts }],
+        generationConfig: {
+          responseModalities: ["IMAGE"],
+          imageConfig: { aspectRatio },
+        },
+      }),
+    },
   );
 
-  if (!imagePart || !("inlineData" in imagePart) || !imagePart.inlineData?.data) {
-    const textPart = responseParts.find((part) => "text" in part && part.text);
+  const payload = (await response.json()) as GeminiGenerateResponse;
+
+  if (!response.ok) {
+    throw new Error(payload.error?.message ?? `Gemini HTTP ${response.status}`);
+  }
+
+  const responseParts = payload.candidates?.[0]?.content?.parts ?? [];
+  const imagePart = responseParts.find((part) => part.inlineData?.data);
+
+  if (!imagePart?.inlineData?.data) {
+    const textPart = responseParts.find((part) => part.text);
     throw new Error(
-      textPart && "text" in textPart
+      textPart?.text
         ? `Gemini görsel döndürmedi: ${textPart.text}`
-        : "Gemini görsel döndürmedi",
+        : "Gemini görsel döndürmedi (boş yanıt)",
     );
   }
 
@@ -95,7 +93,35 @@ export async function generateImageWithGemini(
   };
 }
 
+export async function generateImageWithGemini(
+  prompt: string,
+  inputImageUrls: string[] = [],
+  options?: { aspectRatio?: string },
+) {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY tanımlı değil");
+  }
+
+  const modelName = getGeminiImageModel();
+  const aspectRatio = options?.aspectRatio ?? GEMINI_DEFAULTS.aspectRatio;
+
+  const parts: GeminiPart[] = [{ text: prompt }];
+
+  for (const imageUrl of inputImageUrls) {
+    const imagePart = await imageUrlToPart(imageUrl);
+    if (imagePart) {
+      parts.push(imagePart);
+    }
+  }
+
+  return generateImageViaRest(modelName, apiKey, parts, aspectRatio);
+}
+
 export async function generateTextWithGemini(prompt: string) {
+  const { GoogleGenerativeAI } = await import("@google/generative-ai");
+  const { getGeminiTextModel } = await import("@/lib/ai/gemini-config");
+
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY tanımlı değil");
@@ -110,6 +136,9 @@ export async function generateTextWithGemini(prompt: string) {
 }
 
 export async function analyzeImageWithGemini(prompt: string, imageUrl: string) {
+  const { GoogleGenerativeAI } = await import("@google/generative-ai");
+  const { getGeminiTextModel } = await import("@/lib/ai/gemini-config");
+
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY tanımlı değil");
