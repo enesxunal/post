@@ -5,6 +5,7 @@ import {
   specialDayToRow,
   type SpecialDayRow,
 } from "@/lib/special-days/db-mapper";
+import { buildSpecialDaysFromPromptSeed } from "@/lib/special-days/prompt-seed-merge";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { SpecialDay } from "@/types/domain";
@@ -14,7 +15,7 @@ async function getClient() {
 }
 
 function catalogDays(): SpecialDay[] {
-  return specialDaysCatalog.map(enrichSpecialDayCopy);
+  return buildSpecialDaysFromPromptSeed();
 }
 
 export async function listSpecialDays(): Promise<SpecialDay[]> {
@@ -99,7 +100,7 @@ export async function seedSpecialDaysFromCatalog(): Promise<number> {
     throw new Error("Seed için SUPABASE_SECRET_KEY gerekli");
   }
 
-  const rows = catalogDays().map((day) => specialDayToRow(day));
+  const rows = buildSpecialDaysFromPromptSeed().map((day) => specialDayToRow(day));
   const { error } = await supabase.from("special_days").upsert(rows, { onConflict: "slug" });
 
   if (error) {

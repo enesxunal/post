@@ -56,6 +56,13 @@ export interface AddonOption {
   price: number;
 }
 
+export interface PromptBuildingBlocks {
+  eventBrief: string;
+  brandPersonalizationRules: string[];
+  visualRules: string[];
+  avoid: string[];
+}
+
 export interface SpecialDay {
   id: string;
   name: string;
@@ -71,6 +78,8 @@ export interface SpecialDay {
   visualDirection: string;
   avoidRules: string;
   promptTemplate: string;
+  promptBuildingBlocks?: PromptBuildingBlocks;
+  masterPromptTemplate?: string;
   isDefaultSelected: boolean;
 }
 

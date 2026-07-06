@@ -1,4 +1,4 @@
-import type { SpecialDay, SpecialDayCategory, DayType } from "@/types/domain";
+import type { SpecialDay, SpecialDayCategory, DayType, PromptBuildingBlocks } from "@/types/domain";
 
 export type SpecialDayRow = {
   id: string;
@@ -15,11 +15,28 @@ export type SpecialDayRow = {
   visual_direction: string;
   avoid_rules: string;
   prompt_template: string;
+  prompt_building_blocks?: PromptBuildingBlocks | Record<string, never>;
+  master_prompt_template?: string;
   is_default_selected: boolean;
   is_active: boolean;
 };
 
+function parseBuildingBlocks(raw: SpecialDayRow["prompt_building_blocks"]): PromptBuildingBlocks | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const blocks = raw as Partial<PromptBuildingBlocks>;
+  if (!blocks.eventBrief && !blocks.brandPersonalizationRules?.length) return undefined;
+  return {
+    eventBrief: blocks.eventBrief ?? "",
+    brandPersonalizationRules: blocks.brandPersonalizationRules ?? [],
+    visualRules: blocks.visualRules ?? [],
+    avoid: blocks.avoid ?? [],
+  };
+}
+
 export function rowToSpecialDay(row: SpecialDayRow): SpecialDay {
+  const promptBuildingBlocks = parseBuildingBlocks(row.prompt_building_blocks);
+  const masterPromptTemplate = row.master_prompt_template?.trim() || undefined;
+
   return {
     id: row.slug,
     name: row.name,
@@ -35,6 +52,8 @@ export function rowToSpecialDay(row: SpecialDayRow): SpecialDay {
     visualDirection: row.visual_direction,
     avoidRules: row.avoid_rules,
     promptTemplate: row.prompt_template,
+    promptBuildingBlocks,
+    masterPromptTemplate,
     isDefaultSelected: row.is_default_selected,
   };
 }
@@ -56,6 +75,8 @@ export function specialDayToRow(day: SpecialDay): Omit<SpecialDayRow, "id" | "is
     visual_direction: day.visualDirection,
     avoid_rules: day.avoidRules,
     prompt_template: day.promptTemplate,
+    prompt_building_blocks: day.promptBuildingBlocks ?? {},
+    master_prompt_template: day.masterPromptTemplate ?? day.promptTemplate ?? "",
     is_default_selected: day.isDefaultSelected,
     is_active: true,
   };
@@ -75,12 +96,16 @@ export function enrichSpecialDayCopy(day: SpecialDay): SpecialDay {
       ? day.captionIdeas
       : [
           ...day.captionIdeas,
-          `${day.name} için ${day.name} kutlu olsun — markanıza özel kısa paylaşım metni.`,
+          `${day.name} kutlu olsun — markanıza özel kısa paylaşım metni.`,
           `${headline} temalı, sıcak ve profesyonel bir caption yaz.`,
         ];
 
-  const promptTemplate = day.promptTemplate.includes("Instagram")
-    ? day.promptTemplate
+  const hasRichTemplate =
+    Boolean(day.masterPromptTemplate?.includes("Customer brand context")) ||
+    day.promptTemplate.includes("Instagram");
+
+  const promptTemplate = hasRichTemplate
+    ? (day.masterPromptTemplate ?? day.promptTemplate)
     : [
         `Türkiye'deki küçük işletmeler için ${day.name} özel günü Instagram kare postu tasarla.`,
         `Görselde Türkçe başlık: "${headline}".`,
@@ -95,5 +120,6 @@ export function enrichSpecialDayCopy(day: SpecialDay): SpecialDay {
     culturalContext,
     captionIdeas: [...new Set(captionIdeas)],
     promptTemplate,
+    masterPromptTemplate: day.masterPromptTemplate ?? promptTemplate,
   };
 }

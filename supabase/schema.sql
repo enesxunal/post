@@ -81,6 +81,8 @@ create table if not exists special_days (
   visual_direction text not null,
   avoid_rules text not null,
   prompt_template text not null,
+  prompt_building_blocks jsonb not null default '{}'::jsonb,
+  master_prompt_template text not null default '',
   is_default_selected boolean not null default false,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
