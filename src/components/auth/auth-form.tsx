@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { SUPABASE_SETUP_HINT } from "@/lib/supabase/env";
 import { cn } from "@/lib/utils";
 
 const signupSchema = z.object({
@@ -39,7 +40,7 @@ export function AuthForm() {
   const searchParams = useSearchParams();
   const nextPath = searchParams.get("next") ?? "/dashboard";
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-  const [mode, setMode] = useState<AuthMode>("signup");
+  const [mode, setMode] = useState<AuthMode>("login");
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [feedback, setFeedback] = useState<{
     type: "success" | "error";
@@ -70,7 +71,7 @@ export function AuthForm() {
     if (!supabase) {
       setFeedback({
         type: "error",
-        message: "Supabase ayarlari eksik. Vercel env degiskenlerini ekleyince uye olma aktif olur.",
+        message: SUPABASE_SETUP_HINT,
       });
       return;
     }
@@ -117,7 +118,7 @@ export function AuthForm() {
     if (!supabase) {
       setFeedback({
         type: "error",
-        message: "Supabase ayarlari eksik. Vercel env degiskenlerini ekleyince giris aktif olur.",
+        message: SUPABASE_SETUP_HINT,
       });
       return;
     }
@@ -173,8 +174,9 @@ export function AuthForm() {
           Mail, ad soyad ve sifre ile hizlica hesap olusturabilir veya Google ile tek tikla giris yapabilirsiniz.
         </p>
         {!supabase ? (
-          <p className="mt-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-            Demo mod: Supabase env degiskenleri eklenince butonlar gercek auth akisina baglanir.
+          <p className="mt-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+            Supabase bağlantısı bulunamadı. Localhost’ta <strong>.env.local</strong> dosyası
+            gerekir; canlı sitede env ekledikten sonra yeniden deploy et.
           </p>
         ) : null}
       </div>
@@ -196,10 +198,10 @@ export function AuthForm() {
         <form className="space-y-4" onSubmit={signupForm.handleSubmit(handleSignup)}>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Ad" error={signupForm.formState.errors.firstName?.message}>
-              <Input placeholder="Enes" {...signupForm.register("firstName")} />
+              <Input placeholder="Adınız" autoComplete="given-name" {...signupForm.register("firstName")} />
             </Field>
             <Field label="Soyad" error={signupForm.formState.errors.lastName?.message}>
-              <Input placeholder="Unal" {...signupForm.register("lastName")} />
+              <Input placeholder="Soyadınız" autoComplete="family-name" {...signupForm.register("lastName")} />
             </Field>
           </div>
           <Field label="E-posta" error={signupForm.formState.errors.email?.message}>
