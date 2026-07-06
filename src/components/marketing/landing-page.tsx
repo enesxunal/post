@@ -1,20 +1,24 @@
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, CalendarDays, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2, Sparkles, Zap } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { APP_NAME, BASE_PACKAGE_PRICE } from "@/lib/config";
-import { metrics, sectors } from "@/lib/mock-data";
+import { metrics } from "@/lib/mock-data";
+import {
+  heroShowcase,
+  howItWorksImages,
+  sectorShowcase,
+} from "@/lib/marketing-images";
 import { formatCurrency } from "@/lib/utils";
-
-const mockupDays = ["29 Ekim", "Kandil", "Hayırlı Cumalar", "Anneler Günü", "Ramazan Bayramı"];
 
 export function LandingPage() {
   return (
-    <div className="bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.16),_transparent_40%),linear-gradient(180deg,_#f7fef9_0%,_#ffffff_45%,_#f5fff7_100%)]">
-      <section className="mx-auto max-w-7xl px-4 pb-12 pt-4 sm:px-6 lg:px-8">
-        <header className="flex items-center justify-between rounded-full border border-emerald-100 bg-white/80 px-4 py-3 backdrop-blur sm:px-6">
+    <div className="overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.14),_transparent_42%),linear-gradient(180deg,_#f8fffa_0%,_#ffffff_50%,_#f0fdf4_100%)]">
+      <section className="mx-auto max-w-7xl px-4 pb-8 pt-4 sm:px-6 lg:px-8">
+        <header className="flex items-center justify-between rounded-full border border-emerald-100 bg-white/85 px-4 py-3 backdrop-blur sm:px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500 font-semibold text-white">
               P
@@ -24,15 +28,23 @@ export function LandingPage() {
               <p className="text-xs text-slate-500">Ajans kalitesi tek tıkla</p>
             </div>
           </div>
-          <Link href="/login" className="text-sm font-medium text-slate-600">
-            Giriş Yap
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/dashboard" className="hidden text-sm text-slate-600 sm:block">
+              Panel
+            </Link>
+            <Link href="/login" className="text-sm font-medium text-emerald-700">
+              Giriş Yap
+            </Link>
+          </div>
         </header>
 
-        <div className="grid gap-10 py-12 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-20">
+        <div className="grid gap-12 py-10 lg:grid-cols-[1.02fr_0.98fr] lg:items-center lg:py-16">
           <div>
-            <Badge>Tek ödeme {formatCurrency(BASE_PACKAGE_PRICE)} • Abonelik yok</Badge>
-            <h1 className="mt-5 max-w-2xl text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
+            <Badge className="gap-2">
+              <Zap className="h-3.5 w-3.5" />
+              Tek ödeme {formatCurrency(BASE_PACKAGE_PRICE)} • Abonelik yok
+            </Badge>
+            <h1 className="mt-5 max-w-2xl text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl lg:text-[3.4rem] lg:leading-[1.05]">
               İşletmenizin 1 yıllık özel gün postları dakikalar içinde hazır.
             </h1>
             <p className="mt-5 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
@@ -42,21 +54,23 @@ export function LandingPage() {
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link href="/onboarding">
-                <Button className="w-full sm:w-auto">
+                <Button className="h-12 w-full px-7 text-base sm:w-auto">
                   Postlarımı Oluştur
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <div className="flex items-center rounded-full border border-emerald-100 bg-white px-4 py-3 text-sm text-slate-600">
-                Ajansa tek post parası vermeden 30 özel gün içeriği.
-              </div>
+              <Link href="/dashboard">
+                <Button variant="outline" className="h-12 w-full sm:w-auto">
+                  Örnek paneli gör
+                </Button>
+              </Link>
             </div>
 
             <div className="mt-8 grid gap-3 sm:grid-cols-3">
               {[
                 "30 özel gün postu",
                 "10 revizyon kredisi",
-                "Kandiller, cuma mesajları, bayramlar ve milli günler dahil",
+                "Bayram, kandil ve cuma dahil",
               ].map((item) => (
                 <div
                   key={item}
@@ -68,80 +82,75 @@ export function LandingPage() {
             </div>
           </div>
 
-          <FloatingPostMockups />
+          <HeroVisual />
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-6xl gap-4 px-4 py-6 sm:px-6 lg:grid-cols-3 lg:px-8">
-        {[
-          {
-            title: "Nasıl çalışır?",
-            description: "Logonu ve marka rengini yükle, özel günlerini seç, postlarını indir ve paylaş.",
-          },
-          {
-            title: "Paket içeriği",
-            description: `${metrics.includedPosts} post, ${metrics.revisionCredits} revizyon kredisi, PNG indirme ve panel takibi.`,
-          },
-          {
-            title: "Hangi işletmeler için?",
-            description: "Güzellik salonu, kafe, diş kliniği, emlak, eğitim, butik, oto servis ve daha fazlası.",
-          },
-        ].map((item) => (
-          <Card key={item.title} className="p-5">
-            <CardTitle>{item.title}</CardTitle>
-            <CardDescription className="mt-2">{item.description}</CardDescription>
-          </Card>
-        ))}
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <SectionTitle
           eyebrow="3 adımda hazır"
-          title="Canva gibi karışık değil, akış gibi ilerler."
-          description="Mobilde hızlı, masaüstünde premium görünen tek ekran hissine sahip onboarding deneyimi."
+          title="Karmaşık değil, akış gibi ilerler"
+          description="Mobilde hızlı, masaüstünde premium görünen onboarding deneyimi."
         />
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
+        <div className="mt-8 grid gap-5 md:grid-cols-3">
           {[
-            ["1", "Logonu ve marka rengini yükle", "Markana ait temel görsel dili birkaç dakikada tanımla."],
-            ["2", "Özel günlerini seç", "Önerilen günleri hazır al, istersen sektörüne göre otomatik tamamla."],
-            ["3", "Postlarını indir ve paylaş", "Galeri, caption, story ve takvim seçeneklerini panelden yönet."],
-          ].map(([step, title, description]) => (
-            <Card key={title}>
-              <Badge>{step}. adım</Badge>
-              <CardTitle className="mt-5">{title}</CardTitle>
-              <CardDescription className="mt-2">{description}</CardDescription>
+            ["Markanı tanımla", "Logo, renk ve sektör bilgilerini gir."],
+            ["Günleri seç", "30 özel günü tek tek veya otomatik tamamla."],
+            ["İndir ve paylaş", "Panelden görselleri ve captionları yönet."],
+          ].map(([title, description], index) => (
+            <Card key={title} className="overflow-hidden p-0">
+              <div className="relative h-40">
+                <Image
+                  src={howItWorksImages[index]}
+                  alt={title}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
+                <Badge className="absolute left-4 top-4 border-white/20 bg-black/30 text-white">
+                  {index + 1}. adım
+                </Badge>
+              </div>
+              <div className="p-5">
+                <CardTitle>{title}</CardTitle>
+                <CardDescription className="mt-2">{description}</CardDescription>
+              </div>
             </Card>
           ))}
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <SectionTitle
           eyebrow="Örnek postlar"
-          title="Her özel gün için aynı marka dilinde içerik"
-          description="Küçük işletmelerin yıl içi görünürlüğünü bozmadan, düzenli ve güven veren paylaşım akışı."
+          title="Her özel gün için markanıza uygun görsel dil"
+          description="Aynı işletme için bayram, kandil, cuma ve kampanya günlerinde tutarlı içerik."
         />
-        <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-5">
-          {mockupDays.map((day, index) => (
+        <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+          {heroShowcase.map((post) => (
             <div
-              key={day}
-              className="aspect-square rounded-[28px] border border-emerald-100 bg-white p-4"
+              key={post.day}
+              className="group overflow-hidden rounded-[28px] border border-emerald-100 bg-white shadow-sm transition hover:-translate-y-1"
             >
-              <div
-                className="flex h-full flex-col justify-between rounded-[22px] p-4 text-white"
-                style={{
-                  background:
-                    index % 2 === 0
-                      ? "linear-gradient(160deg, #10b981 0%, #16a34a 100%)"
-                      : "linear-gradient(160deg, #064e3b 0%, #22c55e 100%)",
-                }}
-              >
-                <span className="text-xs font-medium uppercase tracking-[0.2em] opacity-80">
-                  {APP_NAME}
-                </span>
-                <div>
-                  <p className="text-xs opacity-80">Özel Gün Postu</p>
-                  <p className="mt-2 text-xl font-semibold leading-tight">{day}</p>
+              <div className="relative aspect-square">
+                <Image
+                  src={post.image}
+                  alt={post.day}
+                  fill
+                  className="object-cover transition duration-500 group-hover:scale-105"
+                  sizes="(max-width: 768px) 50vw, 20vw"
+                />
+                <div
+                  className="absolute inset-0 opacity-80"
+                  style={{
+                    background: `linear-gradient(180deg, transparent 30%, ${post.accent}CC 100%)`,
+                  }}
+                />
+                <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                  <p className="text-[10px] uppercase tracking-[0.18em] opacity-90">{APP_NAME}</p>
+                  <p className="mt-1 text-lg font-semibold leading-tight">{post.day}</p>
+                  <p className="mt-1 text-xs text-white/85">{post.subtitle}</p>
                 </div>
               </div>
             </div>
@@ -149,57 +158,94 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <SectionTitle
           eyebrow="KOBİ odaklı"
-          title="En çok bu işletmeler için değer üretir"
-          description="Sosyal medyayı düzenli ama pratik yönetmek isteyen yerel işletmeler için tasarlandı."
+          title="Hangi işletmeler için?"
+          description="Yerel işletmelerin yıl boyu düzenli görünmesi için tasarlandı."
         />
-        <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-4">
-          {sectors.slice(0, 8).map((sector) => (
-            <Card key={sector.key} className="p-4">
-              <p className="text-sm font-medium text-slate-800">{sector.label}</p>
+        <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4">
+          {sectorShowcase.map((sector) => (
+            <Card key={sector.key} className="overflow-hidden p-0">
+              <div className="relative h-28">
+                <Image
+                  src={sector.image}
+                  alt={sector.label}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 50vw, 25vw"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+              </div>
+              <p className="p-4 text-sm font-medium text-slate-800">{sector.label}</p>
             </Card>
           ))}
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
           <PricingCard />
-          <Card className="space-y-4">
-            <SectionTitle
-              eyebrow="SSS"
-              title="Kısa ama güven veren cevaplar"
-              description="İlk satın alma kararını hızlandırmak için en kritik sorular."
-            />
-            {[
-              ["Tek seferlik mi?", "Evet. Ana paket tek ödeme 299₺, abonelik yok."],
-              ["Üretim ne kadar sürer?", "İlk sürümde mock akış var; gerçek entegrasyonda arka planda devam edecek."],
-              ["Sayfadan çıkarsam ne olur?", "Üretim arka planda sürer ve hazır olduğunda e-posta mimarisi hazırdır."],
-            ].map(([question, answer]) => (
-              <div key={question} className="rounded-2xl border border-emerald-100 p-4">
-                <p className="font-medium text-slate-900">{question}</p>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{answer}</p>
+          <Card className="overflow-hidden p-0">
+            <div className="relative h-56">
+              <Image
+                src={howItWorksImages[0]}
+                alt="Panel önizlemesi"
+                fill
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 50vw"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-950/80 to-emerald-900/20" />
+              <div className="absolute inset-0 flex flex-col justify-end p-6 text-white">
+                <p className="text-sm uppercase tracking-[0.2em] text-emerald-200">Üye paneli</p>
+                <h3 className="mt-2 text-2xl font-semibold">Görsellerinizi tek yerden yönetin</h3>
+                <p className="mt-2 max-w-md text-sm text-emerald-50/90">
+                  Profil, paket bilgisi, caption ve indirme işlemleri tek panelde.
+                </p>
               </div>
-            ))}
+            </div>
+            <div className="space-y-4 p-6">
+              {[
+                ["Tek seferlik mi?", "Evet. Ana paket tek ödeme 299₺, abonelik yok."],
+                ["Üretim ne kadar sürer?", "Arka planda devam eder, hazır olunca e-posta gider."],
+                ["Sayfadan çıkarsam?", "Üretim durmaz, panelden takip edebilirsiniz."],
+              ].map(([question, answer]) => (
+                <div key={question} className="rounded-2xl border border-emerald-100 p-4">
+                  <p className="font-medium text-slate-900">{question}</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{answer}</p>
+                </div>
+              ))}
+            </div>
           </Card>
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 pb-20 pt-6 sm:px-6 lg:px-8">
-        <Card className="overflow-hidden bg-emerald-950 p-8 text-white sm:p-10">
-          <Badge className="border-white/20 bg-white/10 text-white">Hazır olduğunda indir</Badge>
-          <h2 className="mt-5 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">
-            30 özel gün postunu tek bir akışla hazırla.
-          </h2>
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-emerald-50/85 sm:text-base">
-            Tek ödeme, mobil-first deneyim, arka planda çalışan üretim akışı ve büyümeye açık mimari.
-          </p>
-          <div className="mt-8">
-            <Link href="/onboarding">
-              <Button variant="secondary">Paketimi Hazırla</Button>
-            </Link>
+      <section className="mx-auto max-w-7xl px-4 pb-20 pt-4 sm:px-6 lg:px-8">
+        <Card className="overflow-hidden border-emerald-200 p-0">
+          <div className="grid lg:grid-cols-2">
+            <div className="p-8 sm:p-10">
+              <Badge>Hazır olduğunda indir</Badge>
+              <h2 className="mt-5 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
+                30 özel gün postunu tek akışla hazırla
+              </h2>
+              <p className="mt-4 text-sm leading-7 text-slate-600 sm:text-base">
+                Tek ödeme, mobil-first deneyim, arka planda çalışan üretim ve büyümeye açık mimari.
+              </p>
+              <div className="mt-8">
+                <Link href="/onboarding">
+                  <Button className="h-12 px-7">Paketimi Hazırla</Button>
+                </Link>
+              </div>
+            </div>
+            <div className="relative min-h-[280px]">
+              <Image
+                src={heroShowcase[0].image}
+                alt="Örnek post"
+                fill
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 50vw"
+              />
+            </div>
           </div>
         </Card>
       </section>
@@ -225,40 +271,52 @@ function SectionTitle({
   );
 }
 
-function FloatingPostMockups() {
+function HeroVisual() {
+  const [main, ...rest] = heroShowcase;
+
   return (
     <div className="relative mx-auto w-full max-w-xl">
-      <div className="absolute -left-6 top-6 hidden h-28 w-28 rounded-full bg-emerald-200/50 blur-3xl sm:block" />
-      <div className="absolute -right-6 bottom-6 hidden h-32 w-32 rounded-full bg-lime-200/50 blur-3xl sm:block" />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card className="translate-y-6">
-          <Badge>Tek ödeme 299₺</Badge>
-          <div className="mt-5 rounded-[26px] bg-gradient-to-br from-emerald-500 to-emerald-700 p-5 text-white">
-            <div className="flex items-center justify-between text-xs opacity-90">
-              <span>{APP_NAME}</span>
-              <Sparkles className="h-4 w-4" />
-            </div>
-            <p className="mt-10 text-2xl font-semibold">29 Ekim</p>
-            <p className="mt-2 text-sm text-emerald-50">Cumhuriyet Bayramımız kutlu olsun</p>
+      <div className="absolute -left-8 top-8 h-32 w-32 rounded-full bg-emerald-300/30 blur-3xl" />
+      <div className="absolute -right-6 bottom-8 h-36 w-36 rounded-full bg-lime-300/30 blur-3xl" />
+
+      <div className="relative overflow-hidden rounded-[32px] border border-emerald-100 bg-white p-3 shadow-[0_24px_80px_rgba(16,185,129,0.18)]">
+        <div className="relative aspect-[4/5] overflow-hidden rounded-[26px]">
+          <Image
+            src={main.image}
+            alt={main.day}
+            fill
+            className="object-cover"
+            priority
+            sizes="(max-width: 1024px) 100vw, 40vw"
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(180deg, rgba(0,0,0,0.05) 0%, ${main.accent}DD 100%)`,
+            }}
+          />
+          <div className="absolute left-4 top-4">
+            <Badge className="border-white/20 bg-black/25 text-white">
+              Tek ödeme {formatCurrency(BASE_PACKAGE_PRICE)}
+            </Badge>
           </div>
-        </Card>
-        <div className="space-y-4">
-          {[
-            ["Kandil", "Saygılı, modern, sakin tasarım"],
-            ["Hayırlı Cumalar", "İstediğiniz adet kadar cuma postu seçin"],
-            ["Anneler Günü", "Premium ve sıcak sosyal medya dili"],
-          ].map(([title, text]) => (
-            <Card key={title} className="p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">{title}</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">{text}</p>
-                </div>
-                <div className="rounded-2xl bg-emerald-50 p-2 text-emerald-600">
-                  <CalendarDays className="h-5 w-5" />
-                </div>
-              </div>
-            </Card>
+          <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] opacity-90">
+              <Sparkles className="h-4 w-4" />
+              {APP_NAME}
+            </div>
+            <p className="mt-4 text-3xl font-semibold">{main.day}</p>
+            <p className="mt-2 text-sm text-white/85">{main.subtitle}</p>
+          </div>
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          {rest.slice(0, 2).map((post) => (
+            <div key={post.day} className="relative h-24 overflow-hidden rounded-2xl">
+              <Image src={post.image} alt={post.day} fill className="object-cover" sizes="200px" />
+              <div className="absolute inset-0 bg-black/35" />
+              <p className="absolute bottom-2 left-2 text-xs font-semibold text-white">{post.day}</p>
+            </div>
           ))}
         </div>
       </div>
@@ -274,8 +332,8 @@ function PricingCard() {
       <p className="mt-2 text-sm text-white/80">Tek ödeme • Abonelik yok</p>
       <div className="mt-6 space-y-3">
         {[
-          "30 özel gün postu",
-          "10 revizyon / yeniden üretim kredisi",
+          `${metrics.includedPosts} özel gün postu`,
+          `${metrics.revisionCredits} revizyon kredisi`,
           "Logo ve marka rengi uyumu",
           "PNG indirme ve panel görünümü",
         ].map((item) => (

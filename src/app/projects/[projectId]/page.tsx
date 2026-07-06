@@ -1,5 +1,5 @@
-import { ProjectGallery } from "@/components/dashboard/project-gallery";
+import { UserDashboard } from "@/components/dashboard/user-dashboard";
 
 export default function ProjectDetailPage() {
-  return <ProjectGallery />;
+  return <UserDashboard />;
 }

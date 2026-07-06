@@ -9,7 +9,6 @@ import {
   SPECIAL_DAY_CATEGORY_LABELS,
   SPECIAL_DAY_CATEGORY_ORDER,
   buildAutoSelectedDays,
-  getSpecialDayById,
   specialDaysCatalog,
 } from "@/lib/special-days-data";
 import {
