@@ -1,3 +1,4 @@
+import { resolveImageProvider } from "@/lib/ai/gemini-config";
 import { generateImageWithGemini } from "@/lib/ai/providers/gemini";
 import { generateImageMock } from "@/lib/ai/providers/mock";
 
@@ -6,9 +7,9 @@ export async function generateImage(
   inputImageUrls: string[] = [],
   options?: Record<string, string | number | boolean>,
 ) {
-  const provider = process.env.IMAGE_PROVIDER ?? "mock";
+  const provider = resolveImageProvider();
 
-  if (provider === "gemini" && process.env.GEMINI_API_KEY) {
+  if (provider === "gemini") {
     try {
       return await generateImageWithGemini(prompt, inputImageUrls);
     } catch (error) {
@@ -29,6 +30,9 @@ export async function regenerateImage(
   prompt: string,
   options?: Record<string, string | number | boolean>,
 ) {
-  void previousImageUrl;
-  return generateImage(prompt, [], options);
+  return generateImage(
+    `${prompt}\nRevize et; önceki görseli referans al.`,
+    previousImageUrl ? [previousImageUrl] : [],
+    options,
+  );
 }

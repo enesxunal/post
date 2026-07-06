@@ -1,4 +1,5 @@
 import { getPromptLibraryEntry } from "@/lib/ai/prompt-library";
+import { isGeminiConfigured, resolveCaptionProvider } from "@/lib/ai/gemini-config";
 import { generateTextWithGemini } from "@/lib/ai/providers/gemini";
 import type { BrandContext } from "@/types/domain";
 
@@ -10,7 +11,7 @@ export async function generateCaption(context: BrandContext, dayId: string) {
     hashtags: ["#ozelgun", "#sosyalmedya", "#markapostlari"],
   };
 
-  if (process.env.GEMINI_API_KEY && process.env.CAPTION_PROVIDER !== "mock") {
+  if (isGeminiConfigured() && resolveCaptionProvider() === "gemini") {
     try {
       const text = await generateTextWithGemini(
         [
