@@ -481,21 +481,14 @@ export function CreativeWorkshopLoader({
                   </p>
                 </div>
                 <p className="mt-2 text-sm text-emerald-100/80">
-                  Görseli buradan önizleyip indirebilirsiniz. İsterseniz profile de dönebilirsiniz.
+                  {isRegenerateMode
+                    ? "Sağdaki görsele tıklayarak büyütebilir, indirebilir veya profile dönebilirsiniz."
+                    : "Görselleri sağdan inceleyebilirsiniz. İsterseniz profile de dönebilirsiniz."}
                 </p>
-                {focusPreviewUrl ? (
-                  <div className="mt-4 overflow-hidden rounded-2xl border border-emerald-400/30">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={focusPreviewUrl}
-                      alt={resolvedDayName}
-                      className="aspect-square w-full object-cover"
-                    />
-                  </div>
-                ) : isRegenerateMode && focusJobId ? (
-                  <div className="mt-4 flex items-center justify-center gap-2 rounded-2xl border border-emerald-400/20 bg-emerald-950/30 py-12 text-sm text-emerald-200">
+                {isRegenerateMode && focusJobId && !focusPreviewUrl ? (
+                  <div className="mt-4 flex items-center justify-center gap-2 rounded-2xl border border-emerald-400/20 bg-emerald-950/30 py-8 text-sm text-emerald-200">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Görsel yükleniyor...
+                    Görsel yükleniyor…
                   </div>
                 ) : null}
                 {!isRegenerateMode && readyJobs.length > 0 ? (
