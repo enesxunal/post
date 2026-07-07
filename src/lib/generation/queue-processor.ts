@@ -24,6 +24,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { scheduleQueueProcessing } from "@/lib/generation/schedule-queue";
 import { persistGeneratedImage } from "@/lib/storage/generated-images";
 import { getSpecialDayById } from "@/lib/special-days-data";
+import { recordRevisionFeedback } from "@/lib/trend-brain/repository";
+import { resolvePromptVersionRefs } from "@/lib/trend-brain/prompt-versions";
 import type { SpecialDayCategory } from "@/types/domain";
 
 type JobRow = {
@@ -255,7 +257,7 @@ export async function regenerateGenerationJob(jobId: string, userId: string) {
 
   const { data: job } = await supabase
     .from("generation_jobs")
-    .select("id, project_id, user_id, status, image_url, approved_at, type, art_direction")
+    .select("id, project_id, user_id, status, image_url, approved_at, type, art_direction, prompt_version_refs")
     .eq("id", jobId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -324,6 +326,21 @@ export async function regenerateGenerationJob(jobId: string, userId: string) {
     { dayId: job.type, category },
     brandProfile,
   );
+
+  try {
+    await recordRevisionFeedback({
+      jobId: job.id,
+      userId: job.user_id,
+      projectId: job.project_id,
+      dayId: job.type,
+      sector: project.sector,
+      style: project.visual_style,
+      previousArtDirection: job.art_direction ?? null,
+      previousPromptVersionRefs: job.prompt_version_refs ?? null,
+    });
+  } catch {
+    // revision_feedback tablosu yoksa üretimi engelleme
+  }
 
   await supabase
     .from("projects")
@@ -563,6 +580,11 @@ export async function processOneQueuedJob(projectId: string) {
 
   try {
     const artDirection = await ensureJobArtDirection(nextJob, project);
+    const promptVersionRefs = await resolvePromptVersionRefs({
+      dayId,
+      sector: project.sector,
+      style: project.visual_style,
+    });
     const preview = await composeImagePrompt(context, dayId, { artDirection });
 
     await supabase
@@ -571,6 +593,7 @@ export async function processOneQueuedJob(projectId: string) {
         status: "generating_image",
         prompt: preview.prompt,
         art_direction: artDirection,
+        prompt_version_refs: promptVersionRefs,
         updated_at: nowIso(),
       })
       .eq("id", nextJob.id);

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Brain,
   CalendarDays,
   CreditCard,
   ImagePlus,
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
   { href: "/admin", label: "Genel Bakış", icon: LayoutDashboard },
   { href: "/admin/economics", label: "Muhasebe & Karlılık", icon: TrendingUp },
   { href: "/admin/orders", label: "EFT Onayları", icon: CreditCard },
+  { href: "/admin/trend-brain", label: "Trend Brain", icon: Brain },
   { href: "/admin/special-days", label: "Özel Günler & Metinler", icon: CalendarDays },
   { href: "/admin/generation-test", label: "Görsel Test", icon: ImagePlus },
   { href: "/admin/prompt-library", label: "Prompt Önizleme", icon: Sparkles },

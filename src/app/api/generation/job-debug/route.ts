@@ -28,7 +28,7 @@ export async function GET(request: Request) {
   const { data: job } = await supabase
     .from("generation_jobs")
     .select(
-      "id, user_id, status, type, prompt, art_direction, design_metadata, provider, created_at, updated_at",
+      "id, user_id, status, type, prompt, art_direction, design_metadata, provider, created_at, updated_at, prompt_version_refs",
     )
     .eq("id", jobId)
     .eq("user_id", user.id)
@@ -54,5 +54,6 @@ export async function GET(request: Request) {
     prompt: job.prompt,
     hasPlan: Boolean(job.art_direction),
     hasMetadata: Boolean(job.design_metadata),
+    promptVersionRefs: job.prompt_version_refs,
   });
 }

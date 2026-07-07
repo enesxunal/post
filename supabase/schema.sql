@@ -153,6 +153,7 @@ create table if not exists generation_jobs (
   story_status text,
   art_direction jsonb,
   design_metadata jsonb,
+  prompt_version_refs jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

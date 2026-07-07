@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/generation-resume",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/trend-brain",
+      "schedule": "0 7 * * 1"
     }
   ]
 }
