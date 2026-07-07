@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient();
   const { data: job } = await supabase
     .from("generation_jobs")
-    .select("id, user_id, status, image_url, story_image_url")
+    .select("id, user_id, status, image_url, story_image_url, thumbnail_url")
     .eq("id", jobId)
     .eq("user_id", user.id)
     .maybeSingle();
@@ -27,9 +27,20 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Görsel bulunamadı" }, { status: 404 });
   }
 
-  return NextResponse.json({
-    imageUrl: job.image_url,
-    storyImageUrl: job.story_image_url,
-    status: job.status,
-  });
+  const useThumb = new URL(request.url).searchParams.get("thumb") === "1";
+  const imageUrl = useThumb ? (job.thumbnail_url ?? job.image_url) : job.image_url;
+
+  const headers: HeadersInit = {};
+  if (imageUrl?.startsWith("http")) {
+    headers["Cache-Control"] = "private, max-age=3600";
+  }
+
+  return NextResponse.json(
+    {
+      imageUrl,
+      storyImageUrl: job.story_image_url,
+      status: job.status,
+    },
+    { headers },
+  );
 }

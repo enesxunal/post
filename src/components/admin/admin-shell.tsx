@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Palette,
   Sparkles,
+  TrendingUp,
   Wrench,
 } from "lucide-react";
 
@@ -16,6 +17,7 @@ import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Genel Bakış", icon: LayoutDashboard },
+  { href: "/admin/economics", label: "Muhasebe & Karlılık", icon: TrendingUp },
   { href: "/admin/orders", label: "EFT Onayları", icon: CreditCard },
   { href: "/admin/special-days", label: "Özel Günler & Metinler", icon: CalendarDays },
   { href: "/admin/generation-test", label: "Görsel Test", icon: ImagePlus },

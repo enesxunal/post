@@ -7,6 +7,7 @@ import {
 } from "@/lib/ai/quality-checker";
 import { buildFormatPromptLine, buildSafeZonePrompt, STORY_FORMAT } from "@/lib/image-formats";
 import { projectToBrandContext } from "@/lib/generation/project-service";
+import { persistGeneratedImage } from "@/lib/storage/generated-images";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -129,13 +130,20 @@ export async function generateStoryForJob(jobId: string, userId: string) {
     }
   }
 
+  const storedStoryUrl = await persistGeneratedImage(
+    image.imageUrl,
+    job.project_id as string,
+    jobId,
+    "story",
+  );
+
   await supabase
     .from("generation_jobs")
     .update({
-      story_image_url: image.imageUrl,
+      story_image_url: storedStoryUrl,
       story_status: "ready",
     })
     .eq("id", jobId);
 
-  return { storyImageUrl: image.imageUrl };
+  return { storyImageUrl: storedStoryUrl };
 }

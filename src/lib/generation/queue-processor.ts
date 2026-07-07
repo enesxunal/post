@@ -16,6 +16,7 @@ import { resolveAspectRatio } from "@/lib/image-formats";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { scheduleQueueProcessing } from "@/lib/generation/schedule-queue";
+import { persistGeneratedImage } from "@/lib/storage/generated-images";
 
 type JobRow = {
   id: string;
@@ -480,12 +481,19 @@ export async function processOneQueuedJob(projectId: string) {
 
     const caption = needsCaption ? await generateCaption(context, dayId) : null;
 
+    const storedImageUrl = await persistGeneratedImage(
+      finalImageUrl,
+      projectId,
+      nextJob.id,
+      "feed",
+    );
+
     await supabase
       .from("generation_jobs")
       .update({
         status: "ready",
-        image_url: finalImageUrl,
-        thumbnail_url: finalImageUrl,
+        image_url: storedImageUrl,
+        thumbnail_url: storedImageUrl,
         caption_text: caption?.caption ?? null,
         hashtags: caption?.hashtags ?? [],
         provider: image.provider,

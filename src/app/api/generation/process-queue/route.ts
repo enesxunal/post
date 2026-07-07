@@ -2,7 +2,7 @@ import { after, NextResponse } from "next/server";
 
 import { processOneQueuedJob } from "@/lib/generation/queue-processor";
 import { scheduleQueueProcessing } from "@/lib/generation/schedule-queue";
-import { getProjectStatus } from "@/lib/generation/project-service";
+import { userOwnsProject } from "@/lib/generation/project-service";
 import { getSessionUser } from "@/lib/supabase/auth";
 
 export const maxDuration = 300;
@@ -18,8 +18,7 @@ async function authorizeQueue(request: Request, projectId: string) {
   const user = await getSessionUser();
   if (!user) return false;
 
-  const status = await getProjectStatus(projectId, user.id);
-  return Boolean(status);
+  return userOwnsProject(projectId, user.id);
 }
 
 export async function POST(request: Request) {

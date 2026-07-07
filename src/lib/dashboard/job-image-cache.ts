@@ -28,7 +28,8 @@ function acquireSlot() {
 async function fetchJobImage(jobId: string, story: boolean): Promise<JobImagePayload | null> {
   await acquireSlot();
   try {
-    const response = await fetch(`/api/generation/job-image?jobId=${jobId}`, {
+    const thumb = story ? "" : "&thumb=1";
+    const response = await fetch(`/api/generation/job-image?jobId=${jobId}${thumb}`, {
       cache: "no-store",
     });
     if (!response.ok) return null;

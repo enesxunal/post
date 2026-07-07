@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { LazyJobImage } from "@/components/dashboard/lazy-job-image";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { GENERATION_POLL_MS } from "@/lib/config";
+import { DASHBOARD_POLL_MS } from "@/lib/config";
 import { mapJobStatus } from "@/lib/generation/map-jobs";
 import { getPostFormatLabel, getPreviewAspectClass } from "@/lib/image-formats";
 import type { PostFormat } from "@/types/domain";
@@ -150,7 +150,7 @@ export function UserDashboard({
     }
 
     void poll();
-    const timer = window.setInterval(() => void poll(), GENERATION_POLL_MS);
+    const timer = window.setInterval(() => void poll(), DASHBOARD_POLL_MS);
     return () => {
       active = false;
       window.clearInterval(timer);

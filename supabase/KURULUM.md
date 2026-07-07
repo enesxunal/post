@@ -26,6 +26,31 @@ Aynı şekilde `supabase/seed.sql` dosyasını çalıştırabilirsin.
 |------|--------|
 | `relation "projects" does not exist` | Sadece policy SQL'i çalıştırılmış; önce `schema.sql` gerekli |
 | `type "app_role" already exists` | Şema zaten kurulu; sorun değil, devam edebilirsin |
+| `Connection terminated due to connection timeout` | Çok satırlı migration tek seferde çalıştırılmış — aşağıdaki **Parçalı migration** bölümüne bak |
+
+## Parçalı migration (timeout olursa)
+
+`20260707_performance_indexes_storage.sql` dosyasını **tek parça çalıştırma**.
+
+Sırayla:
+
+### 1) Index'ler
+
+SQL Editor → **New query** → `migrations/20260707_performance_indexes.sql` içeriğini yapıştır → **Run**.
+
+Hâlâ timeout alırsan dosyadaki **her `create index` satırını tek tek** ayrı sorgu olarak çalıştır.
+
+### 2) Storage bucket
+
+**Kolay yol (önerilen):** Supabase → **Storage** → **New bucket** → isim: `generated-images` → **Public bucket** açık → Create.
+
+**SQL yolu:** `migrations/20260707_storage_bucket.sql` dosyasında önce sadece `insert into storage.buckets...` kısmını Run et.
+
+### 3) Storage izni (policy)
+
+Aynı dosyada `drop policy` + `create policy` kısmını **ayrı** sorgu olarak Run et.
+
+Index'ler olmadan da site çalışır; sadece panel biraz yavaş kalır. Storage bucket olmadan yeni görseller yine veritabanına kaydedilir (eski yöntem).
 
 ## Vercel env (yeni Supabase paneli)
 

@@ -198,6 +198,20 @@ function computeProjectProgress(
   };
 }
 
+/** Kuyruk tetikleme için — job/görsel verisi çekilmez. */
+export async function userOwnsProject(projectId: string, userId: string) {
+  const supabase = await getWritableClient();
+
+  const { data } = await supabase
+    .from("projects")
+    .select("id")
+    .eq("id", projectId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  return Boolean(data);
+}
+
 /** Polling için hafif durum — görsel verisi taşınmaz. */
 export async function getProjectStatusLightweight(projectId: string, userId: string) {
   const supabase = await getWritableClient();

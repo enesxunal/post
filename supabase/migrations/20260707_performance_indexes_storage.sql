@@ -1,0 +1,5 @@
+-- ⚠️ Bu dosyayı tek seferde ÇALIŞTIRMA (timeout verebilir).
+--
+-- Sırayla şunları kullan:
+--   1) 20260707_performance_indexes.sql
+--   2) 20260707_storage_bucket.sql  (veya Storage panelinden bucket oluştur)

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays, CreditCard, Sparkles } from "lucide-react";
+import { ArrowRight, CalendarDays, CreditCard, Sparkles, TrendingUp } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
@@ -29,7 +29,13 @@ export async function AdminDashboard() {
         <MetricCard label="Stil kuralı" value={String(styles.length)} />
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-3">
+      <div className="mt-8 grid gap-6 lg:grid-cols-2 xl:grid-cols-4">
+        <QuickLinkCard
+          href="/admin/economics"
+          icon={TrendingUp}
+          title="Muhasebe & Karlılık"
+          description="Sipariş cirosu, tahmini AI maliyeti ve kar marjını tek ekranda görün."
+        />
         <QuickLinkCard
           href="/admin/special-days"
           icon={CalendarDays}
