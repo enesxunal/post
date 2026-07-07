@@ -782,6 +782,32 @@ export function buildAutoSelectedDays(sector?: SectorKey, max = MAX_SELECTED_DAY
     }
   }
 
-  // 30 güne otomatik doldurma kaldırıldı — sadece önerilen + sektörel günler.
+  return result;
+}
+
+/** Hızlı form: sektöre göre 30 güne otomatik doldurur. */
+export function buildQuickPackageDays(sector?: SectorKey, max = MAX_SELECTED_DAYS) {
+  const result = buildAutoSelectedDays(sector, max);
+  let used = result.reduce((sum, item) => sum + item.quantity, 0);
+
+  for (const category of FILL_PRIORITY) {
+    if (used >= max) break;
+    for (const day of specialDaysCatalog.filter((item) => item.category === category)) {
+      if (used >= max) break;
+      const before = used;
+      addEntryIfFits(result, day.id, 1, max);
+      used = result.reduce((sum, item) => sum + item.quantity, 0);
+      if (used === before) continue;
+    }
+  }
+
+  for (const day of specialDaysCatalog) {
+    if (used >= max) break;
+    const before = used;
+    addEntryIfFits(result, day.id, 1, max);
+    used = result.reduce((sum, item) => sum + item.quantity, 0);
+    if (used === before) continue;
+  }
+
   return result;
 }

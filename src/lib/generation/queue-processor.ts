@@ -617,7 +617,9 @@ export async function processOneQueuedJob(projectId: string) {
     }
 
     if (context.logoUrl) {
-      finalImageUrl = await applyLogoOverlay(finalImageUrl, context.logoUrl);
+      const placement =
+        context.logoPlacement ?? context.logoAnalysis?.bestPlacement ?? "bottom-right";
+      finalImageUrl = await applyLogoOverlay(finalImageUrl, context.logoUrl, placement);
     }
 
     if (isQualityCheckEnabled()) {

@@ -162,6 +162,11 @@ export interface BrandContext {
   selectedDayIds: string[];
   purchasedAddons: AddonKey[];
   postFormat?: PostFormat;
+  /** Proje meta — logo konumu ve özelleştirmeler */
+  logoPlacement?: import("@/lib/ai/logo-analysis").LogoAnalysis["bestPlacement"];
+  styleCustomNotes?: string;
+  dayCustomizations?: Record<string, import("@/lib/onboarding/draft").DayCustomization>;
+  formMode?: import("@/lib/onboarding/draft").OnboardingFormMode;
 }
 
 export interface PromptPreview {

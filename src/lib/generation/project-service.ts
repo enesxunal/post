@@ -24,6 +24,10 @@ export function encodeProjectMeta(draft: OnboardingDraft) {
     selectedDays: draft.selectedDays,
     postFormat: draft.postFormat ?? "square",
     logoAnalysis: draft.logoAnalysis,
+    logoPlacement: draft.logoPlacement,
+    styleCustomNotes: draft.styleCustomNotes,
+    dayCustomizations: draft.dayCustomizations,
+    formMode: draft.formMode,
   };
   const userText = draft.brandDescription?.trim() ?? "";
   return `${userText}${META_SEPARATOR}${JSON.stringify(meta)}-->`;
@@ -39,6 +43,10 @@ export function decodeProjectMeta(brandDescription: string | null) {
       selectedDays: [] as OnboardingDraft["selectedDays"],
       postFormat: "square" as PostFormat,
       logoAnalysis: undefined as LogoAnalysis | undefined,
+      logoPlacement: undefined as import("@/lib/ai/logo-analysis").LogoAnalysis["bestPlacement"] | undefined,
+      styleCustomNotes: undefined as string | undefined,
+      dayCustomizations: undefined as OnboardingDraft["dayCustomizations"],
+      formMode: undefined as OnboardingDraft["formMode"],
     };
   }
 
@@ -53,6 +61,10 @@ export function decodeProjectMeta(brandDescription: string | null) {
       selectedDays?: OnboardingDraft["selectedDays"];
       postFormat?: PostFormat;
       logoAnalysis?: LogoAnalysis;
+      logoPlacement?: OnboardingDraft["logoPlacement"];
+      styleCustomNotes?: string;
+      dayCustomizations?: OnboardingDraft["dayCustomizations"];
+      formMode?: OnboardingDraft["formMode"];
     };
 
     return {
@@ -63,6 +75,10 @@ export function decodeProjectMeta(brandDescription: string | null) {
       selectedDays: parsed.selectedDays ?? [],
       postFormat: (parsed.postFormat ?? "square") as PostFormat,
       logoAnalysis: parsed.logoAnalysis,
+      logoPlacement: parsed.logoPlacement,
+      styleCustomNotes: parsed.styleCustomNotes,
+      dayCustomizations: parsed.dayCustomizations,
+      formMode: parsed.formMode,
     };
   } catch {
     return {
@@ -73,6 +89,10 @@ export function decodeProjectMeta(brandDescription: string | null) {
       selectedDays: [],
       postFormat: "square" as PostFormat,
       logoAnalysis: undefined,
+      logoPlacement: undefined,
+      styleCustomNotes: undefined,
+      dayCustomizations: undefined,
+      formMode: undefined,
     };
   }
 }
@@ -99,6 +119,10 @@ export function projectToBrandContext(project: {
     visualStyle: normalizeStyleKey(project.visual_style),
     logoUrl: project.logo_url ?? undefined,
     logoAnalysis: meta.logoAnalysis,
+    logoPlacement: meta.logoPlacement ?? meta.logoAnalysis?.bestPlacement,
+    styleCustomNotes: meta.styleCustomNotes,
+    dayCustomizations: meta.dayCustomizations,
+    formMode: meta.formMode,
     selectedDayIds: meta.selectedDays.map((day) => day.dayId),
     purchasedAddons: meta.purchasedAddons,
     postFormat: meta.postFormat,
@@ -121,7 +145,11 @@ export async function createProjectWithJobs(
   const supabase = await getWritableClient();
   const primaryColor = draft.brandColors[0] ?? "#16A34A";
   const expandedDays = expandSelectedDaysForJobs(draft.selectedDays);
-  const logoAnalysis = draft.logoUrl ? await analyzeLogo(draft.logoUrl) : null;
+  const logoAnalysisRaw = draft.logoUrl ? await analyzeLogo(draft.logoUrl) : null;
+  const logoPlacement = draft.logoPlacement ?? logoAnalysisRaw?.bestPlacement ?? "bottom-right";
+  const logoAnalysis = logoAnalysisRaw
+    ? { ...logoAnalysisRaw, bestPlacement: logoPlacement }
+    : null;
 
   const brandProfile = buildBrandProfile({
     brandName: draft.brandName,
@@ -146,9 +174,10 @@ export async function createProjectWithJobs(
     .insert({
       user_id: userId,
       brand_name: draft.brandName,
-      brand_description: encodeProjectMeta({
+      brand_description:       encodeProjectMeta({
         ...draft,
         logoAnalysis: logoAnalysis ?? undefined,
+        logoPlacement,
       }),
       sector: draft.sector,
       custom_sector: draft.customSector ?? null,

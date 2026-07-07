@@ -15,7 +15,11 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { BasicOnboardingForm } from "@/components/onboarding/basic-onboarding-form";
 import { BrandColorSelector } from "@/components/onboarding/brand-color-selector";
+import { DayCustomizationPanel } from "@/components/onboarding/day-customization-panel";
+import { LogoPlacementSelector } from "@/components/onboarding/logo-placement-selector";
+import { OnboardingModePicker } from "@/components/onboarding/onboarding-mode-picker";
 import { SpecialDaySelector } from "@/components/onboarding/special-day-selector";
 import {
   addonOptions,
@@ -30,9 +34,14 @@ import {
   MAX_SELECTED_DAYS,
 } from "@/lib/config";
 import { formatCurrency } from "@/lib/utils";
-import { saveOnboardingDraft } from "@/lib/onboarding/draft";
+import {
+  saveOnboardingDraft,
+  type DayCustomization,
+  type OnboardingFormMode,
+} from "@/lib/onboarding/draft";
 import { PostFormatSelector } from "@/components/onboarding/post-format-selector";
 import type { AddonKey, PostFormat, SectorKey, VisualStyle } from "@/types/domain";
+import type { LogoAnalysis } from "@/lib/ai/logo-analysis";
 
 const schema = z.object({
   brandName: z.string().min(2, "İşletme adı gerekli."),
@@ -59,11 +68,28 @@ const steps = [
 ];
 
 export function OnboardingWizard() {
+  const [mode, setMode] = useState<OnboardingFormMode | null>(null);
+
+  if (!mode) {
+    return <OnboardingModePicker onSelect={setMode} />;
+  }
+
+  if (mode === "basic") {
+    return <BasicOnboardingForm onBack={() => setMode(null)} />;
+  }
+
+  return <DetailedOnboardingWizard onBack={() => setMode(null)} />;
+}
+
+function DetailedOnboardingWizard({ onBack }: { onBack: () => void }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [selectedDays, setSelectedDays] = useState<SelectedDayEntry[]>(getDefaultSelectedDays());
   const [selectedAddons, setSelectedAddons] = useState<AddonKey[]>([]);
   const [postFormat, setPostFormat] = useState<PostFormat>("square");
+  const [logoPlacement, setLogoPlacement] = useState<LogoAnalysis["bestPlacement"]>("bottom-right");
+  const [styleCustomNotes, setStyleCustomNotes] = useState("");
+  const [dayCustomizations, setDayCustomizations] = useState<Record<string, DayCustomization>>({});
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -111,18 +137,23 @@ export function OnboardingWizard() {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.18),_transparent_36%),linear-gradient(180deg,_#f8fffa_0%,_#ffffff_100%)] px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600">
-              {steps[step]}
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-violet-600">
+              Detaylı kurulum • {steps[step]}
             </p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
               Markanız için akıcı kurulum
             </h1>
           </div>
-          <Link href="/" className="text-sm font-medium text-slate-500">
-            Landing sayfasına dön
-          </Link>
+          <div className="flex flex-col items-end gap-1 text-sm">
+            <Link href="/" className="font-medium text-slate-500">
+              Landing sayfasına dön
+            </Link>
+            <button type="button" onClick={onBack} className="font-medium text-violet-600">
+              Mod seçimine dön
+            </button>
+          </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
@@ -163,6 +194,11 @@ export function OnboardingWizard() {
                           SVG logolar otomatik dönüştürülüp görsele eklenir.
                         </p>
                       </Field>
+                      {watched.logoUrl ? (
+                        <Field label="Logo konumu">
+                          <LogoPlacementSelector value={logoPlacement} onChange={setLogoPlacement} />
+                        </Field>
+                      ) : null}
                       <Field label="Marka renkleri">
                         <BrandColorSelector
                           value={watched.brandColors ?? []}
@@ -211,31 +247,47 @@ export function OnboardingWizard() {
                   )}
 
                   {step === 3 && (
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {styles.map((style) => (
-                        <button
-                          key={style.key}
-                          type="button"
-                          onClick={() => form.setValue("visualStyle", style.key)}
-                          className={`rounded-[24px] border p-5 text-left transition ${
-                            watched.visualStyle === style.key
-                              ? "border-emerald-400 bg-emerald-50"
-                              : "border-emerald-100 bg-white"
-                          }`}
-                        >
-                          <p className="font-medium text-slate-900">{style.name}</p>
-                          <p className="mt-2 text-sm leading-6 text-slate-600">{style.description}</p>
-                        </button>
-                      ))}
+                    <div className="space-y-4">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {styles.map((style) => (
+                          <button
+                            key={style.key}
+                            type="button"
+                            onClick={() => form.setValue("visualStyle", style.key)}
+                            className={`rounded-[24px] border p-5 text-left transition ${
+                              watched.visualStyle === style.key
+                                ? "border-emerald-400 bg-emerald-50"
+                                : "border-emerald-100 bg-white"
+                            }`}
+                          >
+                            <p className="font-medium text-slate-900">{style.name}</p>
+                            <p className="mt-2 text-sm leading-6 text-slate-600">{style.description}</p>
+                          </button>
+                        ))}
+                      </div>
+                      <Field label="Stil notları (isteğe bağlı)">
+                        <Textarea
+                          placeholder="Örn: Daha editorial poster hissi, az 3D ikon, sıcak fotoğraf tonu"
+                          value={styleCustomNotes}
+                          onChange={(event) => setStyleCustomNotes(event.target.value)}
+                        />
+                      </Field>
                     </div>
                   )}
 
                   {step === 4 && (
-                    <SpecialDaySelector
-                      selectedDays={selectedDays}
-                      onChange={setSelectedDays}
-                      sector={watched.sector as SectorKey | undefined}
-                    />
+                    <div className="space-y-5">
+                      <SpecialDaySelector
+                        selectedDays={selectedDays}
+                        onChange={setSelectedDays}
+                        sector={watched.sector as SectorKey | undefined}
+                      />
+                      <DayCustomizationPanel
+                        selectedDays={selectedDays}
+                        customizations={dayCustomizations}
+                        onChange={setDayCustomizations}
+                      />
+                    </div>
                   )}
 
                   {step === 5 && (
@@ -287,14 +339,21 @@ export function OnboardingWizard() {
                               saveOnboardingDraft({
                                 brandName: values.brandName,
                                 logoUrl: values.logoUrl,
+                                logoPlacement: values.logoUrl ? logoPlacement : undefined,
                                 brandColors: values.brandColors,
                                 sector: values.sector,
                                 customSector: values.customSector,
                                 brandDescription: values.brandDescription,
                                 visualStyle: values.visualStyle as VisualStyle,
+                                styleCustomNotes: styleCustomNotes.trim() || undefined,
+                                dayCustomizations:
+                                  Object.keys(dayCustomizations).length > 0
+                                    ? dayCustomizations
+                                    : undefined,
                                 selectedDays,
                                 purchasedAddons: selectedAddons,
                                 postFormat,
+                                formMode: "detailed",
                               });
                               router.push("/checkout");
                             }}

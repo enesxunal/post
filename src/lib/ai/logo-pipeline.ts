@@ -56,11 +56,13 @@ export async function rasterizeLogo(logoUrl: string): Promise<Buffer | null> {
   }
 }
 
-/** Üretilen görselin sağ üstüne gerçek logoyu bindirir — AI'nın çizmesine güvenilmez. */
+import type { LogoAnalysis } from "@/lib/ai/logo-analysis";
+
+/** Üretilen görsele gerçek logoyu bindirir — AI'nın çizmesine güvenilmez. */
 export async function applyLogoOverlay(
   imageUrl: string,
   logoUrl: string,
-  position: "top-right" | "bottom-right" = "top-right",
+  position: LogoAnalysis["bestPlacement"] = "bottom-right",
 ): Promise<string> {
   const logoBuffer = await rasterizeLogo(logoUrl);
   if (!logoBuffer) return imageUrl;
@@ -94,8 +96,28 @@ export async function applyLogoOverlay(
   const logoH = logoMeta.height ?? maxLogoH;
 
   const margin = Math.round(width * 0.045);
-  const left = width - logoW - margin;
-  const top = position === "top-right" ? margin : height - logoH - margin;
+  let left = width - logoW - margin;
+  let top = height - logoH - margin;
+
+  switch (position) {
+    case "top-left":
+      left = margin;
+      top = margin;
+      break;
+    case "top-right":
+      left = width - logoW - margin;
+      top = margin;
+      break;
+    case "bottom-center":
+      left = Math.round((width - logoW) / 2);
+      top = height - logoH - margin;
+      break;
+    case "bottom-right":
+    default:
+      left = width - logoW - margin;
+      top = height - logoH - margin;
+      break;
+  }
 
   const output = await base
     .composite([{ input: resizedLogo, left, top }])

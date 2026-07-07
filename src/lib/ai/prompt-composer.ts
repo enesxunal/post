@@ -16,6 +16,8 @@ export { pickHeadlineForBrand } from "@/lib/ai/creative-brief";
 
 export type ComposeImagePromptOptions = {
   artDirection?: ArtDirection;
+  selectedHeadline?: string;
+  userNote?: string;
 };
 
 function usesTextFreeBackground(): boolean {
@@ -40,6 +42,16 @@ export async function composeImagePrompt(
   const sectorRule = await getSectorRule(context.sector);
   const styleRule = await getStyleRule(context.visualStyle);
   const backgroundOnly = usesTextFreeBackground();
+  const dayCustom = context.dayCustomizations?.[dayId];
+  const customHeadline = options?.selectedHeadline ?? dayCustom?.headline;
+  const userNote = [
+    options?.userNote,
+    context.styleCustomNotes,
+    dayCustom?.visualDirection ? `Visual direction: ${dayCustom.visualDirection}` : "",
+    dayCustom?.captionNote ? `Caption tone: ${dayCustom.captionNote}` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   if (!day) {
     const fallbackBrief = buildCreativeBrief({
@@ -74,6 +86,8 @@ export async function composeImagePrompt(
       styleRule,
       backgroundOnly,
       artDirection: options?.artDirection,
+      selectedHeadline: customHeadline,
+      userNote,
     });
 
     return {
@@ -100,6 +114,8 @@ export async function composeImagePrompt(
     styleRule,
     backgroundOnly,
     artDirection: options?.artDirection,
+    selectedHeadline: customHeadline,
+    userNote,
   });
 
   return {
