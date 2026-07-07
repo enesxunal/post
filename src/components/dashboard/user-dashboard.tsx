@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { LazyJobImage } from "@/components/dashboard/lazy-job-image";
+import { JobProductionDetails } from "@/components/dashboard/job-production-details";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { DASHBOARD_POLL_MS } from "@/lib/config";
 import { mapJobStatus } from "@/lib/generation/map-jobs";
@@ -486,6 +487,10 @@ export function UserDashboard({
                           {selectedJob.errorMessage}
                         </div>
                       ) : null}
+                      <JobProductionDetails
+                        jobId={selectedJob.id}
+                        status={selectedJob.status}
+                      />
                       {selectedJob.caption ? (
                         <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
                           <div className="flex items-center justify-between gap-2">
