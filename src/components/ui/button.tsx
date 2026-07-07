@@ -12,7 +12,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 const variants: Record<ButtonVariant, string> = {
   default:
-    "bg-emerald-500 text-white hover:bg-emerald-600 focus-visible:ring-emerald-300",
+    "bg-gradient-to-r from-[var(--brand-from)] to-[var(--brand-to)] text-white hover:opacity-95 focus-visible:ring-emerald-300",
   secondary:
     "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 focus-visible:ring-emerald-200",
   outline:

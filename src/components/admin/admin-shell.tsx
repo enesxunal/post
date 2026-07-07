@@ -14,6 +14,7 @@ import {
   Wrench,
 } from "lucide-react";
 
+import { APP_NAME } from "@/lib/config";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -37,7 +38,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <aside className="lg:w-64 lg:shrink-0">
           <div className="rounded-[28px] border border-emerald-100 bg-white p-5 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-600">
-              Post Admin
+              {APP_NAME} Admin
             </p>
             <h2 className="mt-2 text-lg font-semibold text-slate-950">Yönetim Paneli</h2>
             <p className="mt-1 text-sm text-slate-500">

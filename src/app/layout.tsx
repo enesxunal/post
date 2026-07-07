@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-import { APP_NAME } from "@/lib/config";
+import { APP_DOMAIN, APP_NAME, APP_URL } from "@/lib/config";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,9 +15,25 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: `${APP_NAME} | KOBI ozel gun postlari`,
+  metadataBase: new URL(APP_URL),
+  title: {
+    default: `${APP_NAME} | KOBİ özel gün postları`,
+    template: `%s | ${APP_NAME}`,
+  },
   description:
-    "Kucuk ve orta olcekli isletmeler icin ozel gun sosyal medya postlarini otomatik hazirlayan mobil-first MVP.",
+    "Küçük ve orta ölçekli işletmeler için özel gün sosyal medya postlarını otomatik hazırlayan platform.",
+  applicationName: APP_NAME,
+  icons: {
+    icon: "/poust-favicon.png",
+    apple: "/poust-favicon.png",
+  },
+  openGraph: {
+    title: APP_NAME,
+    siteName: APP_NAME,
+    url: APP_URL,
+    locale: "tr_TR",
+    type: "website",
+  },
 };
 
 export default function RootLayout({

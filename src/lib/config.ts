@@ -1,4 +1,12 @@
-export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "PostName";
+export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "poust";
+export const APP_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN ?? "poust.app";
+export const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://poust.app";
+
+/** Logo gradyanı — poust marka rengi */
+export const BRAND_GRADIENT = {
+  from: "#38C661",
+  to: "#1E9E4B",
+} as const;
 
 export const BASE_PACKAGE_PRICE = 299;
 export const CAPTION_ADDON_PRICE = 99;

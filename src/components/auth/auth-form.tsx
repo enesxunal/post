@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
+import { BrandLogo } from "@/components/brand/brand-logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -164,7 +165,11 @@ export function AuthForm() {
   }
 
   return (
-    <Card className="w-full max-w-md space-y-5">
+    <>
+      <div className="mb-4 flex justify-center">
+        <BrandLogo href="/" tagline="İşletmeniz için özel gün postları" />
+      </div>
+      <Card className="w-full max-w-md space-y-5">
       <Badge>{mode === "signup" ? "Hizli uye ol" : "Hizli giris"}</Badge>
       <div>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
@@ -271,7 +276,8 @@ export function AuthForm() {
           {feedback.message}
         </div>
       ) : null}
-    </Card>
+      </Card>
+    </>
   );
 }
 

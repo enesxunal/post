@@ -18,12 +18,13 @@ import {
   Zap,
 } from "lucide-react";
 
+import { BrandLogo } from "@/components/brand/brand-logo";
 import { HeroVisual } from "@/components/marketing/hero-visual";
 import { PostMockCard } from "@/components/marketing/post-mock-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
-import { APP_NAME, BASE_PACKAGE_PRICE } from "@/lib/config";
+import { APP_DOMAIN, APP_NAME, BASE_PACKAGE_PRICE, BRAND_GRADIENT } from "@/lib/config";
 import {
   heroShowcase,
   howItWorksSteps,
@@ -55,15 +56,7 @@ export function LandingPage() {
       {/* Üst navigasyon */}
       <section className="mx-auto max-w-7xl px-4 pb-4 pt-4 sm:px-6 lg:px-8">
         <header className="flex items-center justify-between rounded-2xl border border-emerald-100/80 bg-white/90 px-4 py-3 shadow-sm backdrop-blur-md sm:rounded-full sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 text-sm font-bold text-white shadow-md shadow-emerald-500/25">
-              P
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-900">{APP_NAME}</p>
-              <p className="text-xs text-slate-500">Özel gün postları, tek ödeme</p>
-            </div>
-          </div>
+          <BrandLogo tagline="Özel gün postları, tek ödeme" />
           <div className="flex items-center gap-3 sm:gap-5">
             <Link
               href="/login"
@@ -87,7 +80,12 @@ export function LandingPage() {
 
             <h1 className="mt-6 max-w-2xl text-4xl font-bold tracking-tight text-slate-950 sm:text-5xl lg:text-[3.25rem] lg:leading-[1.08]">
               İşletmenizin 1 yıllık özel gün postları{" "}
-              <span className="bg-gradient-to-r from-emerald-600 to-green-500 bg-clip-text text-transparent">
+              <span
+                className="bg-clip-text text-transparent"
+                style={{
+                  backgroundImage: `linear-gradient(to right, ${BRAND_GRADIENT.from}, ${BRAND_GRADIENT.to})`,
+                }}
+              >
                 dakikalar içinde
               </span>{" "}
               hazır.
@@ -328,7 +326,9 @@ export function LandingPage() {
         </Card>
 
         <footer className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-emerald-100 pt-8 text-sm text-slate-500 sm:flex-row">
-          <p>© {new Date().getFullYear()} {APP_NAME}. Tüm hakları saklıdır.</p>
+          <p>
+            © {new Date().getFullYear()} {APP_NAME}. Tüm hakları saklıdır. · {APP_DOMAIN}
+          </p>
           <div className="flex gap-6">
             <Link href="/onboarding" className="hover:text-emerald-700">
               Paketi Başlat
