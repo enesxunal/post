@@ -167,7 +167,7 @@ export function AuthForm() {
   return (
     <>
       <div className="mb-4 flex justify-center">
-        <BrandLogo href="/" tagline="İşletmeniz için özel gün postları" />
+        <BrandLogo href="/" size="lg" />
       </div>
       <Card className="w-full max-w-md space-y-5">
       <Badge>{mode === "signup" ? "Hizli uye ol" : "Hizli giris"}</Badge>

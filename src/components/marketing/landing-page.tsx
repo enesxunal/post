@@ -56,7 +56,7 @@ export function LandingPage() {
       {/* Üst navigasyon */}
       <section className="mx-auto max-w-7xl px-4 pb-4 pt-4 sm:px-6 lg:px-8">
         <header className="flex items-center justify-between rounded-2xl border border-emerald-100/80 bg-white/90 px-4 py-3 shadow-sm backdrop-blur-md sm:rounded-full sm:px-6">
-          <BrandLogo tagline="Özel gün postları, tek ödeme" />
+          <BrandLogo />
           <div className="flex items-center gap-3 sm:gap-5">
             <Link
               href="/login"
