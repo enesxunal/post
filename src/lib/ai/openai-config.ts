@@ -24,6 +24,10 @@ export function getOpenAIImageModel() {
   return process.env.OPENAI_IMAGE_MODEL?.trim() || OPENAI_IMAGE_DEFAULTS.model;
 }
 
+export function getOpenAIImageFallbackModel() {
+  return process.env.OPENAI_IMAGE_FALLBACK_MODEL?.trim() || "dall-e-3";
+}
+
 export function isDalle3Model(model = getOpenAIImageModel()) {
   return model.startsWith("dall-e");
 }
@@ -53,8 +57,8 @@ export function getDalle3Style(): Dalle3Style {
 }
 
 /** Instagram formatlarına yakın boyut — modele göre farklı çözünürlükler */
-export function resolveOpenAIImageSize(aspectRatio?: string): string {
-  if (isDalle3Model()) {
+export function resolveOpenAIImageSize(aspectRatio?: string, model = getOpenAIImageModel()) {
+  if (model.startsWith("dall-e")) {
     switch (aspectRatio) {
       case "5:4":
         return "1792x1024";

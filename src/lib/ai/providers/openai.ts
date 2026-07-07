@@ -3,8 +3,8 @@ import {
   getDalle3Style,
   getGptImageQuality,
   getOpenAIApiKey,
+  getOpenAIImageFallbackModel,
   getOpenAIImageModel,
-  isDalle3Model,
   isOpenAITextFreeMode,
   OPENAI_IMAGE_DEFAULTS,
   resolveOpenAIImageSize,
@@ -55,8 +55,8 @@ function buildOpenAIPrompt(fullPrompt: string, headline?: string) {
     visual ? `Visual: ${visual.slice(0, 300)}` : "",
     fullPrompt.slice(0, 1500),
   ]
-      .filter(Boolean)
-      .join("\n\n");
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 async function urlToDataUrl(url: string) {
@@ -69,17 +69,13 @@ async function urlToDataUrl(url: string) {
   return `data:${mimeType};base64,${buffer.toString("base64")}`;
 }
 
-function buildRequestBody(
-  model: string,
-  prompt: string,
-  size: string,
-) {
-  const imagePrompt = prompt;
+function buildRequestBody(model: string, prompt: string, aspectRatio?: string) {
+  const size = resolveOpenAIImageSize(aspectRatio, model);
 
-  if (isDalle3Model(model)) {
+  if (model.startsWith("dall-e")) {
     return {
       model,
-      prompt: imagePrompt,
+      prompt,
       n: 1,
       size,
       quality: getDalle3Quality(),
@@ -90,12 +86,35 @@ function buildRequestBody(
 
   return {
     model,
-    prompt: imagePrompt,
+    prompt,
     n: 1,
     size,
     quality: getGptImageQuality(),
     output_format: "png",
   };
+}
+
+function isModelAccessError(message: string) {
+  return /does not have access to model/i.test(message);
+}
+
+async function requestOpenAIImage(
+  apiKey: string,
+  model: string,
+  prompt: string,
+  aspectRatio?: string,
+) {
+  const response = await fetch(`${OPENAI_IMAGE_DEFAULTS.apiBase}/images/generations`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(buildRequestBody(model, prompt, aspectRatio)),
+  });
+
+  const payload = (await response.json()) as OpenAIImageResponse;
+  return { response, payload };
 }
 
 export async function generateImageWithOpenAI(
@@ -110,24 +129,43 @@ export async function generateImageWithOpenAI(
     throw new Error("OPENAI_API_KEY tanımlı değil");
   }
 
-  const model = getOpenAIImageModel();
-  const size = resolveOpenAIImageSize(options?.aspectRatio);
+  const primaryModel = getOpenAIImageModel();
+  const fallbackModel = getOpenAIImageFallbackModel();
   const textFree = isOpenAITextFreeMode();
   const imagePrompt = buildOpenAIPrompt(prompt, options?.headline);
 
-  const response = await fetch(`${OPENAI_IMAGE_DEFAULTS.apiBase}/images/generations`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(buildRequestBody(model, imagePrompt, size)),
-  });
+  let activeModel = primaryModel;
+  let { response, payload } = await requestOpenAIImage(
+    apiKey,
+    activeModel,
+    imagePrompt,
+    options?.aspectRatio,
+  );
 
-  const payload = (await response.json()) as OpenAIImageResponse;
+  if (
+    !response.ok &&
+    isModelAccessError(payload.error?.message ?? "") &&
+    activeModel !== fallbackModel
+  ) {
+    console.warn(
+      `[openai] ${activeModel} erişilemiyor, ${fallbackModel} ile yeniden deneniyor`,
+    );
+    activeModel = fallbackModel;
+    ({ response, payload } = await requestOpenAIImage(
+      apiKey,
+      activeModel,
+      imagePrompt,
+      options?.aspectRatio,
+    ));
+  }
 
   if (!response.ok) {
     const message = payload.error?.message ?? `OpenAI HTTP ${response.status}`;
+    if (isModelAccessError(message)) {
+      throw new Error(
+        `${message} — Vercel'de OPENAI_IMAGE_MODEL=dall-e-3 yapın veya OpenAI hesabınızda organizasyon doğrulaması yapın.`,
+      );
+    }
     throw new Error(message);
   }
 
@@ -143,9 +181,11 @@ export async function generateImageWithOpenAI(
     throw new Error("OpenAI görsel döndürmedi");
   }
 
+  const usedFallback = activeModel !== primaryModel;
+
   return {
     provider: "openai" as const,
-    model: `${model}${textFree ? "-textfree" : ""}`,
+    model: `${activeModel}${textFree ? "-textfree" : ""}${usedFallback ? "-fallback" : ""}`,
     imageUrl: dataUrl,
     thumbnailUrl: dataUrl,
     status: "ready" as const,
