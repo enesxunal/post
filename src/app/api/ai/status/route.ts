@@ -32,7 +32,7 @@ export async function GET() {
 
   const note =
     imageProvider === "openai"
-      ? "Görsel: OpenAI DALL-E 3 | Caption/kalite kontrolü: Gemini"
+      ? `Görsel: OpenAI ${getOpenAIImageModel()} | Caption/kalite kontrolü: Gemini`
       : imageProvider === "ideogram"
         ? "Görsel: Ideogram 4.0 | Caption/kalite kontrolü: Gemini"
         : "Görsel ve metin: Gemini";

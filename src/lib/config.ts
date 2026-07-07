@@ -53,7 +53,7 @@ export const GENERATING_MESSAGES = [
 
 export const TODO_LABELS = {
   tosla: "Tosla canlı ödeme bağlı — env eksikse mock moda düşer",
-  imageProvider: "OpenAI DALL-E 3 görsel + Gemini caption/QC",
+  imageProvider: "OpenAI gpt-image-1.5 görsel + Gemini caption/QC",
   emailProvider: "TODO: configure email provider",
   cronWorker: "TODO: deploy cron worker",
 } as const;

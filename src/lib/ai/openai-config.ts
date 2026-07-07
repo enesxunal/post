@@ -1,7 +1,7 @@
 export const OPENAI_IMAGE_DEFAULTS = {
   apiBase: "https://api.openai.com/v1",
-  model: "dall-e-3" as const,
-  quality: "standard" as const,
+  model: "gpt-image-1.5" as const,
+  quality: "medium" as const,
   style: "vivid" as const,
   size: "1024x1024" as const,
 } as const;
@@ -25,7 +25,7 @@ export function getOpenAIImageModel() {
 }
 
 export function getOpenAIImageFallbackModel() {
-  return process.env.OPENAI_IMAGE_FALLBACK_MODEL?.trim() || "dall-e-3";
+  return process.env.OPENAI_IMAGE_FALLBACK_MODEL?.trim() || "gpt-image-1";
 }
 
 export function isDalle3Model(model = getOpenAIImageModel()) {

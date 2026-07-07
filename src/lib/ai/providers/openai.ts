@@ -163,7 +163,7 @@ export async function generateImageWithOpenAI(
     const message = payload.error?.message ?? `OpenAI HTTP ${response.status}`;
     if (isModelAccessError(message)) {
       throw new Error(
-        `${message} — Vercel'de OPENAI_IMAGE_MODEL=dall-e-3 yapın veya OpenAI hesabınızda organizasyon doğrulaması yapın.`,
+        `${message} — OpenAI proje Limits sayfasında bu modeli açın veya OPENAI_IMAGE_MODEL=gpt-image-1 deneyin.`,
       );
     }
     throw new Error(message);
