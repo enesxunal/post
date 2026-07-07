@@ -10,6 +10,7 @@ import {
 } from "@/lib/ai/gemini-config";
 import { isIdeogramConfigured } from "@/lib/ai/ideogram-config";
 import { isOpenAIConfigured } from "@/lib/ai/openai-config";
+import { resolveAspectRatio } from "@/lib/image-formats";
 import type { BrandContext, PostFormat, SectorKey, VisualStyle } from "@/types/domain";
 
 export const maxDuration = 180;
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
 
   try {
     const preview = await composeImagePrompt(context, dayId);
-    const aspectRatio = postFormat === "landscape-1350x1080" ? "5:4" : "1:1";
+    const aspectRatio = resolveAspectRatio(postFormat);
 
     const results = await Promise.all(
       Array.from({ length: count }, async (_, index) => {

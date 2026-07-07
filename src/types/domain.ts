@@ -53,7 +53,7 @@ export type JobStatus =
 
 export type AddonKey = "caption" | "story" | "calendar";
 
-export type PostFormat = "square" | "landscape-1350x1080";
+export type PostFormat = "square" | "portrait-1080x1350" | "landscape-1350x1080";
 
 export interface SelectedDayEntry {
   dayId: string;

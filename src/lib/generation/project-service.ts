@@ -119,7 +119,7 @@ export function projectToBrandContext(project: {
     visualStyle: normalizeStyleKey(project.visual_style),
     logoUrl: project.logo_url ?? undefined,
     logoAnalysis: meta.logoAnalysis,
-    logoPlacement: meta.logoPlacement ?? meta.logoAnalysis?.bestPlacement,
+    logoPlacement: meta.logoAnalysis?.bestPlacement,
     styleCustomNotes: meta.styleCustomNotes,
     dayCustomizations: meta.dayCustomizations,
     formMode: meta.formMode,
@@ -146,10 +146,7 @@ export async function createProjectWithJobs(
   const primaryColor = draft.brandColors[0] ?? "#16A34A";
   const expandedDays = expandSelectedDaysForJobs(draft.selectedDays);
   const logoAnalysisRaw = draft.logoUrl ? await analyzeLogo(draft.logoUrl) : null;
-  const logoPlacement = draft.logoPlacement ?? logoAnalysisRaw?.bestPlacement ?? "bottom-right";
-  const logoAnalysis = logoAnalysisRaw
-    ? { ...logoAnalysisRaw, bestPlacement: logoPlacement }
-    : null;
+  const logoAnalysis = logoAnalysisRaw ?? null;
 
   const brandProfile = buildBrandProfile({
     brandName: draft.brandName,
@@ -177,7 +174,6 @@ export async function createProjectWithJobs(
       brand_description:       encodeProjectMeta({
         ...draft,
         logoAnalysis: logoAnalysis ?? undefined,
-        logoPlacement,
       }),
       sector: draft.sector,
       custom_sector: draft.customSector ?? null,

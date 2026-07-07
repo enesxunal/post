@@ -25,6 +25,8 @@ export function getIdeogramRenderingSpeed(): IdeogramRenderingSpeed {
 /** Ideogram 4.0 çözünürlükleri — Instagram formatlarına yakın eşleme */
 export function resolveIdeogramResolution(aspectRatio?: string) {
   switch (aspectRatio) {
+    case "4:5":
+      return "1792x2240";
     case "5:4":
       return "2240x1792";
     case "9:16":

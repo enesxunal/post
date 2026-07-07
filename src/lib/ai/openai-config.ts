@@ -60,10 +60,11 @@ export function getDalle3Style(): Dalle3Style {
 export function resolveOpenAIImageSize(aspectRatio?: string, model = getOpenAIImageModel()) {
   if (model.startsWith("dall-e")) {
     switch (aspectRatio) {
-      case "5:4":
-        return "1792x1024";
+      case "4:5":
       case "9:16":
         return "1024x1792";
+      case "5:4":
+        return "1792x1024";
       case "1:1":
       default:
         return "1024x1024";
@@ -71,10 +72,11 @@ export function resolveOpenAIImageSize(aspectRatio?: string, model = getOpenAIIm
   }
 
   switch (aspectRatio) {
-    case "5:4":
-      return "1536x1024";
+    case "4:5":
     case "9:16":
       return "1024x1536";
+    case "5:4":
+      return "1536x1024";
     case "1:1":
     default:
       return "1024x1024";

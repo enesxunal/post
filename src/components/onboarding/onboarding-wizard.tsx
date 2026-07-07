@@ -18,7 +18,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { BasicOnboardingForm } from "@/components/onboarding/basic-onboarding-form";
 import { BrandColorSelector } from "@/components/onboarding/brand-color-selector";
 import { DayCustomizationPanel } from "@/components/onboarding/day-customization-panel";
-import { LogoPlacementSelector } from "@/components/onboarding/logo-placement-selector";
 import { OnboardingModePicker } from "@/components/onboarding/onboarding-mode-picker";
 import { SpecialDaySelector } from "@/components/onboarding/special-day-selector";
 import {
@@ -41,7 +40,6 @@ import {
 } from "@/lib/onboarding/draft";
 import { PostFormatSelector } from "@/components/onboarding/post-format-selector";
 import type { AddonKey, PostFormat, SectorKey, VisualStyle } from "@/types/domain";
-import type { LogoAnalysis } from "@/lib/ai/logo-analysis";
 
 const schema = z.object({
   brandName: z.string().min(2, "İşletme adı gerekli."),
@@ -87,7 +85,6 @@ function DetailedOnboardingWizard({ onBack }: { onBack: () => void }) {
   const [selectedDays, setSelectedDays] = useState<SelectedDayEntry[]>(getDefaultSelectedDays());
   const [selectedAddons, setSelectedAddons] = useState<AddonKey[]>([]);
   const [postFormat, setPostFormat] = useState<PostFormat>("square");
-  const [logoPlacement, setLogoPlacement] = useState<LogoAnalysis["bestPlacement"]>("bottom-right");
   const [styleCustomNotes, setStyleCustomNotes] = useState("");
   const [dayCustomizations, setDayCustomizations] = useState<Record<string, DayCustomization>>({});
 
@@ -191,14 +188,9 @@ function DetailedOnboardingWizard({ onBack }: { onBack: () => void }) {
                           {...form.register("logoUrl")}
                         />
                         <p className="mt-1.5 text-xs text-slate-500">
-                          SVG logolar otomatik dönüştürülüp görsele eklenir.
+                          SVG logolar otomatik dönüştürülür; konum tasarıma göre otomatik seçilir.
                         </p>
                       </Field>
-                      {watched.logoUrl ? (
-                        <Field label="Logo konumu">
-                          <LogoPlacementSelector value={logoPlacement} onChange={setLogoPlacement} />
-                        </Field>
-                      ) : null}
                       <Field label="Marka renkleri">
                         <BrandColorSelector
                           value={watched.brandColors ?? []}
@@ -339,7 +331,6 @@ function DetailedOnboardingWizard({ onBack }: { onBack: () => void }) {
                               saveOnboardingDraft({
                                 brandName: values.brandName,
                                 logoUrl: values.logoUrl,
-                                logoPlacement: values.logoUrl ? logoPlacement : undefined,
                                 brandColors: values.brandColors,
                                 sector: values.sector,
                                 customSector: values.customSector,

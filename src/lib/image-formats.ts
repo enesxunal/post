@@ -1,6 +1,14 @@
-export type PostFormat = "square" | "landscape-1350x1080";
+export type PostFormat = "square" | "portrait-1080x1350" | "landscape-1350x1080";
 
-export type ImageAspectRatio = "1:1" | "5:4" | "9:16";
+export type ImageAspectRatio = "1:1" | "4:5" | "5:4" | "9:16";
+
+/** Eski siparişlerdeki yatay anahtarı dikeye çevirir (UI'da yanlış etiketlenmişti). */
+export function normalizePostFormat(format?: string): PostFormat {
+  if (format === "landscape-1350x1080" || format === "portrait-1080x1350") {
+    return "portrait-1080x1350";
+  }
+  return "square";
+}
 
 export const POST_FORMAT_OPTIONS: Array<{
   key: PostFormat;
@@ -17,11 +25,11 @@ export const POST_FORMAT_OPTIONS: Array<{
     aspectRatio: "1:1",
   },
   {
-    key: "landscape-1350x1080",
-    label: "Yatay feed",
-    size: "1350×1080",
-    description: "Geniş feed formatı (5:4)",
-    aspectRatio: "5:4",
+    key: "portrait-1080x1350",
+    label: "Dikey feed",
+    size: "1080×1350",
+    description: "Instagram dikey gönderi (4:5)",
+    aspectRatio: "4:5",
   },
 ];
 
@@ -31,24 +39,28 @@ export const STORY_FORMAT = {
   aspectRatio: "9:16" as ImageAspectRatio,
 };
 
-export function resolveAspectRatio(format: PostFormat): ImageAspectRatio {
-  return POST_FORMAT_OPTIONS.find((item) => item.key === format)?.aspectRatio ?? "1:1";
+export function resolveAspectRatio(format?: string): ImageAspectRatio {
+  const normalized = normalizePostFormat(format);
+  return POST_FORMAT_OPTIONS.find((item) => item.key === normalized)?.aspectRatio ?? "1:1";
 }
 
-export function getPostFormatLabel(format: PostFormat) {
-  return POST_FORMAT_OPTIONS.find((item) => item.key === format)?.size ?? "1080×1080";
+export function getPostFormatLabel(format?: string) {
+  const normalized = normalizePostFormat(format);
+  return POST_FORMAT_OPTIONS.find((item) => item.key === normalized)?.size ?? "1080×1080";
 }
 
-export function getPreviewAspectClass(format: PostFormat) {
-  if (format === "landscape-1350x1080") return "aspect-[5/4]";
+export function getPreviewAspectClass(format?: string) {
+  const normalized = normalizePostFormat(format);
+  if (normalized === "portrait-1080x1350") return "aspect-[4/5]";
   return "aspect-square";
 }
 
 /** Instagram feed + story güvenli alan kuralları — prompt'a eklenir */
-export function buildSafeZonePrompt(kind: "post" | "story", format?: PostFormat) {
+export function buildSafeZonePrompt(kind: "post" | "story", format?: string) {
+  const normalized = normalizePostFormat(format);
   const postRule =
-    format === "landscape-1350x1080"
-      ? "SAFE ZONE (1350x1080): Tüm metin, logo ve odak öğeleri kenarlardan en az %8 içeride kalsın. Üst ve alt kırpma riskine karşı kritik içerik merkeze yakın."
+    normalized === "portrait-1080x1350"
+      ? "SAFE ZONE (1080x1350): Tüm metin ve odak öğeleri kenarlardan en az %8 içeride. Alt %18 ve üst %10 bölgesini sade bırak (logo otomatik eklenir). Dikey kompozisyon — yatay değil."
       : "SAFE ZONE (1080x1080): Tüm metin, logo ve odak öğeleri her kenardan en az %8 içeride. Merkez ağırlıklı kompozisyon; köşelere kritik metin koyma.";
 
   const storyRule =
@@ -57,9 +69,10 @@ export function buildSafeZonePrompt(kind: "post" | "story", format?: PostFormat)
   return kind === "story" ? storyRule : postRule;
 }
 
-export function buildFormatPromptLine(format: PostFormat) {
-  if (format === "landscape-1350x1080") {
-    return "OUTPUT FORMAT: 1350x1080 pixels landscape Instagram feed post (5:4).";
+export function buildFormatPromptLine(format?: string) {
+  const normalized = normalizePostFormat(format);
+  if (normalized === "portrait-1080x1350") {
+    return "OUTPUT FORMAT: 1080x1350 pixels PORTRAIT vertical Instagram feed post (4:5). Taller than wide — NOT landscape.";
   }
   return "OUTPUT FORMAT: 1080x1080 pixels square Instagram feed post (1:1).";
 }

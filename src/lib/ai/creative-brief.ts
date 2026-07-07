@@ -1,3 +1,4 @@
+import { normalizePostFormat } from "@/lib/image-formats";
 import { buildOccasionCreativeGuide } from "@/lib/ai/occasion-creative-guide";
 import type { ArtDirection } from "@/lib/ai/art-direction";
 import { artDirectionToPromptSentence } from "@/lib/ai/art-direction";
@@ -71,6 +72,20 @@ export type CreativeBriefInput = {
   backgroundOnly?: boolean;
   artDirection?: ArtDirection;
 };
+
+const COMMERCIAL_DESIGN_AVOID = [
+  "stock photo family",
+  "family hugging",
+  "multi-generation family portrait",
+  "living room family scene",
+  "black footer bar",
+  "canva template",
+  "generic greeting card",
+  "photo with text strip at bottom",
+  "amatör şablon",
+  "clip art",
+  "flat boring gradient only",
+];
 
 function hashSeed(value: string): number {
   let hash = 0;
@@ -147,16 +162,40 @@ function pickCulturalSignal(day: SpecialDay, seed: string): string {
   );
 }
 
-function pickPrimaryVisualIdea(day: SpecialDay, seed: string): string {
+function pickPrimaryVisualIdea(
+  day: SpecialDay,
+  seed: string,
+  sectorRule?: SectorRule,
+): string {
   const guide = buildOccasionCreativeGuide(day);
   const fromGuide = pickBySeed(guide.visualMetaphors, `${seed}:visual`, "");
-  if (fromGuide) return shorten(fromGuide, 120);
-  return shorten(firstSentence(day.visualDirection, 120) || day.name, 120);
+  const occasionPart =
+    fromGuide || shorten(firstSentence(day.visualDirection, 120) || day.name, 120);
+
+  const isCelebration =
+    day.category === "holiday" || day.category === "religious" || day.category === "friday";
+
+  if (sectorRule && isCelebration) {
+    const element = pickBySeed(sectorRule.suitableElements, `${seed}:blend`, "");
+    return shorten(
+      `Premium brand graphic for ${sectorRule.name}: ${occasionPart}. ` +
+        `Blend ${day.name} motifs with business atmosphere` +
+        `${element ? ` (${element})` : ""}. ` +
+        `Commercial Instagram post to customers — NOT a family stock photo.`,
+      200,
+    );
+  }
+
+  return shorten(occasionPart, 120);
 }
 
 function pickSectorVisualCue(rule: SectorRule | undefined, seed: string): string {
-  if (!rule) return "a local small-business touch";
+  if (!rule) return "a distinctive local small-business identity";
   const element = pickBySeed(rule.suitableElements, `${seed}:sector-el`, "");
+  const modifier = shorten(firstSentence(rule.promptModifier, 100), 100);
+  if (element && modifier) {
+    return shorten(`${modifier} Accent: ${element}.`, 140);
+  }
   if (element) return shorten(element, 90);
   return shorten(firstSentence(rule.visualCues, 90) || rule.name, 90);
 }
@@ -184,22 +223,27 @@ function pickLayout(
   backgroundOnly: boolean,
   hasLogo: boolean,
   artDirection?: ArtDirection,
+  sectorRule?: SectorRule,
 ): string {
+  const normalized = normalizePostFormat(postFormat);
   const format =
-    postFormat === "landscape-1350x1080"
-      ? "1350x1080 landscape feed layout"
+    normalized === "portrait-1080x1350"
+      ? "1080x1350 PORTRAIT vertical feed layout (4:5, taller than wide — NOT landscape)"
       : "1080x1080 square layout";
   const styleLayout = artDirection
     ? `${artDirection.layout.replace(/-/g, " ")}; text at ${artDirection.textPosition}`
     : styleRule
       ? shorten(firstSentence(styleRule.compositionHints, 80), 80)
-      : "centered premium layout";
+      : "editorial poster layout with layered depth";
+  const sectorLayout = sectorRule
+    ? shorten(firstSentence(sectorRule.compositionHints, 70), 70)
+    : "";
   const cornerNote = hasLogo
-    ? "Leave top-right corner completely empty — real logo is added after generation."
+    ? "Keep one clean area for automatic logo overlay. Do NOT draw brand name or watermark."
     : backgroundOnly
-      ? "Leave the top 22% and top-right corner clean for headline and logo overlay."
-      : "Strong readable Turkish headline with safe margins.";
-  return `${format}; ${styleLayout}; ${cornerNote}`;
+      ? "Leave top and lower edge clean for headline and logo overlay."
+      : "Professional typographic hierarchy — no photo+footer-bar template.";
+  return [format, styleLayout, sectorLayout, cornerNote].filter(Boolean).join("; ");
 }
 
 function buildTypographyLine(
@@ -226,17 +270,18 @@ function buildLogoUsage(input: CreativeBriefInput): string {
   if (!input.logoUrl) {
     return "No logo provided — do not invent any logo or brand mark.";
   }
-  return "Do NOT draw any logo, brand mark, watermark or company name anywhere. Top-right corner must stay empty — the real logo is added automatically after generation.";
+  return "Do NOT draw any logo, brand mark, watermark or company name. Leave one clean corner — real logo is placed automatically after generation.";
 }
 
 function buildMustHave(day: SpecialDay, category: SpecialDayCategory): string[] {
   const guide = buildOccasionCreativeGuide(day);
   const items = [
+    "professional graphic designer quality — layered brand social media design",
+    "clear business-to-customer occasion post (not personal greeting card)",
     category === "national" ? "clear national-day identity" : "",
     guide.culturalElements[0] ? shorten(guide.culturalElements[0], 60) : "",
-    "premium small-business social media finish",
   ].filter(Boolean);
-  return items.slice(0, 3);
+  return items.slice(0, 4);
 }
 
 function buildAvoidList(
@@ -258,6 +303,7 @@ function buildAvoidList(
       : []),
     ...guide.avoid,
     day.avoidRules,
+    ...COMMERCIAL_DESIGN_AVOID,
     ...(sectorRule ? sectorAvoidList(sectorRule) : []),
     ...(styleRule ? styleAvoidList(styleRule) : []),
     ...(day.promptBuildingBlocks?.avoid ?? []),
@@ -281,7 +327,7 @@ function buildAvoidList(
   const prioritized = unique.sort(
     (a, b) => (hashSeed(`${seed}:${a}`) % 100) - (hashSeed(`${seed}:${b}`) % 100),
   );
-  return prioritized.slice(0, 5).map((item) => shorten(item, 48));
+  return prioritized.slice(0, 8).map((item) => shorten(item, 48));
 }
 
 function brandDescriptionSnippet(description?: string): string | undefined {
@@ -308,7 +354,6 @@ export function buildCreativeBrief(input: CreativeBriefInput): CreativeBrief {
   const backgroundOnly = input.backgroundOnly ?? false;
   const hasLogo = Boolean(input.logoUrl);
   const logoUsage = buildLogoUsage(input);
-  const logoPlacement = input.logoAnalysis?.bestPlacement ?? "top-right";
 
   return {
     occasion: {
@@ -316,7 +361,7 @@ export function buildCreativeBrief(input: CreativeBriefInput): CreativeBrief {
       category: input.specialDay.category,
       emotionalGoal: pickEmotionalGoal(input.specialDay, seed),
       culturalSignal: pickCulturalSignal(input.specialDay, seed),
-      primaryVisualIdea: pickPrimaryVisualIdea(input.specialDay, seed),
+      primaryVisualIdea: pickPrimaryVisualIdea(input.specialDay, seed, input.sectorRule),
     },
     brand: {
       name: input.brandName,
@@ -337,11 +382,12 @@ export function buildCreativeBrief(input: CreativeBriefInput): CreativeBrief {
         backgroundOnly,
         hasLogo,
         input.artDirection,
+        input.sectorRule,
       ),
       background: pickBackground(input.specialDay, input.styleRule, seed),
       typography: buildTypographyLine(headline, backgroundOnly, input.artDirection),
       logoPlacement: input.logoUrl
-        ? `Logo reserved for ${logoPlacement} overlay after generation.`
+        ? "Real logo placed automatically on the cleanest area after generation."
         : "No logo placement needed.",
     },
     text: {
@@ -367,12 +413,13 @@ export function buildCreativeBrief(input: CreativeBriefInput): CreativeBrief {
 }
 
 function formatSize(postFormat?: PostFormat) {
-  return postFormat === "landscape-1350x1080"
-    ? "1350x1080 Instagram landscape feed post"
+  const normalized = normalizePostFormat(postFormat);
+  return normalized === "portrait-1080x1350"
+    ? "1080x1350 Instagram PORTRAIT vertical feed post (4:5)"
     : "1080x1080 Instagram square post";
 }
 
-/** Tek parça, kısa art director brief — max ~1300 karakter. */
+/** Tek parça art director brief — görsel kalitesi için yeterli detay. */
 export function writeImagePrompt(brief: CreativeBrief, postFormat?: PostFormat): string {
   const sizeLabel = formatSize(postFormat);
   const backgroundOnly = brief.text.strictTextRule.includes("no text");
@@ -384,35 +431,49 @@ export function writeImagePrompt(brief: CreativeBrief, postFormat?: PostFormat):
   const colorRule = getColorPriority(brief.occasion.category as SpecialDayCategory);
 
   const parts = [
-    backgroundOnly
-      ? `Create a ${sizeLabel} BACKGROUND ONLY for ${brief.occasion.name} for the Turkish brand "${brief.brand.name}", a ${brief.brand.sector} business.${brandDesc}`
-      : `Create a ${sizeLabel} for ${brief.occasion.name} for the Turkish brand "${brief.brand.name}", a ${brief.brand.sector} business.${brandDesc}`,
+    `DESIGN BRIEF: Premium Turkish small-business Instagram ${sizeLabel}.`,
+    `Commissioned from a senior graphic designer — polished brand social media creative, NOT a Canva drag-and-drop template.`,
     "",
-    `Occasion mood: ${brief.occasion.emotionalGoal} The viewer should instantly understand the special day through ${brief.occasion.primaryVisualIdea}.`,
+    `BUSINESS POST: "${brief.brand.name}" (${brief.brand.sector}) publishes this ${brief.occasion.name} graphic TO CUSTOMERS on Instagram.`,
+    `Purpose: commercial brand marketing and holiday greeting — NOT a personal family card, NOT stock lifestyle photography.${brandDesc}`,
     "",
-    `Design style: ${brief.style.name} — ${brief.style.designLanguage}. Brand adaptation: use brand color ${brief.brand.color}. ${colorRule} Match the brand's sector with a ${brief.brand.sectorCue}.`,
+    `VISUAL CONCEPT: ${brief.occasion.primaryVisualIdea}`,
+    `Mood: ${brief.occasion.emotionalGoal} Cultural signal: ${brief.occasion.culturalSignal}.`,
     "",
-    `Logo: ${brief.brand.logoUsage}`,
+    `SECTOR IDENTITY: Design must feel specific to a ${brief.brand.sector} business — ${brief.brand.sectorCue}.`,
+    `The customer should think "this is MY store/brand's post" — not a generic holiday image.`,
     "",
-    `Composition: ${brief.composition.layout} ${brief.composition.background}. ${brief.composition.typography}`,
+    `STYLE: ${brief.style.name} — ${brief.style.designLanguage}.`,
+    `Brand color ${brief.brand.color} integrated into the design. ${colorRule}`,
     "",
+    `COMPOSITION: ${brief.composition.layout}`,
+    `Background/scene: ${brief.composition.background}.`,
     brief.artDirection ? artDirectionToPromptSentence(brief.artDirection) : "",
-    brief.artDirection ? "" : "",
+    "",
+    `LOGO: ${brief.brand.logoUsage}`,
+    "",
+    `MUST INCLUDE: ${brief.constraints.mustHave.join("; ")}.`,
+    "",
     backgroundOnly
       ? `${brief.text.strictTextRule} Leave clean space for headline and logo overlay.`
-      : `On-image text: render ONLY "${brief.text.headline}" in perfect Turkish (ğ ü ş ı ö ç). Large, bold, readable headline — no other words, slogans, URLs or footer.`,
-    "",
+      : `TYPOGRAPHY: ${brief.composition.typography}`,
     backgroundOnly
-      ? `Avoid: ${brief.constraints.avoid.join(", ")}.`
-      : `Avoid: extra text beyond the headline, ${brief.constraints.avoid.join(", ")}.`,
+      ? ""
+      : `On-image text: render ONLY "${brief.text.headline}" in perfect Turkish (ğ ü ş ı ö ç). Professional typographic hierarchy — no footer bar, no extra slogans.`,
     "",
-    "No extra text, no fake slogans, no misspelled Turkish, no clutter.",
+    `STRICTLY AVOID: ${brief.constraints.avoid.join(", ")}.`,
+    "",
+    "No stock family photos, no black footer text strip, no watermark, no misspelled Turkish.",
   ];
 
-  let prompt = parts.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  let prompt = parts
+    .filter((line) => line !== "")
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 
-  if (prompt.length > 1300) {
-    prompt = `${prompt.slice(0, 1297).trim()}…`;
+  if (prompt.length > 2200) {
+    prompt = `${prompt.slice(0, 2197).trim()}…`;
   }
 
   return prompt;

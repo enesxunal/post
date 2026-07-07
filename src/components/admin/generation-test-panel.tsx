@@ -225,7 +225,7 @@ export function GenerationTestPanel({ days }: { days: SpecialDay[] }) {
               onChange={(e) => setPostFormat(e.target.value as PostFormat)}
             >
               <option value="square">Kare 1080×1080</option>
-              <option value="landscape-1350x1080">Yatay 1350×1080</option>
+              <option value="portrait-1080x1350">Dikey 1080×1350</option>
             </select>
           </Field>
 

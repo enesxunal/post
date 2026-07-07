@@ -86,7 +86,8 @@ export async function analyzeLogo(logoUrl: string): Promise<LogoAnalysis | null>
 
     const logoType = classifyLogoType(width, height);
     const complexity = classifyComplexity(width * height);
-    const bestPlacement: LogoAnalysis["bestPlacement"] = "top-right";
+    const bestPlacement: LogoAnalysis["bestPlacement"] =
+      logoType === "wordmark" ? "bottom-center" : "bottom-right";
 
     return {
       logoType,

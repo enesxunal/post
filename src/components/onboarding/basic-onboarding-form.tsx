@@ -76,7 +76,6 @@ export function BasicOnboardingForm({ onBack }: { onBack: () => void }) {
       purchasedAddons: selectedAddons,
       postFormat,
       formMode: "basic" as const,
-      logoPlacement: "bottom-right" as const,
     };
   }
 
@@ -143,7 +142,7 @@ export function BasicOnboardingForm({ onBack }: { onBack: () => void }) {
               </Field>
               <Field label="Logo (isteğe bağlı)">
                 <Input placeholder="Logo linki" {...form.register("logoUrl")} />
-                <p className="mt-1 text-xs text-slate-500">Logo sağ alt köşeye eklenir.</p>
+                <p className="mt-1 text-xs text-slate-500">Logo tasarıma uygun yere otomatik eklenir.</p>
               </Field>
               <Field label="Marka renkleri">
                 <BrandColorSelector
