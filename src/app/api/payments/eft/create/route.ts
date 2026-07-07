@@ -1,16 +1,20 @@
 import { NextResponse } from "next/server";
 
+import { calculatePackageTotal } from "@/lib/checkout/calculate-total";
 import { createEftOrder } from "@/lib/orders/service";
 import { requireSessionUser } from "@/lib/supabase/auth";
-import { BASE_PACKAGE_PRICE } from "@/lib/config";
+import type { AddonKey } from "@/types/domain";
 
 export async function POST(request: Request) {
   const user = await requireSessionUser("/login");
 
   const body = (await request.json().catch(() => ({}))) as {
     amount?: number;
-    addons?: string[];
+    addons?: AddonKey[];
   };
+
+  const addons = body.addons ?? [];
+  const amount = calculatePackageTotal(addons);
 
   try {
     const order = await createEftOrder(
@@ -19,8 +23,8 @@ export async function POST(request: Request) {
         email: user.email,
         fullName: user.fullName,
       },
-      body.amount ?? BASE_PACKAGE_PRICE,
-      body.addons ?? [],
+      amount,
+      addons,
     );
 
     return NextResponse.json({

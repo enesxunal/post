@@ -6,13 +6,16 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+import type { AddonKey } from "@/types/domain";
+
 type PaymentMethod = "card" | "eft";
 
 type CheckoutPaymentProps = {
   amount: number;
+  addons?: AddonKey[];
 };
 
-export function CheckoutPayment({ amount }: CheckoutPaymentProps) {
+export function CheckoutPayment({ amount, addons = [] }: CheckoutPaymentProps) {
   const [method, setMethod] = useState<PaymentMethod>("eft");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +29,7 @@ export function CheckoutPayment({ amount }: CheckoutPaymentProps) {
         const response = await fetch("/api/payments/tosla/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount }),
+          body: JSON.stringify({ amount, addons }),
         });
         const data = (await response.json()) as {
           redirectUrl?: string;

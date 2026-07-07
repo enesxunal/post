@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 
-import { BASE_PACKAGE_PRICE } from "@/lib/config";
+import { calculatePackageTotal } from "@/lib/checkout/calculate-total";
 import { createToslaOrder } from "@/lib/orders/service";
 import { createPaymentSession } from "@/lib/payments/tosla";
 import { getToslaEnvironment, isToslaConfigured } from "@/lib/payments/tosla-config";
 import { requireSessionUser } from "@/lib/supabase/auth";
+import type { AddonKey } from "@/types/domain";
 
 export async function POST(request: Request) {
   const user = await requireSessionUser("/login");
@@ -13,11 +14,12 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as {
     orderId?: string;
     amount?: number;
+    addons?: AddonKey[];
     description?: string;
   };
 
   const orderId = body.orderId ?? `order_${randomUUID().replace(/-/g, "").slice(0, 16)}`;
-  const amount = body.amount ?? BASE_PACKAGE_PRICE;
+  const amount = calculatePackageTotal(body.addons ?? []);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   await createToslaOrder(

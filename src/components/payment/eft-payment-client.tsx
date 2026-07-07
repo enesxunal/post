@@ -7,7 +7,6 @@ import { CheckCircle2, Copy, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { BASE_PACKAGE_PRICE } from "@/lib/config";
 import { EFT_BANK_DETAILS } from "@/lib/payments/eft-config";
 import { formatCurrency } from "@/lib/utils";
 
@@ -17,6 +16,7 @@ type EftPaymentClientProps = {
 
 export function EftPaymentClient({ orderId }: EftPaymentClientProps) {
   const [status, setStatus] = useState<"pending" | "paid" | "loading" | "error">("loading");
+  const [amount, setAmount] = useState<number | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
   useEffect(() => {
@@ -25,9 +25,17 @@ export function EftPaymentClient({ orderId }: EftPaymentClientProps) {
     async function poll() {
       try {
         const response = await fetch(`/api/payments/eft/${orderId}/status`);
-        const data = (await response.json()) as { paid?: boolean; status?: string };
+        const data = (await response.json()) as {
+          paid?: boolean;
+          status?: string;
+          amount?: number;
+        };
 
         if (!active) return;
+
+        if (typeof data.amount === "number") {
+          setAmount(data.amount);
+        }
 
         if (data.paid || data.status === "paid") {
           setStatus("paid");
@@ -55,6 +63,7 @@ export function EftPaymentClient({ orderId }: EftPaymentClientProps) {
   }
 
   const ibanPlain = EFT_BANK_DETAILS.iban.replace(/\s/g, "");
+  const amountLabel = amount !== null ? formatCurrency(amount) : "…";
 
   if (status === "loading") {
     return (
@@ -94,7 +103,7 @@ export function EftPaymentClient({ orderId }: EftPaymentClientProps) {
             <Badge>EFT / Havale</Badge>
             <h1 className="mt-3 text-2xl font-semibold text-slate-950">Ödeme bilgileri</h1>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Aşağıdaki hesaba <strong>{formatCurrency(BASE_PACKAGE_PRICE)}</strong> gönderin.
+              Aşağıdaki hesaba <strong>{amountLabel}</strong> gönderin.
               Ödeme onaylandığında bu sayfa otomatik güncellenir.
             </p>
           </div>
@@ -116,7 +125,7 @@ export function EftPaymentClient({ orderId }: EftPaymentClientProps) {
                 {copied === "iban" ? "Kopyalandı" : "IBAN kopyala"}
               </Button>
             </div>
-            <InfoRow label="Tutar" value={formatCurrency(BASE_PACKAGE_PRICE)} />
+            <InfoRow label="Tutar" value={amountLabel} />
             <InfoRow label="Açıklama" value={EFT_BANK_DETAILS.description} />
             <InfoRow label="Sipariş no" value={orderId.slice(0, 8).toUpperCase()} />
           </div>
