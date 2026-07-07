@@ -2,6 +2,7 @@ import { composeImagePrompt } from "@/lib/ai/prompt-composer";
 import { getPromptLibraryEntry } from "@/lib/ai/prompt-library";
 import { generateCaption } from "@/lib/ai/caption-provider";
 import { generateImage, isPlaceholderImageUrl } from "@/lib/ai/image-provider";
+import { applyHeadlineOverlay, useHeadlineOverlayForProvider } from "@/lib/ai/headline-pipeline";
 import { applyLogoOverlay } from "@/lib/ai/logo-pipeline";
 import {
   checkGeneratedImageQuality,
@@ -410,9 +411,18 @@ export async function processOneQueuedJob(projectId: string) {
       throw new Error("Görsel üretilemedi (placeholder döndü)");
     }
 
-    const finalImageUrl = context.logoUrl
-      ? await applyLogoOverlay(image.imageUrl, context.logoUrl)
-      : image.imageUrl;
+    let finalImageUrl = image.imageUrl;
+    const headlineOverlay = useHeadlineOverlayForProvider(image.provider);
+
+    if (headlineOverlay) {
+      finalImageUrl = await applyHeadlineOverlay(finalImageUrl, preview.headline, {
+        brandColor: context.primaryColor,
+      });
+    }
+
+    if (context.logoUrl) {
+      finalImageUrl = await applyLogoOverlay(finalImageUrl, context.logoUrl);
+    }
 
     await supabase
       .from("generation_jobs")
@@ -430,6 +440,7 @@ export async function processOneQueuedJob(projectId: string) {
       dayCategory: day?.category,
       culturalContext: day?.culturalContext,
       logoComposited: Boolean(context.logoUrl),
+      headlineOverlay,
     });
 
     if (shouldRetryQualityCheck(quality)) {

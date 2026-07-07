@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 
 import { getAdminSession } from "@/lib/admin/auth";
 import { composeImagePrompt } from "@/lib/ai/prompt-composer";
+import { applyHeadlineOverlay, useHeadlineOverlayForProvider } from "@/lib/ai/headline-pipeline";
 import { generateImage, isPlaceholderImageUrl } from "@/lib/ai/image-provider";
 import {
   isGeminiConfigured,
   resolveImageProvider,
 } from "@/lib/ai/gemini-config";
 import { isIdeogramConfigured } from "@/lib/ai/ideogram-config";
+import { isOpenAIConfigured } from "@/lib/ai/openai-config";
 import type { BrandContext, PostFormat, SectorKey, VisualStyle } from "@/types/domain";
 
 export const maxDuration = 180;
@@ -30,6 +32,9 @@ export async function POST(request: Request) {
   }
 
   const provider = resolveImageProvider();
+  if (provider === "openai" && !isOpenAIConfigured()) {
+    return NextResponse.json({ error: "OPENAI_API_KEY tanımlı değil" }, { status: 400 });
+  }
   if (provider === "ideogram" && !isIdeogramConfigured()) {
     return NextResponse.json({ error: "IDEOGRAM_API_KEY tanımlı değil" }, { status: 400 });
   }
@@ -75,10 +80,17 @@ export async function POST(request: Request) {
             throw new Error("Placeholder görsel döndü — API yanıt vermedi");
           }
 
+          let imageUrl = image.imageUrl;
+          if (useHeadlineOverlayForProvider(image.provider)) {
+            imageUrl = await applyHeadlineOverlay(imageUrl, preview.headline, {
+              brandColor: context.primaryColor,
+            });
+          }
+
           return {
             index: index + 1,
             ok: true as const,
-            imageUrl: image.imageUrl,
+            imageUrl,
             provider: image.provider,
             model: "model" in image ? String(image.model) : provider,
             durationMs: Date.now() - started,

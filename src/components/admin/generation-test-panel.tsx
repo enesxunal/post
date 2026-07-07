@@ -16,6 +16,7 @@ import type { PostFormat, SectorKey, SpecialDay, VisualStyle } from "@/types/dom
 type AiStatus = {
   imageProvider?: string;
   ideogramConfigured?: boolean;
+  openaiConfigured?: boolean;
   geminiConfigured?: boolean;
   models?: { image?: string };
 };
@@ -120,11 +121,12 @@ export function GenerationTestPanel({ days }: { days: SpecialDay[] }) {
         <h1 className="mt-3 text-3xl font-semibold text-slate-950">Görsel üretim testi</h1>
         <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">
           Seçtiğiniz özel gün için gerçek AI modelinden 1–4 görsel üretin. Müşteri akışına girmeden
-          kaliteyi burada deneyebilirsiniz. Her tıklama Ideogram/Gemini API kredisi harcar.
+          kaliteyi burada deneyebilirsiniz. Her tıklama OpenAI/Ideogram/Gemini API kredisi harcar.
         </p>
         {aiStatus ? (
           <p className="mt-2 text-xs text-emerald-700">
             Aktif motor: <strong>{aiStatus.models?.image ?? aiStatus.imageProvider}</strong>
+            {aiStatus.openaiConfigured ? " • OpenAI bağlı" : ""}
             {aiStatus.ideogramConfigured ? " • Ideogram bağlı" : ""}
             {aiStatus.geminiConfigured ? " • Gemini bağlı" : ""}
           </p>

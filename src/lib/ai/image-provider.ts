@@ -5,7 +5,9 @@ import {
 import { isIdeogramConfigured } from "@/lib/ai/ideogram-config";
 import { generateImageWithGemini } from "@/lib/ai/providers/gemini";
 import { generateImageWithIdeogram } from "@/lib/ai/providers/ideogram";
+import { generateImageWithOpenAI } from "@/lib/ai/providers/openai";
 import { generateImageMock } from "@/lib/ai/providers/mock";
+import { isOpenAIConfigured } from "@/lib/ai/openai-config";
 
 export type ImageGenerationOptions = {
   aspectRatio?: string;
@@ -25,6 +27,10 @@ export async function generateImage(
 ) {
   const provider = resolveImageProvider();
 
+  if (provider === "openai") {
+    return generateImageWithOpenAI(prompt, inputImageUrls, options);
+  }
+
   if (provider === "ideogram") {
     return generateImageWithIdeogram(prompt, inputImageUrls, options);
   }
@@ -38,7 +44,12 @@ export async function generateImage(
     void options;
   }
 
-  if (isIdeogramConfigured() || isGeminiConfigured() || process.env.VERCEL === "1") {
+  if (
+    isOpenAIConfigured() ||
+    isIdeogramConfigured() ||
+    isGeminiConfigured() ||
+    process.env.VERCEL === "1"
+  ) {
     throw new Error(
       `Görsel üretilemedi: IMAGE_PROVIDER=${provider} ayarlı ama API yanıt vermedi.`,
     );

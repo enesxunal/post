@@ -21,6 +21,7 @@ export type QualityCheckContext = {
   dayCategory?: SpecialDayCategory;
   culturalContext?: string;
   logoComposited?: boolean;
+  headlineOverlay?: boolean;
 };
 
 function parseQualityJson(text: string): QualityCheckResult | null {
@@ -47,6 +48,9 @@ function buildEssentialCheckPrompt(input: QualityCheckContext) {
     input.dayName ? `Özel gün: ${input.dayName}` : "",
     input.logoComposited
       ? "Logo görsele sonradan eklendi — logo kontrolü yapma."
+      : "",
+    input.headlineOverlay
+      ? "Başlık görsele sonradan bindirildi — sadece bu başlık olmalı, başka hiçbir yazı/URL/footer/ikon metni OLMAMALI."
       : "",
     "",
     "REDDET (passed=false, severity=high) eğer:",
@@ -98,6 +102,9 @@ function buildFullCheckPrompt(input: QualityCheckContext) {
       ? `İzin verilen tek ikincil metin: "${allowedSubtext}"`
       : "İkincil metin/cümle OLMAMALI — sadece başlık + logo.",
     input.logoComposited ? "Logo sonradan bindirildi — logo şekli kontrol edilmesin." : "",
+    input.headlineOverlay
+      ? "Başlık programatik bindirildi — görselde SADECE bu başlık yazmalı; sahte Türkçe, footer, sosyal ikon, URL varsa REDDET."
+      : "",
     "",
     "KONTROL:",
     "1) Türkçe yazım hatası? (Ağustos→Agustos, AĞÜ TUS, Áğostos, ye/ve karışıklığı)",

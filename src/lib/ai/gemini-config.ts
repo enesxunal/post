@@ -1,4 +1,5 @@
 import { isIdeogramConfigured } from "@/lib/ai/ideogram-config";
+import { isOpenAIConfigured } from "@/lib/ai/openai-config";
 
 /** Tek GEMINI_API_KEY ile hem metin hem görsel modelleri kullanılır. */
 export const GEMINI_DEFAULTS = {
@@ -27,6 +28,7 @@ export function getGeminiTextModel() {
 export function resolveImageProvider() {
   const explicit = process.env.IMAGE_PROVIDER?.trim();
   if (explicit) return explicit;
+  if (isOpenAIConfigured()) return "openai";
   if (isIdeogramConfigured()) return "ideogram";
   return isGeminiConfigured() ? "gemini" : "mock";
 }
