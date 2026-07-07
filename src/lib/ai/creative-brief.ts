@@ -178,6 +178,7 @@ function pickLayout(
   styleRule: StyleRule | undefined,
   postFormat: PostFormat,
   backgroundOnly: boolean,
+  hasLogo: boolean,
 ): string {
   const format =
     postFormat === "landscape-1350x1080"
@@ -186,20 +187,19 @@ function pickLayout(
   const styleLayout = styleRule
     ? shorten(firstSentence(styleRule.compositionHints, 80), 80)
     : "centered premium layout";
-  const overlayNote = backgroundOnly
-    ? "Leave the top 22% and top-right corner clean for headline and logo overlay."
-    : "Strong readable Turkish headline with safe margins.";
-  return `${format}; ${styleLayout}; ${overlayNote}`;
+  const cornerNote = hasLogo
+    ? "Leave top-right corner completely empty — real logo is added after generation."
+    : backgroundOnly
+      ? "Leave the top 22% and top-right corner clean for headline and logo overlay."
+      : "Strong readable Turkish headline with safe margins.";
+  return `${format}; ${styleLayout}; ${cornerNote}`;
 }
 
 function buildLogoUsage(input: CreativeBriefInput): string {
   if (!input.logoUrl) {
     return "No logo provided — do not invent any logo or brand mark.";
   }
-  return (
-    input.logoAnalysis?.usageNote ??
-    "Use the provided logo small in the top-right, keep it readable, undistorted and proportional."
-  );
+  return "Do NOT draw any logo, brand mark, watermark or company name anywhere. Top-right corner must stay empty — the real logo is added automatically after generation.";
 }
 
 function buildMustHave(day: SpecialDay, category: SpecialDayCategory): string[] {
@@ -217,9 +217,18 @@ function buildAvoidList(
   sectorRule?: SectorRule,
   styleRule?: StyleRule,
   userNote?: string,
+  hasLogo?: boolean,
 ): string[] {
   const guide = buildOccasionCreativeGuide(day);
   const raw = [
+    ...(hasLogo
+      ? [
+          "any logo or brand mark drawn by AI",
+          "duplicate logos",
+          "watermark",
+          "company name in corner",
+        ]
+      : []),
     ...guide.avoid,
     day.avoidRules,
     ...(sectorRule ? sectorAvoidList(sectorRule) : []),
@@ -270,6 +279,7 @@ export function buildCreativeBrief(input: CreativeBriefInput): CreativeBrief {
     });
 
   const backgroundOnly = input.backgroundOnly ?? false;
+  const hasLogo = Boolean(input.logoUrl);
   const logoUsage = buildLogoUsage(input);
   const logoPlacement = input.logoAnalysis?.bestPlacement ?? "top-right";
 
@@ -294,7 +304,7 @@ export function buildCreativeBrief(input: CreativeBriefInput): CreativeBrief {
       designLanguage: pickDesignLanguage(input.styleRule),
     },
     composition: {
-      layout: pickLayout(input.styleRule, input.postFormat ?? "square", backgroundOnly),
+      layout: pickLayout(input.styleRule, input.postFormat ?? "square", backgroundOnly, hasLogo),
       background: pickBackground(input.specialDay, input.styleRule, seed),
       typography: backgroundOnly
         ? "No typography in image — headline added separately."
@@ -307,7 +317,9 @@ export function buildCreativeBrief(input: CreativeBriefInput): CreativeBrief {
       headline,
       strictTextRule: backgroundOnly
         ? "Absolutely no text, letters, numbers, logos, URLs or UI in the image."
-        : `ONLY the headline "${headline}" may appear on the image.`,
+        : hasLogo
+          ? `ONLY the headline "${headline}" may appear — no logo, no brand mark, no watermark.`
+          : `ONLY the headline "${headline}" may appear on the image.`,
     },
     constraints: {
       mustHave: buildMustHave(input.specialDay, input.specialDay.category),
@@ -316,6 +328,7 @@ export function buildCreativeBrief(input: CreativeBriefInput): CreativeBrief {
         input.sectorRule,
         input.styleRule,
         input.userNote,
+        hasLogo,
       ),
     },
   };

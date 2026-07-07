@@ -56,14 +56,7 @@ function buildUsageNote(
           ? "bottom-center"
           : "bottom-right";
 
-  const sizeHint =
-    complexity === "complex"
-      ? "small but clearly readable"
-      : complexity === "simple"
-        ? "small and crisp"
-        : "small, readable";
-
-  return `Use the provided logo ${sizeHint} in the ${placementText}, keep it undistorted and proportional. Do not redraw or invent any logo.`;
+  return `Do NOT draw any logo in the image. ${placementText} corner must stay empty — real logo added after generation.`;
 }
 
 /** Logo bir kez analiz edilir; sonuç proje meta'sında saklanır. */
@@ -111,7 +104,7 @@ export async function analyzeLogo(logoUrl: string): Promise<LogoAnalysis | null>
       complexity: "medium",
       bestPlacement: "top-right",
       usageNote:
-        "Use the provided logo small in the top-right, keep it readable, undistorted and proportional.",
+        "Do NOT draw any logo in the image. Top-right corner must stay empty — real logo added after generation.",
     };
   }
 }
