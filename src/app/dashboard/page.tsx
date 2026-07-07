@@ -1,6 +1,8 @@
+import { DashboardProjectBootstrap } from "@/components/dashboard/dashboard-project-bootstrap";
 import { UserDashboard } from "@/components/dashboard/user-dashboard";
 import { decodeProjectMeta } from "@/lib/generation/project-service";
 import { mapGenerationJobsForDashboard } from "@/lib/generation/map-jobs";
+import { findProjectIdByOrderId } from "@/lib/generation/queue-processor";
 import { requireSessionUser } from "@/lib/supabase/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -79,8 +81,28 @@ export default async function DashboardPage() {
 
   const postsGenerating = jobs.filter((job) => job.status === "generating").length;
 
+  let paidOrderNeedsSetup = false;
+  if (!project) {
+    const { data: paidOrders } = await supabase
+      .from("orders")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("status", "paid")
+      .order("created_at", { ascending: false });
+
+    for (const order of paidOrders ?? []) {
+      const existing = await findProjectIdByOrderId(user.id, order.id);
+      if (!existing?.id) {
+        paidOrderNeedsSetup = true;
+        break;
+      }
+    }
+  }
+
   return (
-    <UserDashboard
+    <>
+      <DashboardProjectBootstrap hasProject={Boolean(project)} />
+      <UserDashboard
       liveGenerating={postsGenerating > 0}
       user={{
         firstName: user.firstName,
@@ -114,6 +136,12 @@ export default async function DashboardPage() {
       postFormat={meta?.postFormat ?? "square"}
       hasStoryAddon={meta?.purchasedAddons.includes("story") ?? false}
       hasCaptionAddon={meta?.purchasedAddons.includes("caption") ?? false}
+      emptyMessage={
+        paidOrderNeedsSetup
+          ? "Ödemeniz onaylandı ama paket kurulumu yarım kalmış. Aşağıdaki butona tıklayıp formu tekrar doldurun — yeniden ödeme gerekmez."
+          : undefined
+      }
     />
+    </>
   );
 }

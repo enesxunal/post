@@ -1,3 +1,5 @@
+import type { OnboardingDraft } from "@/lib/onboarding/draft";
+import { provisionProjectAfterEftApproval } from "@/lib/orders/provision-project";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ensureUserProfile } from "@/lib/supabase/profiles";
@@ -16,6 +18,7 @@ export async function createEftOrder(
   user: OrderUser,
   amount: number,
   addons: string[] = [],
+  onboardingDraft?: OnboardingDraft,
 ) {
   await ensureUserProfile(user);
   const supabase = await getClient();
@@ -29,6 +32,7 @@ export async function createEftOrder(
       status: "pending",
       payment_provider: "eft",
       addons,
+      onboarding_draft: onboardingDraft ?? null,
     })
     .select("id, status, amount_total, created_at")
     .single();
@@ -44,6 +48,8 @@ export async function createToslaOrder(
   user: OrderUser,
   amount: number,
   externalOrderId: string,
+  addons: string[] = [],
+  onboardingDraft?: OnboardingDraft,
 ) {
   await ensureUserProfile(user);
   const supabase = await getClient();
@@ -57,6 +63,8 @@ export async function createToslaOrder(
       status: "pending",
       payment_provider: "tosla",
       provider_payment_id: externalOrderId,
+      addons,
+      onboarding_draft: onboardingDraft ?? null,
     })
     .select("id")
     .single();
@@ -147,6 +155,8 @@ export async function approveEftOrder(orderId: string) {
   if (!data) {
     throw new Error("Sipariş bulunamadı veya zaten onaylanmış");
   }
+
+  await provisionProjectAfterEftApproval(orderId);
 
   return data;
 }

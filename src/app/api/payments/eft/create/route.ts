@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { calculatePackageTotal } from "@/lib/checkout/calculate-total";
 import { createEftOrder } from "@/lib/orders/service";
+import type { OnboardingDraft } from "@/lib/onboarding/draft";
 import { requireSessionUser } from "@/lib/supabase/auth";
 import type { AddonKey } from "@/types/domain";
 
@@ -11,9 +12,11 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as {
     amount?: number;
     addons?: AddonKey[];
+    draft?: OnboardingDraft;
   };
 
-  const addons = body.addons ?? [];
+  const draft = body.draft;
+  const addons = body.addons?.length ? body.addons : (draft?.purchasedAddons ?? []);
   const amount = calculatePackageTotal(addons);
 
   try {
@@ -25,6 +28,7 @@ export async function POST(request: Request) {
       },
       amount,
       addons,
+      draft,
     );
 
     return NextResponse.json({

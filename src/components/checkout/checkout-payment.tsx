@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { loadOnboardingDraft, saveOnboardingDraft } from "@/lib/onboarding/draft";
 import { cn } from "@/lib/utils";
 
 import type { AddonKey } from "@/types/domain";
@@ -24,20 +25,28 @@ export function CheckoutPayment({ amount, addons = [] }: CheckoutPaymentProps) {
     setIsLoading(true);
     setError(null);
 
+    const draft = loadOnboardingDraft();
+
     try {
       if (method === "card") {
         const response = await fetch("/api/payments/tosla/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount, addons }),
+          body: JSON.stringify({ amount, addons, draft: draft ?? undefined }),
         });
         const data = (await response.json()) as {
           redirectUrl?: string;
+          internalOrderId?: string | null;
           error?: string;
         };
         if (!response.ok || !data.redirectUrl) {
           throw new Error(data.error ?? "Kart ödemesi başlatılamadı");
         }
+
+        if (data.internalOrderId && draft && typeof window !== "undefined") {
+          saveOnboardingDraft({ ...draft, orderId: data.internalOrderId });
+        }
+
         window.location.href = data.redirectUrl;
         return;
       }
@@ -45,7 +54,7 @@ export function CheckoutPayment({ amount, addons = [] }: CheckoutPaymentProps) {
       const response = await fetch("/api/payments/eft/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount }),
+        body: JSON.stringify({ addons, draft: draft ?? undefined }),
       });
       const data = (await response.json()) as {
         redirectUrl?: string;

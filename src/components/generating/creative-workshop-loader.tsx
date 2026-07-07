@@ -268,15 +268,14 @@ export function CreativeWorkshopLoader({
       }
 
       const draft = loadOnboardingDraft();
-      if (!draft) {
-        setPhase("running");
-        return;
-      }
 
       const startResponse = await fetch("/api/generation/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ draft: { ...draft, orderId }, orderId }),
+        body: JSON.stringify({
+          draft: draft ? { ...draft, orderId } : { orderId },
+          orderId,
+        }),
       });
 
       const startData = (await startResponse.json()) as GenerationStatus & {
@@ -285,7 +284,19 @@ export function CreativeWorkshopLoader({
       };
 
       if (!startResponse.ok || !startData.projectId) {
-        setPhase("running");
+        const bootstrapResponse = await fetch("/api/generation/bootstrap", {
+          method: "POST",
+        });
+        const bootstrapData = (await bootstrapResponse.json()) as {
+          projectId?: string;
+        };
+        if (bootstrapResponse.ok && bootstrapData.projectId) {
+          saveActiveProjectId(bootstrapData.projectId);
+          window.location.href = "/dashboard";
+          return;
+        }
+
+        setPhase("failed");
         return;
       }
 

@@ -39,6 +39,9 @@ export function EftPaymentClient({ orderId }: EftPaymentClientProps) {
 
         if (data.paid || data.status === "paid") {
           setStatus("paid");
+          window.setTimeout(() => {
+            window.location.href = `/orders/${orderId}/generating`;
+          }, 1200);
           return;
         }
 
@@ -80,15 +83,15 @@ export function EftPaymentClient({ orderId }: EftPaymentClientProps) {
           <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600" />
           <h1 className="text-2xl font-semibold text-slate-950">Ödemeniz onaylandı!</h1>
           <p className="text-sm text-slate-600">
-            Profilinizde boş kartlar hazır. İstediğiniz posta tıklayıp tek tek üretebilirsiniz.
+            Kartlarınız hazırlanıyor, birazdan panele yönlendirileceksiniz…
           </p>
           <Button
             className="mt-5 w-full"
             onClick={() => {
-              window.location.href = "/dashboard";
+              window.location.href = `/orders/${orderId}/generating`;
             }}
           >
-            Profilime git
+            Hemen devam et
           </Button>
         </Card>
       </div>

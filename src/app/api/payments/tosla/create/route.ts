@@ -5,6 +5,7 @@ import { calculatePackageTotal } from "@/lib/checkout/calculate-total";
 import { createToslaOrder } from "@/lib/orders/service";
 import { createPaymentSession } from "@/lib/payments/tosla";
 import { getToslaEnvironment, isToslaConfigured } from "@/lib/payments/tosla-config";
+import type { OnboardingDraft } from "@/lib/onboarding/draft";
 import { requireSessionUser } from "@/lib/supabase/auth";
 import type { AddonKey } from "@/types/domain";
 
@@ -15,14 +16,17 @@ export async function POST(request: Request) {
     orderId?: string;
     amount?: number;
     addons?: AddonKey[];
+    draft?: OnboardingDraft;
     description?: string;
   };
 
   const orderId = body.orderId ?? `order_${randomUUID().replace(/-/g, "").slice(0, 16)}`;
-  const amount = calculatePackageTotal(body.addons ?? []);
+  const draft = body.draft;
+  const addons = body.addons?.length ? body.addons : (draft?.purchasedAddons ?? []);
+  const amount = calculatePackageTotal(addons);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-  await createToslaOrder(
+  const internalOrder = await createToslaOrder(
     {
       id: user.id,
       email: user.email,
@@ -30,6 +34,8 @@ export async function POST(request: Request) {
     },
     amount,
     orderId,
+    addons,
+    draft,
   );
 
   try {
@@ -42,7 +48,10 @@ export async function POST(request: Request) {
       description: body.description,
     });
 
-    return NextResponse.json(session);
+    return NextResponse.json({
+      ...session,
+      internalOrderId: internalOrder?.id ?? null,
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Ödeme oturumu oluşturulamadı";

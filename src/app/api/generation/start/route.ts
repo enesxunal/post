@@ -7,6 +7,10 @@ import {
 } from "@/lib/generation/project-service";
 import { findProjectIdByOrderId } from "@/lib/generation/queue-processor";
 import type { OnboardingDraft } from "@/lib/onboarding/draft";
+import {
+  getLatestPaidOrderNeedingProject,
+  getOrderWithDraft,
+} from "@/lib/orders/provision-project";
 import { isOrderPaid, userHasPaidOrder } from "@/lib/orders/service";
 import { getSessionUser } from "@/lib/supabase/auth";
 
@@ -30,13 +34,30 @@ export async function POST(request: Request) {
     return NextResponse.json(status);
   }
 
-  const orderId = body.orderId ?? body.draft?.orderId;
+  let resolvedOrderId = body.orderId ?? body.draft?.orderId;
 
-  if (orderId) {
-    const existing = await findProjectIdByOrderId(user.id, orderId);
+  if (resolvedOrderId) {
+    const existing = await findProjectIdByOrderId(user.id, resolvedOrderId);
     if (existing?.id) {
       const status = await getProjectStatus(existing.id, user.id);
       return NextResponse.json(status ?? { projectId: existing.id });
+    }
+  }
+
+  if (!body.draft?.brandName || !body.draft.selectedDays?.length) {
+    if (resolvedOrderId) {
+      const fromOrder = await getOrderWithDraft(resolvedOrderId, user.id);
+      if (fromOrder?.draft) {
+        body.draft = fromOrder.draft;
+      }
+    }
+
+    if (!body.draft?.brandName || !body.draft.selectedDays?.length) {
+      const pending = await getLatestPaidOrderNeedingProject(user.id);
+      if (pending) {
+        body.draft = pending.draft;
+        resolvedOrderId = pending.orderId;
+      }
     }
   }
 
@@ -47,8 +68,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const paymentOk = orderId
-    ? await isOrderPaid(orderId, user.id)
+  const paymentOk = resolvedOrderId
+    ? await isOrderPaid(resolvedOrderId, user.id)
     : await userHasPaidOrder(user.id);
 
   if (!paymentOk) {
@@ -69,7 +90,7 @@ export async function POST(request: Request) {
         fullName: user.fullName,
       },
       body.draft,
-      orderId,
+      resolvedOrderId,
     );
 
     const status = await getProjectStatus(created.projectId, user.id);

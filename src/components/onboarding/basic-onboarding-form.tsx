@@ -62,11 +62,11 @@ export function BasicOnboardingForm({ onBack }: { onBack: () => void }) {
     );
   }
 
-  function goCheckout() {
+  function buildDraft() {
     const values = form.getValues();
     const selectedDays = buildQuickPackageDays(values.sector as SectorKey, MAX_SELECTED_DAYS);
 
-    saveOnboardingDraft({
+    return {
       brandName: values.brandName,
       logoUrl: values.logoUrl,
       brandColors: values.brandColors,
@@ -75,9 +75,47 @@ export function BasicOnboardingForm({ onBack }: { onBack: () => void }) {
       selectedDays,
       purchasedAddons: selectedAddons,
       postFormat,
-      formMode: "basic",
-      logoPlacement: "bottom-right",
-    });
+      formMode: "basic" as const,
+      logoPlacement: "bottom-right" as const,
+    };
+  }
+
+  async function goCheckout() {
+    const draft = buildDraft();
+
+    try {
+      const needsResponse = await fetch("/api/generation/needs-setup");
+      if (needsResponse.ok) {
+        const needsData = (await needsResponse.json()) as {
+          needsSetup?: boolean;
+          orderId?: string;
+        };
+        if (needsData.needsSetup) {
+          const completeResponse = await fetch("/api/generation/complete-setup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(draft),
+          });
+          const completeData = (await completeResponse.json()) as {
+            redirectUrl?: string;
+            orderId?: string;
+            error?: string;
+          };
+          if (completeResponse.ok && completeData.redirectUrl) {
+            saveOnboardingDraft({
+              ...draft,
+              orderId: completeData.orderId ?? needsData.orderId,
+            });
+            router.push(completeData.redirectUrl);
+            return;
+          }
+        }
+      }
+    } catch {
+      // Ödeme akışına devam et
+    }
+
+    saveOnboardingDraft(draft);
     router.push("/checkout");
   }
 
