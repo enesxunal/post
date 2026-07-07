@@ -105,9 +105,9 @@ export async function applyHeadlineOverlay(
 }
 
 export function useHeadlineOverlayForProvider(provider: string) {
-  if (process.env.HEADLINE_OVERLAY === "false") return false;
   if (process.env.HEADLINE_OVERLAY === "true") return true;
-  if (provider === "ideogram") return process.env.IDEOGRAM_TEXT_FREE !== "false";
-  if (provider === "openai") return process.env.OPENAI_TEXT_FREE !== "false";
+  if (process.env.HEADLINE_OVERLAY === "false") return false;
+  if (provider === "ideogram") return process.env.IDEOGRAM_TEXT_FREE === "true";
+  if (provider === "openai") return process.env.OPENAI_TEXT_FREE === "true";
   return false;
 }

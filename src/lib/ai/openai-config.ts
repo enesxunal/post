@@ -82,5 +82,5 @@ export function resolveOpenAIImageSize(aspectRatio?: string, model = getOpenAIIm
 }
 
 export function isOpenAITextFreeMode() {
-  return process.env.OPENAI_TEXT_FREE !== "false";
+  return process.env.OPENAI_TEXT_FREE === "true";
 }

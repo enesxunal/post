@@ -298,7 +298,7 @@ export function buildCreativeBrief(input: CreativeBriefInput): CreativeBrief {
       background: pickBackground(input.specialDay, input.styleRule, seed),
       typography: backgroundOnly
         ? "No typography in image — headline added separately."
-        : "Large readable Turkish headline with premium hierarchy.",
+        : `Render ONE large, bold, perfectly spelled Turkish headline: "${headline}". High contrast, mobile-readable, top-center.`,
       logoPlacement: input.logoUrl
         ? `Logo reserved for ${logoPlacement} overlay after generation.`
         : "No logo placement needed.",
@@ -353,9 +353,11 @@ export function writeImagePrompt(brief: CreativeBrief, postFormat?: PostFormat):
     "",
     backgroundOnly
       ? `${brief.text.strictTextRule} Leave clean space for headline and logo overlay.`
-      : `On-image text: ONLY "${brief.text.headline}".`,
+      : `On-image text: render ONLY "${brief.text.headline}" in perfect Turkish (ğ ü ş ı ö ç). Large, bold, readable headline — no other words, slogans, URLs or footer.`,
     "",
-    `Avoid: ${brief.constraints.avoid.join(", ")}.`,
+    backgroundOnly
+      ? `Avoid: ${brief.constraints.avoid.join(", ")}.`
+      : `Avoid: extra text beyond the headline, ${brief.constraints.avoid.join(", ")}.`,
     "",
     "No extra text, no fake slogans, no misspelled Turkish, no clutter.",
   ];

@@ -14,13 +14,14 @@ export type { CreativeBrief } from "@/lib/ai/creative-brief";
 export { pickHeadlineForBrand } from "@/lib/ai/creative-brief";
 
 function usesTextFreeBackground(): boolean {
+  if (process.env.HEADLINE_OVERLAY === "true") return true;
   if (process.env.HEADLINE_OVERLAY === "false") return false;
   const provider = process.env.IMAGE_PROVIDER?.trim();
   if (provider === "openai") return isOpenAITextFreeMode();
-  if (provider === "ideogram") return process.env.IDEOGRAM_TEXT_FREE !== "false";
+  if (provider === "ideogram") return process.env.IDEOGRAM_TEXT_FREE === "true";
   if (!provider) {
     if (isOpenAIConfigured()) return isOpenAITextFreeMode();
-    if (isIdeogramConfigured()) return process.env.IDEOGRAM_TEXT_FREE !== "false";
+    if (isIdeogramConfigured()) return process.env.IDEOGRAM_TEXT_FREE === "true";
   }
   return false;
 }
