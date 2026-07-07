@@ -25,7 +25,7 @@ export function getOpenAIImageModel() {
 }
 
 export function getOpenAIImageFallbackModel() {
-  return process.env.OPENAI_IMAGE_FALLBACK_MODEL?.trim() || "gpt-image-1";
+  return process.env.OPENAI_IMAGE_FALLBACK_MODEL?.trim() || "gpt-image-1-mini";
 }
 
 export function isDalle3Model(model = getOpenAIImageModel()) {

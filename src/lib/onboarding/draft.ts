@@ -5,6 +5,7 @@ const DRAFT_KEY = "post_onboarding_draft";
 export interface OnboardingDraft {
   brandName: string;
   logoUrl?: string;
+  logoAnalysis?: import("@/lib/ai/logo-analysis").LogoAnalysis;
   brandColors: string[];
   sector: string;
   customSector?: string;

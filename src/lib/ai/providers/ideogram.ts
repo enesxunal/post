@@ -18,123 +18,6 @@ type IdeogramGenerateResponse = {
   error?: string;
 };
 
-type V4JsonPrompt = {
-  high_level_description: string;
-  style_description?: {
-    aesthetics?: string;
-    art_style?: string;
-    medium?: string;
-    lighting?: string;
-  };
-  compositional_deconstruction: {
-    background: string;
-    elements: Array<
-      | { type: "text"; text: string; desc: string; bbox?: number[] }
-      | { type: "obj"; desc: string; bbox?: number[] }
-    >;
-  };
-};
-
-function extractSection(prompt: string, marker: string) {
-  const index = prompt.indexOf(marker);
-  if (index === -1) return "";
-  const rest = prompt.slice(index + marker.length);
-  const next = rest.search(/\n=== /);
-  return (next === -1 ? rest : rest.slice(0, next)).trim();
-}
-
-function extractOccasionContext(prompt: string) {
-  return (
-    extractSection(prompt, "=== LAYER 1: EVENT CULTURAL CONTEXT & MESSAGE PURPOSE ===") ||
-    extractSection(prompt, "=== EVENT CULTURAL CONTEXT") ||
-    extractSection(prompt, "=== EVENT CULTURAL CONTEXT (read and embody) ===")
-  );
-}
-
-function extractVisualDirection(prompt: string) {
-  return (
-    extractSection(prompt, "Visual direction for this occasion:") ||
-    extractSection(prompt, "=== EVENT VISUAL DIRECTION ===")
-  );
-}
-
-/** Metinsiz arka plan — başlık sonradan bindirilir (Türkçe yazım garantisi). */
-function buildTextFreeJsonPrompt(prompt: string): V4JsonPrompt {
-  const cultural = extractOccasionContext(prompt);
-  const visual = extractVisualDirection(prompt);
-
-  return {
-    high_level_description: [
-      "Premium Turkish Instagram post BACKGROUND ONLY.",
-      "Absolutely ZERO text, ZERO letters, ZERO numbers, ZERO words anywhere in the image.",
-      "NO logos, NO brand names, NO watermarks, NO social media UI, NO footer bar, NO contact info.",
-      "NO fake URLs, NO icons with text, NO pseudo-Turkish gibberish.",
-      "Pure visual illustration / photo-style scene for a special day social post.",
-      cultural ? `Occasion mood: ${cultural.slice(0, 350)}` : "",
-      "Leave top 22% and top-right corner visually clean for text and logo overlay.",
-    ]
-      .filter(Boolean)
-      .join(" "),
-    style_description: {
-      aesthetics: "clean professional social media background, premium, shareable",
-      medium: "digital illustration or polished photo composite",
-      lighting: "balanced contrast, mobile-friendly",
-      art_style: "modern branded social post background without typography",
-    },
-    compositional_deconstruction: {
-      background:
-        visual ||
-        cultural ||
-        "Rich but uncluttered occasion-themed visual atmosphere with brand-friendly colors",
-      elements: [
-        {
-          type: "obj",
-          desc:
-            "Occasion-themed visual elements only (decor, atmosphere, subtle symbols) — no typography, no UI chrome",
-        },
-      ],
-    },
-  };
-}
-
-/** Eski yol: başlığı Ideogram'a yazdır (Türkçe'de güvenilir değil). */
-function buildLegacyTextJsonPrompt(prompt: string, headline: string): V4JsonPrompt {
-  const cultural = extractOccasionContext(prompt);
-  const visual = extractVisualDirection(prompt);
-
-  return {
-    high_level_description: [
-      "Premium Turkish small-business Instagram social media post.",
-      cultural ? `Occasion mood: ${cultural.slice(0, 400)}` : "",
-      "Only ONE headline text allowed. No footer, no extra sentences.",
-      "Leave top-right corner clean for logo overlay.",
-    ]
-      .filter(Boolean)
-      .join(" "),
-    style_description: {
-      aesthetics: "professional Turkish KOBİ social media, premium, shareable",
-      medium: "digital graphic design",
-      lighting: "polished, balanced contrast",
-      art_style: "modern branded social post",
-    },
-    compositional_deconstruction: {
-      background: visual || cultural || "Occasion-themed background",
-      elements: [
-        {
-          type: "text",
-          text: headline,
-          desc: "Single large headline only, exact Turkish spelling, no other text on image",
-          bbox: [90, 50, 340, 950],
-        },
-        {
-          type: "obj",
-          desc: visual || "Occasion visual accents without clutter",
-        },
-      ],
-    },
-  };
-}
-
 async function downloadAsDataUrl(url: string) {
   const response = await fetch(url);
   if (!response.ok) {
@@ -152,6 +35,7 @@ export async function generateImageWithIdeogram(
   options?: { aspectRatio?: string; headline?: string },
 ) {
   void _inputImageUrls;
+  void options?.headline;
 
   const apiKey = getIdeogramApiKey();
   if (!apiKey) {
@@ -160,19 +44,10 @@ export async function generateImageWithIdeogram(
 
   const resolution = resolveIdeogramResolution(options?.aspectRatio);
   const renderingSpeed = getIdeogramRenderingSpeed();
-  const headline = options?.headline?.trim();
   const textFree = process.env.IDEOGRAM_TEXT_FREE !== "false";
 
   const form = new FormData();
-
-  if (textFree) {
-    form.append("json_prompt", JSON.stringify(buildTextFreeJsonPrompt(prompt)));
-  } else if (headline) {
-    form.append("json_prompt", JSON.stringify(buildLegacyTextJsonPrompt(prompt, headline)));
-  } else {
-    form.append("text_prompt", prompt.slice(0, 4000));
-  }
-
+  form.append("text_prompt", prompt.slice(0, 4000));
   form.append("resolution", resolution);
   form.append("rendering_speed", renderingSpeed);
 

@@ -435,7 +435,7 @@ export async function processOneQueuedJob(projectId: string) {
       imageUrl: finalImageUrl,
       expectedHeadline: preview.headline,
       brandName: context.brandName,
-      brandBrief: preview.brandBrief,
+      brandBrief: preview.brief,
       dayName: day?.name,
       dayCategory: day?.category,
       culturalContext: day?.culturalContext,

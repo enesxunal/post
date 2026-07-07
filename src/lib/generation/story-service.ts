@@ -101,8 +101,8 @@ export async function generateStoryForJob(jobId: string, userId: string) {
     "Keep the same colors, mood, typography style and brand logo from the reference.",
     "Extend background naturally for vertical format — do NOT crop out the main message.",
     "Do not add new slogans or service text. Recompose vertically with agency quality.",
-    preview.brandBrief?.visualQuality,
-    preview.brandBrief?.onImageTextRules,
+    preview.brief?.composition.layout,
+    preview.brief?.text.strictTextRule,
   ]
     .filter(Boolean)
     .join("\n");
@@ -115,7 +115,7 @@ export async function generateStoryForJob(jobId: string, userId: string) {
     imageUrl: image.imageUrl,
     expectedHeadline: preview.headline,
     brandName: context.brandName,
-    brandBrief: preview.brandBrief,
+    brandBrief: preview.brief,
   });
 
   if (shouldRetryQualityCheck(quality)) {

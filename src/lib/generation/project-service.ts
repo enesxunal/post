@@ -1,4 +1,6 @@
 import type { OnboardingDraft } from "@/lib/onboarding/draft";
+import { analyzeLogo } from "@/lib/ai/logo-analysis";
+import type { LogoAnalysis } from "@/lib/ai/logo-analysis";
 import { expandSelectedDaysForJobs } from "@/lib/selected-days";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -15,6 +17,7 @@ export function encodeProjectMeta(draft: OnboardingDraft) {
     customSector: draft.customSector,
     selectedDays: draft.selectedDays,
     postFormat: draft.postFormat ?? "square",
+    logoAnalysis: draft.logoAnalysis,
   };
   const userText = draft.brandDescription?.trim() ?? "";
   return `${userText}${META_SEPARATOR}${JSON.stringify(meta)}-->`;
@@ -29,6 +32,7 @@ export function decodeProjectMeta(brandDescription: string | null) {
       customSector: undefined as string | undefined,
       selectedDays: [] as OnboardingDraft["selectedDays"],
       postFormat: "square" as PostFormat,
+      logoAnalysis: undefined as LogoAnalysis | undefined,
     };
   }
 
@@ -42,6 +46,7 @@ export function decodeProjectMeta(brandDescription: string | null) {
       customSector?: string;
       selectedDays?: OnboardingDraft["selectedDays"];
       postFormat?: PostFormat;
+      logoAnalysis?: LogoAnalysis;
     };
 
     return {
@@ -51,6 +56,7 @@ export function decodeProjectMeta(brandDescription: string | null) {
       customSector: parsed.customSector,
       selectedDays: parsed.selectedDays ?? [],
       postFormat: (parsed.postFormat ?? "square") as PostFormat,
+      logoAnalysis: parsed.logoAnalysis,
     };
   } catch {
     return {
@@ -60,6 +66,7 @@ export function decodeProjectMeta(brandDescription: string | null) {
       customSector: undefined,
       selectedDays: [],
       postFormat: "square" as PostFormat,
+      logoAnalysis: undefined,
     };
   }
 }
@@ -85,6 +92,7 @@ export function projectToBrandContext(project: {
       : [project.primary_color],
     visualStyle: normalizeStyleKey(project.visual_style),
     logoUrl: project.logo_url ?? undefined,
+    logoAnalysis: meta.logoAnalysis,
     selectedDayIds: meta.selectedDays.map((day) => day.dayId),
     purchasedAddons: meta.purchasedAddons,
     postFormat: meta.postFormat,
@@ -107,13 +115,17 @@ export async function createProjectWithJobs(
   const supabase = await getWritableClient();
   const primaryColor = draft.brandColors[0] ?? "#16A34A";
   const expandedDays = expandSelectedDaysForJobs(draft.selectedDays);
+  const logoAnalysis = draft.logoUrl ? await analyzeLogo(draft.logoUrl) : null;
 
   const { data: project, error: projectError } = await supabase
     .from("projects")
     .insert({
       user_id: userId,
       brand_name: draft.brandName,
-      brand_description: encodeProjectMeta(draft),
+      brand_description: encodeProjectMeta({
+        ...draft,
+        logoAnalysis: logoAnalysis ?? undefined,
+      }),
       sector: draft.sector,
       custom_sector: draft.customSector ?? null,
       primary_color: primaryColor,

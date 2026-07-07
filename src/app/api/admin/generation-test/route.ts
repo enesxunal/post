@@ -111,6 +111,7 @@ export async function POST(request: Request) {
       headline: preview.headline,
       negativePrompt: preview.negativePrompt,
       prompt: preview.prompt,
+      brief: preview.brief,
       results,
     });
   } catch (error) {

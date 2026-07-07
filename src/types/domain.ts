@@ -157,6 +157,7 @@ export interface BrandContext {
   brandColors: string[];
   visualStyle: VisualStyle;
   logoUrl?: string;
+  logoAnalysis?: import("@/lib/ai/logo-analysis").LogoAnalysis;
   selectedDayIds: string[];
   purchasedAddons: AddonKey[];
   postFormat?: PostFormat;
@@ -166,6 +167,8 @@ export interface PromptPreview {
   headline: string;
   prompt: string;
   negativePrompt: string;
+  brief?: import("@/lib/ai/creative-brief").CreativeBrief;
+  /** @deprecated brief kullanın */
   brandBrief?: import("@/lib/ai/brand-creative-director").BrandCreativeBrief;
 }
 

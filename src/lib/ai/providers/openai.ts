@@ -5,7 +5,6 @@ import {
   getOpenAIApiKey,
   getOpenAIImageFallbackModel,
   getOpenAIImageModel,
-  isOpenAITextFreeMode,
   OPENAI_IMAGE_DEFAULTS,
   resolveOpenAIImageSize,
 } from "@/lib/ai/openai-config";
@@ -15,49 +14,6 @@ type OpenAIImageResponse = {
   data?: Array<{ b64_json?: string; url?: string; revised_prompt?: string }>;
   error?: { message?: string; type?: string; code?: string };
 };
-
-function extractSection(prompt: string, marker: string) {
-  const index = prompt.indexOf(marker);
-  if (index === -1) return "";
-  const rest = prompt.slice(index + marker.length);
-  const next = rest.search(/\n=== /);
-  return (next === -1 ? rest : rest.slice(0, next)).trim();
-}
-
-function buildOpenAIPrompt(fullPrompt: string, headline?: string) {
-  const cultural =
-    extractSection(fullPrompt, "=== LAYER 1: EVENT CULTURAL CONTEXT & MESSAGE PURPOSE ===") ||
-    extractSection(fullPrompt, "=== EVENT CULTURAL CONTEXT");
-  const visual = extractSection(fullPrompt, "Visual direction for this occasion:");
-
-  if (isOpenAITextFreeMode()) {
-    return [
-      "Premium Turkish small-business Instagram post BACKGROUND ONLY.",
-      "Absolutely NO text, NO letters, NO numbers, NO words, NO logos, NO watermarks.",
-      "NO social media UI, NO footer bar, NO fake URLs, NO contact info.",
-      "Leave top 22% and top-right corner clean for headline and logo overlay.",
-      cultural ? `Occasion mood: ${cultural.slice(0, 500)}` : "",
-      visual ? `Visual direction: ${visual.slice(0, 400)}` : "",
-      fullPrompt.slice(0, 1200),
-    ]
-      .filter(Boolean)
-      .join("\n\n");
-  }
-
-  return [
-    "Premium Turkish small-business Instagram social media post graphic.",
-    headline
-      ? `Main headline on image (exact Turkish spelling, large and readable): "${headline}"`
-      : "",
-    "Only ONE headline — no footer, no extra sentences, no pseudo-Turkish gibberish.",
-    "Leave top-right corner clean for logo overlay.",
-    cultural ? `Occasion: ${cultural.slice(0, 400)}` : "",
-    visual ? `Visual: ${visual.slice(0, 300)}` : "",
-    fullPrompt.slice(0, 1500),
-  ]
-    .filter(Boolean)
-    .join("\n\n");
-}
 
 async function urlToDataUrl(url: string) {
   const imageResponse = await fetch(url);
@@ -117,12 +73,19 @@ async function requestOpenAIImage(
   return { response, payload };
 }
 
+function buildModelChain(primaryModel: string) {
+  const configuredFallback = getOpenAIImageFallbackModel();
+  const candidates = [primaryModel, configuredFallback, "gpt-image-1-mini", "gpt-image-1"];
+  return [...new Set(candidates)];
+}
+
 export async function generateImageWithOpenAI(
   prompt: string,
   _inputImageUrls: string[] = [],
   options?: { aspectRatio?: string; headline?: string },
 ) {
   void _inputImageUrls;
+  void options?.headline;
 
   const apiKey = getOpenAIApiKey();
   if (!apiKey) {
@@ -130,40 +93,33 @@ export async function generateImageWithOpenAI(
   }
 
   const primaryModel = getOpenAIImageModel();
-  const fallbackModel = getOpenAIImageFallbackModel();
-  const textFree = isOpenAITextFreeMode();
-  const imagePrompt = buildOpenAIPrompt(prompt, options?.headline);
-
+  const modelChain = buildModelChain(primaryModel);
   let activeModel = primaryModel;
-  let { response, payload } = await requestOpenAIImage(
-    apiKey,
-    activeModel,
-    imagePrompt,
-    options?.aspectRatio,
-  );
+  let response: Response | null = null;
+  let payload: OpenAIImageResponse = {};
 
-  if (
-    !response.ok &&
-    isModelAccessError(payload.error?.message ?? "") &&
-    activeModel !== fallbackModel
-  ) {
-    console.warn(
-      `[openai] ${activeModel} erişilemiyor, ${fallbackModel} ile yeniden deneniyor`,
-    );
-    activeModel = fallbackModel;
+  for (const model of modelChain) {
+    activeModel = model;
     ({ response, payload } = await requestOpenAIImage(
       apiKey,
-      activeModel,
-      imagePrompt,
+      model,
+      prompt,
       options?.aspectRatio,
     ));
+
+    if (response.ok) break;
+
+    const message = payload.error?.message ?? "";
+    if (!isModelAccessError(message)) break;
+
+    console.warn(`[openai] ${model} erişilemiyor, sıradaki model deneniyor`);
   }
 
-  if (!response.ok) {
-    const message = payload.error?.message ?? `OpenAI HTTP ${response.status}`;
+  if (!response?.ok) {
+    const message = payload.error?.message ?? `OpenAI HTTP ${response?.status ?? 500}`;
     if (isModelAccessError(message)) {
       throw new Error(
-        `${message} — OpenAI proje Limits sayfasında bu modeli açın veya OPENAI_IMAGE_MODEL=gpt-image-1 deneyin.`,
+        `${message} — OpenAI proje Limits sayfasında gpt-image-1.5 / gpt-image-1-mini modellerini açın ve API key'in doğru projeye bağlı olduğundan emin olun.`,
       );
     }
     throw new Error(message);
@@ -185,7 +141,7 @@ export async function generateImageWithOpenAI(
 
   return {
     provider: "openai" as const,
-    model: `${activeModel}${textFree ? "-textfree" : ""}${usedFallback ? "-fallback" : ""}`,
+    model: `${activeModel}${usedFallback ? "-fallback" : ""}`,
     imageUrl: dataUrl,
     thumbnailUrl: dataUrl,
     status: "ready" as const,

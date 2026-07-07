@@ -1,79 +1,102 @@
-import { composePrompt } from "@/lib/ai/compose-prompt";
-import { buildBrandCreativeBrief } from "@/lib/ai/brand-creative-director";
+import {
+  briefToNegativePrompt,
+  buildCreativeBrief,
+  writeImagePrompt,
+} from "@/lib/ai/creative-brief";
+import { isIdeogramConfigured } from "@/lib/ai/ideogram-config";
 import { getPromptLibraryEntry } from "@/lib/ai/prompt-library";
-import { isLeanGenerationMode } from "@/lib/generation/generation-mode";
+import { isOpenAIConfigured, isOpenAITextFreeMode } from "@/lib/ai/openai-config";
 import { getStyleRule } from "@/lib/styles/repository";
 import { getSectorRule } from "@/lib/sectors/repository";
 import type { BrandContext, PromptPreview } from "@/types/domain";
+
+export type { CreativeBrief } from "@/lib/ai/creative-brief";
+export { pickHeadlineForBrand } from "@/lib/ai/creative-brief";
+
+function usesTextFreeBackground(): boolean {
+  if (process.env.HEADLINE_OVERLAY === "false") return false;
+  const provider = process.env.IMAGE_PROVIDER?.trim();
+  if (provider === "openai") return isOpenAITextFreeMode();
+  if (provider === "ideogram") return process.env.IDEOGRAM_TEXT_FREE !== "false";
+  if (!provider) {
+    if (isOpenAIConfigured()) return isOpenAITextFreeMode();
+    if (isIdeogramConfigured()) return process.env.IDEOGRAM_TEXT_FREE !== "false";
+  }
+  return false;
+}
 
 export async function composeImagePrompt(
   context: BrandContext,
   dayId: string,
 ): Promise<PromptPreview> {
   const day = await getPromptLibraryEntry(dayId);
-  const lean = isLeanGenerationMode();
   const sectorRule = await getSectorRule(context.sector);
   const styleRule = await getStyleRule(context.visualStyle);
+  const backgroundOnly = usesTextFreeBackground();
 
-  const dayContext = day
-    ? {
-        name: day.name,
-        category: day.category,
-        culturalContext: day.culturalContext,
-        visualDirection: day.visualDirection,
-        captionIdeas: day.captionIdeas,
-        headlineAlternatives: day.headlineAlternatives,
-        avoidRules: day.avoidRules,
-      }
-    : undefined;
+  if (!day) {
+    const fallbackBrief = buildCreativeBrief({
+      brandName: context.brandName,
+      brandDescription: context.brandDescription,
+      sector: context.sector,
+      customSector: context.customSector,
+      selectedStyle: context.visualStyle,
+      brandColor: context.primaryColor,
+      brandColors: context.brandColors,
+      specialDay: {
+        id: dayId,
+        name: "Özel Gün",
+        slug: dayId,
+        category: "popular",
+        dateType: "fixed",
+        dateValue: "",
+        importance: "medium",
+        culturalContext: "",
+        popularUsages: [],
+        headlineAlternatives: ["Özel Gün"],
+        captionIdeas: [],
+        visualDirection: "",
+        avoidRules: "",
+        promptTemplate: "",
+        isDefaultSelected: false,
+      },
+      logoUrl: context.logoUrl,
+      logoAnalysis: context.logoAnalysis,
+      postFormat: context.postFormat,
+      sectorRule,
+      styleRule,
+      backgroundOnly,
+    });
 
-  const brief = await buildBrandCreativeBrief(context, dayContext, {
-    useGemini: !lean,
-    sectorRule,
-    styleRule,
-  });
-
-  const composed = day
-    ? composePrompt(day, context, context.postFormat ?? "square", sectorRule, styleRule)
-    : {
-        headline: "Özel Gün",
-        prompt: `Premium Turkish social post for ${context.brandName}.`,
-        negativePrompt: "misspelled Turkish, distorted logo, watermark",
-      };
-
-  if (lean) {
     return {
-      headline: composed.headline,
-      prompt: composed.prompt,
-      negativePrompt: composed.negativePrompt,
-      brandBrief: brief,
+      headline: fallbackBrief.text.headline,
+      prompt: writeImagePrompt(fallbackBrief, context.postFormat),
+      negativePrompt: briefToNegativePrompt(fallbackBrief),
+      brief: fallbackBrief,
     };
   }
 
-  const prompt = [
-    composed.prompt,
-    "",
-    "=== CREATIVE DIRECTOR LAYER (brand × special day harmony) ===",
-    brief.dayHarmony,
-    `Scene composition: ${brief.sceneComposition}`,
-    `Sector × occasion blend: ${brief.sectorBlend}`,
-    `Brand positioning: ${brief.positioning}`,
-    `Tone: ${brief.toneOfVoice}`,
-    brief.subtextOnImage
-      ? `Optional secondary text (small): "${brief.subtextOnImage}"`
-      : "No secondary text on image.",
-    brief.onImageTextRules,
-    brief.visualQuality,
-    brief.visualDirection,
-    "",
-    "=== EXTRA FORBIDDEN ===",
-    [...new Set([...brief.avoidOnImage])].join("; "),
-  ].join("\n");
+  const brief = buildCreativeBrief({
+    brandName: context.brandName,
+    brandDescription: context.brandDescription,
+    sector: context.sector,
+    customSector: context.customSector,
+    selectedStyle: context.visualStyle,
+    brandColor: context.primaryColor,
+    brandColors: context.brandColors,
+    specialDay: day,
+    logoUrl: context.logoUrl,
+    logoAnalysis: context.logoAnalysis,
+    postFormat: context.postFormat,
+    sectorRule,
+    styleRule,
+    backgroundOnly,
+  });
 
   return {
-    headline: composed.headline,
-    prompt,
-    negativePrompt: [composed.negativePrompt, ...brief.avoidOnImage].filter(Boolean).join(", "),
-    brandBrief: brief,
+    headline: brief.text.headline,
+    prompt: writeImagePrompt(brief, context.postFormat),
+    negativePrompt: briefToNegativePrompt(brief),
+    brief,
   };
 }

@@ -3,7 +3,7 @@ import { isPlaceholderImageUrl } from "@/lib/ai/image-provider";
 import { isGeminiConfigured } from "@/lib/ai/gemini-config";
 import { buildOccasionCreativeGuide } from "@/lib/ai/occasion-creative-guide";
 import { isLeanGenerationMode } from "@/lib/generation/generation-mode";
-import type { BrandCreativeBrief } from "@/lib/ai/brand-creative-director";
+import type { CreativeBrief } from "@/lib/ai/creative-brief";
 import type { SpecialDayCategory } from "@/types/domain";
 
 export type QualityCheckResult = {
@@ -16,7 +16,7 @@ export type QualityCheckContext = {
   imageUrl: string;
   expectedHeadline: string;
   brandName: string;
-  brandBrief?: BrandCreativeBrief;
+  brandBrief?: CreativeBrief;
   dayName?: string;
   dayCategory?: SpecialDayCategory;
   culturalContext?: string;
@@ -68,7 +68,7 @@ function buildEssentialCheckPrompt(input: QualityCheckContext) {
 }
 
 function buildFullCheckPrompt(input: QualityCheckContext) {
-  const allowedSubtext = input.brandBrief?.subtextOnImage;
+  const allowedSubtext = undefined;
   const occasionGuide =
     input.dayName && input.dayCategory
       ? buildOccasionCreativeGuide({
@@ -95,7 +95,11 @@ function buildFullCheckPrompt(input: QualityCheckContext) {
     "",
     `Özel gün: ${input.dayName ?? "bilinmiyor"} (${input.dayCategory ?? "?"})`,
     input.culturalContext ? `Kültürel bağlam: ${input.culturalContext}` : "",
-    occasionGuide ? `Beklenen ruh: ${occasionGuide.soul}` : "",
+    input.brandBrief
+      ? `Beklenen ruh: ${input.brandBrief.occasion.emotionalGoal}`
+      : occasionGuide
+        ? `Beklenen ruh: ${occasionGuide.soul}`
+        : "",
     `Marka: "${input.brandName}"`,
     `Beklenen başlık (birebir): "${input.expectedHeadline}"`,
     allowedSubtext
