@@ -7,6 +7,7 @@ import { CheckCircle2, Download, Loader2, Octagon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AtelierStage } from "@/components/generating/atelier-stage";
 import { GENERATING_MESSAGES, GENERATION_POLL_MS } from "@/lib/config";
 import { loadOnboardingDraft } from "@/lib/onboarding/draft";
 import { getSpecialDayById } from "@/lib/special-days-data";
@@ -606,10 +607,10 @@ export function CreativeWorkshopLoader({
                 <Link
                   href={`/projects/${status.projectId}`}
                   className={cn(
-                    "inline-flex h-11 w-full items-center justify-center rounded-full px-5 text-sm font-semibold sm:w-auto",
+                    "inline-flex h-11 w-full items-center justify-center rounded-full px-5 text-sm font-semibold transition sm:w-auto",
                     phase === "done"
-                      ? "border border-emerald-400/40 bg-transparent text-emerald-100 hover:bg-emerald-500/10"
-                      : "bg-emerald-50 text-emerald-700",
+                      ? "border border-emerald-300/50 bg-emerald-500/10 !text-emerald-50 hover:bg-emerald-500/20"
+                      : "border border-white/20 bg-white !text-slate-900 shadow-sm hover:bg-emerald-50 hover:!text-slate-900",
                   )}
                 >
                   {phase === "done" ? "Profile git" : "Profilde gör"}
@@ -617,7 +618,7 @@ export function CreativeWorkshopLoader({
               ) : (
                 <Link
                   href="/dashboard"
-                  className="inline-flex h-11 items-center justify-center rounded-full bg-emerald-50 px-5 text-sm font-semibold text-emerald-700"
+                  className="inline-flex h-11 items-center justify-center rounded-full border border-white/20 bg-white px-5 text-sm font-semibold !text-slate-900 shadow-sm transition hover:bg-emerald-50 hover:!text-slate-900"
                 >
                   Panele git
                 </Link>
@@ -625,18 +626,18 @@ export function CreativeWorkshopLoader({
             </div>
           </div>
 
-          <WorkshopStage
-            activeIndex={messageIndex}
-            readyCount={
-              isRegenerateMode
-                ? focusJob?.status === "ready"
-                  ? 1
-                  : 0
-                : (status?.ready ?? 0)
-            }
-            focusDayName={isRegenerateMode ? resolvedDayName : undefined}
-            focusImageUrl={isRegenerateMode ? focusPreviewUrl : undefined}
-          />
+          {isRegenerateMode ? (
+            <AtelierStage
+              dayName={resolvedDayName}
+              imageUrl={focusPreviewUrl}
+              progress={progress}
+            />
+          ) : (
+            <WorkshopStage
+              activeIndex={messageIndex}
+              readyCount={status?.ready ?? 0}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -646,16 +647,10 @@ export function CreativeWorkshopLoader({
 function WorkshopStage({
   activeIndex,
   readyCount,
-  focusDayName,
-  focusImageUrl,
 }: {
   activeIndex: number;
   readyCount: number;
-  focusDayName?: string;
-  focusImageUrl?: string | null;
 }) {
-  const isFocused = Boolean(focusDayName);
-
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[520px]">
       <motion.div
@@ -664,54 +659,33 @@ function WorkshopStage({
         transition={{ duration: 10, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
       />
       <motion.div
-        className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full bg-gradient-to-br from-emerald-400 to-lime-300 shadow-[0_0_60px_rgba(52,211,153,0.45)]"
-        animate={{ scale: isFocused || activeIndex === 3 ? [1, 1.12, 1] : [1, 1.04, 1] }}
+        className="absolute left-1/2 top-1/2 flex h-28 w-28 -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-emerald-400 to-lime-300 shadow-[0_0_60px_rgba(52,211,153,0.45)]"
+        animate={{ scale: activeIndex === 3 ? [1, 1.12, 1] : [1, 1.04, 1] }}
         transition={{ duration: 1.4, repeat: Number.POSITIVE_INFINITY }}
       >
-        {focusImageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={focusImageUrl} alt={focusDayName} className="h-full w-full object-cover" />
-        ) : (
-          <div className="flex h-full flex-col items-center justify-center text-sm font-bold text-emerald-950">
-            <span>{isFocused ? "AI" : "AI"}</span>
-            {readyCount > 0 ? (
-              <span className="mt-1 text-[10px] font-semibold">{readyCount} hazır</span>
-            ) : isFocused ? (
-              <span className="mt-1 max-w-[72px] text-center text-[9px] font-semibold leading-tight">
-                {focusDayName}
-              </span>
-            ) : null}
-          </div>
-        )}
+        <span className="text-sm font-bold text-emerald-950">AI</span>
+        {readyCount > 0 ? (
+          <span className="mt-1 text-[10px] font-semibold text-emerald-950/80">{readyCount} hazır</span>
+        ) : null}
       </motion.div>
-      {(isFocused ? [focusDayName!] : floatingPosts).map((label, postIndex) => {
-        const angle = isFocused
-          ? -Math.PI / 2
-          : (postIndex / floatingPosts.length) * Math.PI * 2;
-        const radius = isFocused ? 0 : 150;
+      {floatingPosts.map((label, postIndex) => {
+        const angle = (postIndex / floatingPosts.length) * Math.PI * 2;
+        const radius = 150;
         return (
           <motion.div
             key={label}
             className="absolute left-1/2 top-1/2 w-28 -translate-x-1/2 -translate-y-1/2"
             animate={{
-              x: Math.cos(angle + (isFocused ? 0 : activeIndex * 0.4)) * radius,
-              y: Math.sin(angle + (isFocused ? 0 : activeIndex * 0.4)) * radius,
-              scale: isFocused ? [1, 1.05, 1] : 1,
+              x: Math.cos(angle + activeIndex * 0.4) * radius,
+              y: Math.sin(angle + activeIndex * 0.4) * radius,
             }}
             transition={{
-              duration: isFocused ? 1.6 : 3 + postIndex * 0.2,
+              duration: 3 + postIndex * 0.2,
               repeat: Number.POSITIVE_INFINITY,
               ease: "easeInOut",
             }}
           >
-            <div
-              className={cn(
-                "rounded-2xl border p-3 text-center text-xs font-medium shadow-lg backdrop-blur",
-                isFocused
-                  ? "border-emerald-300/50 bg-emerald-400/20 text-emerald-50"
-                  : "border-emerald-300/30 bg-[#0f2f22]/90",
-              )}
-            >
+            <div className="rounded-2xl border border-emerald-300/30 bg-[#0f2f22]/90 p-3 text-center text-xs font-medium text-emerald-50 shadow-lg backdrop-blur">
               {label}
             </div>
           </motion.div>
