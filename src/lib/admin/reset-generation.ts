@@ -47,7 +47,7 @@ export async function resetUserGenerationByEmail(email: string): Promise<ResetGe
     const { error: projectUpdateError } = await supabase
       .from("projects")
       .update({
-        status: "generating",
+        status: "paid",
         generation_stopped_at: null,
         updated_at: new Date().toISOString(),
       })
@@ -61,7 +61,7 @@ export async function resetUserGenerationByEmail(email: string): Promise<ResetGe
   const { data: jobs, error: jobsError } = await supabase
     .from("generation_jobs")
     .update({
-      status: "queued",
+      status: "draft",
       image_url: null,
       thumbnail_url: null,
       story_image_url: null,

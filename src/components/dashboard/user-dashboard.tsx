@@ -29,6 +29,7 @@ import type { PostFormat } from "@/types/domain";
 import { cn } from "@/lib/utils";
 
 const statusMap = {
+  draft: { label: "Boş", className: "bg-white/90 text-slate-600 ring-1 ring-inset ring-slate-200" },
   queued: { label: "Sırada", className: "bg-slate-100 text-slate-600" },
   generating: { label: "Üretiliyor", className: "bg-amber-100 text-amber-700" },
   ready: { label: "Hazır", className: "bg-emerald-100 text-emerald-700" },
@@ -85,6 +86,7 @@ type UserDashboardProps = {
   jobs: DashboardJob[];
   postFormat?: PostFormat;
   hasStoryAddon?: boolean;
+  hasCaptionAddon?: boolean;
   emptyMessage?: string;
   /** Arka planda üretim devam ediyorsa hafif polling (sayfa yenilemeden) */
   liveGenerating?: boolean;
@@ -96,6 +98,7 @@ export function UserDashboard({
   jobs: initialJobs,
   postFormat = "square",
   hasStoryAddon = false,
+  hasCaptionAddon = false,
   emptyMessage,
   liveGenerating = false,
 }: UserDashboardProps) {
@@ -219,10 +222,44 @@ export function UserDashboard({
     }
   }
 
-  const canRetryGeneration = Boolean(project && selectedJob && selectedJob.status === "failed");
+  const canGenerate =
+    Boolean(project && selectedJob && (selectedJob.status === "draft" || selectedJob.status === "failed"));
+
+  const canRevise =
+    Boolean(
+      project &&
+        selectedJob &&
+        selectedJob.status === "ready" &&
+        !selectedJob.approvedAt &&
+        remainingCredits > 0,
+    );
+
+  async function generatePost() {
+    if (!project || !selectedJob || !canGenerate) return;
+
+    setActionLoading("generate");
+    try {
+      const response = await fetch("/api/generation/generate-job", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: selectedJob.id }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(data.error ?? "Üretim başlatılamadı");
+
+      const dayName = encodeURIComponent(selectedJob.dayName);
+      router.push(
+        `/projects/${project.id}/generating?jobId=${selectedJob.id}&dayName=${dayName}`,
+      );
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Üretim hatası");
+    } finally {
+      setActionLoading(null);
+    }
+  }
 
   async function regeneratePost() {
-    if (!project || !selectedJob || !canRetryGeneration) return;
+    if (!project || !selectedJob || !canRevise) return;
 
     setActionLoading("regenerate");
     try {
@@ -348,7 +385,8 @@ export function UserDashboard({
                     Özel gün postlarınız
                   </h1>
                   <p className="mt-1 text-sm text-slate-600">
-                    Hazır görselleri indirin, caption kopyalayın veya story üretin.
+                    Kartlara tıklayın, <strong>Üret</strong> ile tek tek görsel oluşturun. Onayladıktan
+                    sonra caption ve story hazır olur.
                     <span className="ml-1 text-emerald-700">Format: {getPostFormatLabel(postFormat)}</span>
                   </p>
                 </div>
@@ -391,9 +429,10 @@ export function UserDashboard({
                           onClick={() => setSelectedJobId(job.id)}
                           className={cn(
                             "overflow-hidden rounded-[24px] border bg-white text-left transition hover:-translate-y-0.5",
+                            job.status === "draft" && "border-dashed border-slate-200",
                             selectedJobId === job.id
                               ? "border-emerald-400 ring-2 ring-emerald-200"
-                              : "border-emerald-100",
+                              : job.status !== "draft" && "border-emerald-100",
                           )}
                         >
                           <div className={cn("relative overflow-hidden", previewAspect)}>
@@ -472,9 +511,29 @@ export function UserDashboard({
                             </p>
                           ) : null}
                         </div>
+                      ) : hasCaptionAddon && !selectedJob.approvedAt ? (
+                        <p className="text-sm text-slate-500">
+                          Caption paketi aktif — postu onayladıktan sonra üretilecek.
+                        </p>
                       ) : (
                         <p className="text-sm text-slate-500">Caption henüz hazır değil.</p>
                       )}
+
+                      {canGenerate ? (
+                        <Button
+                          className="w-full"
+                          onClick={generatePost}
+                          disabled={actionLoading === "generate"}
+                        >
+                          <Sparkles
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              actionLoading === "generate" && "animate-spin",
+                            )}
+                          />
+                          Üret
+                        </Button>
+                      ) : null}
 
                       {selectedJob.status === "ready" && !selectedJob.approvedAt ? (
                         <Button
@@ -491,26 +550,13 @@ export function UserDashboard({
                         </Badge>
                       ) : null}
 
-                      {hasStoryAddon && selectedJob.approvedAt ? (
+                      {hasStoryAddon && selectedJob.approvedAt && selectedJob.storyStatus !== "ready" ? (
                         <div className="space-y-3 rounded-2xl border border-violet-100 bg-violet-50/40 p-4">
                           <p className="text-sm font-medium text-slate-800">Story (1080×1920)</p>
-                          {selectedJob.storyStatus === "ready" ? (
-                            <div className="relative aspect-[9/16] max-h-64 overflow-hidden rounded-xl">
-                              <LazyJobImage
-                                jobId={selectedJob.id}
-                                status="ready"
-                                alt="Story"
-                                className="h-full w-full"
-                                story
-                                initialUrl={selectedJob.storyImageUrl}
-                              />
-                            </div>
-                          ) : (
-                            <p className="text-xs text-slate-500">
-                              Feed postu onaylandı. Aynı tasarımdan story üretin.
-                            </p>
-                          )}
-                          {selectedJob.storyStatus !== "ready" ? (
+                          <p className="text-xs text-slate-500">
+                            Onay sonrası story üretiliyor veya hazırlanıyor…
+                          </p>
+                          {selectedJob.storyStatus === "failed" ? (
                             <Button
                               variant="secondary"
                               className="w-full"
@@ -518,18 +564,34 @@ export function UserDashboard({
                               disabled={actionLoading === "story"}
                             >
                               <Sparkles className="mr-2 h-4 w-4" />
-                              Story boyutu üret
+                              Story&apos;yi tekrar üret
                             </Button>
                           ) : null}
                         </div>
                       ) : null}
 
+                      {hasStoryAddon && selectedJob.approvedAt && selectedJob.storyStatus === "ready" ? (
+                        <div className="space-y-3 rounded-2xl border border-violet-100 bg-violet-50/40 p-4">
+                          <p className="text-sm font-medium text-slate-800">Story (1080×1920)</p>
+                          <div className="relative aspect-[9/16] max-h-64 overflow-hidden rounded-xl">
+                            <LazyJobImage
+                              jobId={selectedJob.id}
+                              status="ready"
+                              alt="Story"
+                              className="h-full w-full"
+                              story
+                              initialUrl={selectedJob.storyImageUrl}
+                            />
+                          </div>
+                        </div>
+                      ) : null}
+
                       <div className="grid grid-cols-2 gap-2">
-                        <Button variant="outline" className="w-full">
+                        <Button variant="outline" className="w-full" disabled={selectedJob.status !== "ready"}>
                           <Download className="mr-2 h-4 w-4" />
                           İndir
                         </Button>
-                        {canRetryGeneration ? (
+                        {canRevise ? (
                           <Button
                             variant="outline"
                             className="w-full"
@@ -542,7 +604,7 @@ export function UserDashboard({
                                 actionLoading === "regenerate" && "animate-spin",
                               )}
                             />
-                            Yeniden üret
+                            Revizyon ({remainingCredits} hak)
                           </Button>
                         ) : null}
                       </div>

@@ -71,15 +71,15 @@ export function EftPaymentClient({ orderId }: EftPaymentClientProps) {
           <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600" />
           <h1 className="text-2xl font-semibold text-slate-950">Ödemeniz onaylandı!</h1>
           <p className="text-sm text-slate-600">
-            Artık postlarınızı üretmeye başlayabilirsiniz.
+            Profilinizde boş kartlar hazır. İstediğiniz posta tıklayıp tek tek üretebilirsiniz.
           </p>
           <Button
             className="mt-5 w-full"
             onClick={() => {
-              window.location.href = `/orders/${orderId}/generating`;
+              window.location.href = "/dashboard";
             }}
           >
-            Tasarımları oluştur
+            Profilime git
           </Button>
         </Card>
       </div>

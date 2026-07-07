@@ -1,5 +1,6 @@
+import { generateCaption } from "@/lib/ai/caption-provider";
 import { composeImagePrompt } from "@/lib/ai/prompt-composer";
-import { generateImage, regenerateImage } from "@/lib/ai/image-provider";
+import { regenerateImage } from "@/lib/ai/image-provider";
 import {
   checkGeneratedImageQuality,
   isQualityCheckEnabled,
@@ -20,7 +21,7 @@ export async function approvePostJob(jobId: string, userId: string) {
 
   const { data: job } = await supabase
     .from("generation_jobs")
-    .select("id, status, project_id, user_id")
+    .select("id, status, project_id, user_id, type, image_url, approved_at")
     .eq("id", jobId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -33,16 +34,63 @@ export async function approvePostJob(jobId: string, userId: string) {
     throw new Error("Sadece hazır postlar onaylanabilir");
   }
 
+  if (job.approved_at) {
+    return { ok: true, alreadyApproved: true };
+  }
+
+  const approvedAt = new Date().toISOString();
+
   const { error } = await supabase
     .from("generation_jobs")
-    .update({ approved_at: new Date().toISOString() })
+    .update({ approved_at: approvedAt })
     .eq("id", jobId);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return { ok: true };
+  const { data: project } = await supabase
+    .from("projects")
+    .select("*")
+    .eq("id", job.project_id)
+    .single();
+
+  if (!project) {
+    throw new Error("Proje bulunamadı");
+  }
+
+  const context = projectToBrandContext(project);
+  const dayId = job.type as string;
+  let captionText: string | null = null;
+  let hashtags: string[] = [];
+
+  if (context.purchasedAddons.includes("caption")) {
+    const caption = await generateCaption(context, dayId);
+    captionText = caption?.caption ?? null;
+    hashtags = caption?.hashtags ?? [];
+
+    await supabase
+      .from("generation_jobs")
+      .update({
+        caption_text: captionText,
+        hashtags,
+      })
+      .eq("id", jobId);
+  }
+
+  let storyImageUrl: string | null = null;
+
+  if (context.purchasedAddons.includes("story") && job.image_url) {
+    const story = await generateStoryForJob(jobId, userId);
+    storyImageUrl = story.storyImageUrl;
+  }
+
+  return {
+    ok: true,
+    captionText,
+    hashtags,
+    storyImageUrl,
+  };
 }
 
 export async function generateStoryForJob(jobId: string, userId: string) {

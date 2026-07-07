@@ -102,13 +102,11 @@ export default async function ProjectDetailPage({
       (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     ),
   );
-  const postsGenerating = jobs.filter(
-    (job) => job.status === "generating" || job.status === "queued",
-  ).length;
+  const postsGenerating = jobs.filter((job) => job.status === "generating").length;
 
   return (
     <UserDashboard
-      liveGenerating={postsGenerating > 0 || row.status === "generating"}
+      liveGenerating={postsGenerating > 0}
       user={{
         firstName: user.firstName,
         lastName: user.lastName,
@@ -139,6 +137,7 @@ export default async function ProjectDetailPage({
       jobs={jobs}
       postFormat={meta.postFormat}
       hasStoryAddon={meta.purchasedAddons.includes("story")}
+      hasCaptionAddon={meta.purchasedAddons.includes("caption")}
     />
   );
 }

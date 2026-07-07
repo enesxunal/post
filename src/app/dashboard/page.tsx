@@ -77,13 +77,11 @@ export default async function DashboardPage() {
       })
     : new Date().toLocaleDateString("tr-TR", { month: "long", year: "numeric" });
 
-  const postsGenerating = jobs.filter(
-    (job) => job.status === "generating" || job.status === "queued",
-  ).length;
+  const postsGenerating = jobs.filter((job) => job.status === "generating").length;
 
   return (
     <UserDashboard
-      liveGenerating={postsGenerating > 0 || project?.status === "generating"}
+      liveGenerating={postsGenerating > 0}
       user={{
         firstName: user.firstName,
         lastName: user.lastName,
@@ -115,6 +113,7 @@ export default async function DashboardPage() {
       jobs={jobs}
       postFormat={meta?.postFormat ?? "square"}
       hasStoryAddon={meta?.purchasedAddons.includes("story") ?? false}
+      hasCaptionAddon={meta?.purchasedAddons.includes("caption") ?? false}
     />
   );
 }

@@ -132,7 +132,7 @@ export async function createProjectWithJobs(
       visual_style: draft.visualStyle,
       logo_url: draft.logoUrl ?? null,
       package_type: orderId ? `order:${orderId}` : "base",
-      status: "generating",
+      status: "paid",
     })
     .select("id")
     .single();
@@ -145,7 +145,7 @@ export async function createProjectWithJobs(
     project_id: project.id,
     user_id: userId,
     type: day.dayId,
-    status: "queued" as const,
+    status: "draft" as const,
     provider: "gemini",
   }));
 
@@ -171,6 +171,7 @@ function computeProjectProgress(
   const queued = list.filter(
     (job) => job.status === "queued" || job.status === "composing_prompt",
   ).length;
+  const draft = list.filter((job) => job.status === "draft").length;
   const inProgress = list.filter(
     (job) =>
       job.status === "generating_image" || job.status === "generating_caption",
@@ -183,7 +184,8 @@ function computeProjectProgress(
   ).length;
 
   const stopped = Boolean(project.generation_stopped_at);
-  const done = stopped || (pending === 0 && total > 0);
+  const done =
+    stopped || (pending === 0 && queued === 0 && inProgress === 0 && total > 0 && draft === 0);
 
   return {
     brandName: project.brand_name,
@@ -192,6 +194,7 @@ function computeProjectProgress(
     ready,
     failed,
     queued,
+    draft,
     inProgress,
     done,
     progress: total > 0 ? Math.round((ready / total) * 100) : 0,

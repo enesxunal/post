@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   await markOrderPaid(orderId, "tosla");
 
   return NextResponse.redirect(
-    `${appUrl()}/orders/${encodeURIComponent(orderId)}/generating`,
+    `${appUrl()}/success?orderId=${encodeURIComponent(orderId)}`,
     { status: 303 },
   );
 }

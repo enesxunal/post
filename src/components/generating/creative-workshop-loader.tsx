@@ -289,11 +289,7 @@ export function CreativeWorkshopLoader({
       }
 
       saveActiveProjectId(startData.projectId);
-      applyStatus(startData);
-
-      if (!startData.done && !startData.stopped) {
-        await kickQueue(startData.projectId);
-      }
+      window.location.href = "/dashboard";
     }
 
     void start();

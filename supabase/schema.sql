@@ -21,7 +21,7 @@ begin
   end if;
 
   if not exists (select 1 from pg_type where typname = 'generation_status') then
-    create type generation_status as enum ('queued', 'composing_prompt', 'generating_image', 'generating_caption', 'ready', 'failed');
+    create type generation_status as enum ('draft', 'queued', 'composing_prompt', 'generating_image', 'generating_caption', 'ready', 'failed');
   end if;
 end $$;
 
@@ -139,7 +139,7 @@ create table if not exists generation_jobs (
   user_id uuid not null references profiles(id) on delete cascade,
   special_day_id uuid references special_days(id) on delete set null,
   type text not null,
-  status generation_status not null default 'queued',
+  status generation_status not null default 'draft',
   prompt text,
   provider text,
   image_url text,

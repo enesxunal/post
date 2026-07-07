@@ -1,5 +1,6 @@
 "use client";
 
+import { ImageIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { loadJobImage } from "@/lib/dashboard/job-image-cache";
@@ -64,7 +65,7 @@ export function LazyJobImage({
     }
 
     if (status !== "ready" || !visible) {
-      if (status !== "ready") setUrl(null);
+      if (status !== "ready" && status !== "draft") setUrl(null);
       return;
     }
 
@@ -90,6 +91,17 @@ export function LazyJobImage({
       <div className={className}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={url} alt={alt} className={cn("h-full w-full object-cover", imageClassName)} />
+      </div>
+    );
+  }
+
+  if (status === "draft") {
+    return (
+      <div ref={rootRef} className={cn("relative flex items-center justify-center bg-slate-100", className)}>
+        <div className="text-center px-3">
+          <ImageIcon className="mx-auto h-8 w-8 text-slate-300" />
+          <p className="mt-2 text-xs font-medium text-slate-400">Henüz üretilmedi</p>
+        </div>
       </div>
     );
   }

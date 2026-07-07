@@ -6,7 +6,6 @@ import {
   getProjectStatusLightweight,
 } from "@/lib/generation/project-service";
 import { findProjectIdByOrderId } from "@/lib/generation/queue-processor";
-import { scheduleQueueProcessing } from "@/lib/generation/schedule-queue";
 import type { OnboardingDraft } from "@/lib/onboarding/draft";
 import { isOrderPaid, userHasPaidOrder } from "@/lib/orders/service";
 import { getSessionUser } from "@/lib/supabase/auth";
@@ -28,9 +27,6 @@ export async function POST(request: Request) {
     if (!status) {
       return NextResponse.json({ error: "Proje bulunamadı" }, { status: 404 });
     }
-  if (!status.done && !status.stopped) {
-    scheduleQueueProcessing(body.projectId);
-  }
     return NextResponse.json(status);
   }
 
@@ -39,7 +35,6 @@ export async function POST(request: Request) {
   if (orderId) {
     const existing = await findProjectIdByOrderId(user.id, orderId);
     if (existing?.id) {
-      scheduleQueueProcessing(existing.id);
       const status = await getProjectStatus(existing.id, user.id);
       return NextResponse.json(status ?? { projectId: existing.id });
     }
@@ -76,8 +71,6 @@ export async function POST(request: Request) {
       body.draft,
       orderId,
     );
-
-    scheduleQueueProcessing(created.projectId);
 
     const status = await getProjectStatus(created.projectId, user.id);
     return NextResponse.json({ ...created, ...status });

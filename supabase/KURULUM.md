@@ -52,6 +52,28 @@ Aynı dosyada `drop policy` + `create policy` kısmını **ayrı** sorgu olarak 
 
 Index'ler olmadan da site çalışır; sadece panel biraz yavaş kalır. Storage bucket olmadan yeni görseller yine veritabanına kaydedilir (eski yöntem).
 
+## `draft` enum hatası (unsafe use of new value)
+
+`alter type ... add value 'draft'` ile `update ... set status = 'draft'` **aynı sorguda çalışmaz**.
+
+**Adım 1** — yeni sorgu, sadece:
+
+```sql
+alter type generation_status add value if not exists 'draft';
+```
+
+Run → Success.
+
+**Adım 2** — yeni sorgu, sadece:
+
+```sql
+update generation_jobs
+set status = 'draft'
+where status = 'queued' and image_url is null;
+```
+
+Run → Success.
+
 ## Vercel env (yeni Supabase paneli)
 
 **Project URL** artık API Keys sayfasında yazmıyor olabilir. Şu formülle oluştur:

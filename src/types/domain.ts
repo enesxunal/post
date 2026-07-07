@@ -43,6 +43,7 @@ export type SpecialDayCategory =
 export type DayType = "fixed" | "movable" | "manual";
 
 export type JobStatus =
+  | "draft"
   | "queued"
   | "composing_prompt"
   | "generating_image"

@@ -1,6 +1,5 @@
 import { composeImagePrompt } from "@/lib/ai/prompt-composer";
 import { getPromptLibraryEntry } from "@/lib/ai/prompt-library";
-import { generateCaption } from "@/lib/ai/caption-provider";
 import { generateImage, isPlaceholderImageUrl } from "@/lib/ai/image-provider";
 import { applyHeadlineOverlay, useHeadlineOverlayForProvider } from "@/lib/ai/headline-pipeline";
 import { applyLogoOverlay } from "@/lib/ai/logo-pipeline";
@@ -110,6 +109,7 @@ async function syncProjectStatus(projectId: string) {
   const total = list.length;
   const ready = list.filter((j) => j.status === "ready").length;
   const failed = list.filter((j) => j.status === "failed").length;
+  const draft = list.filter((j) => j.status === "draft").length;
   const pending = list.filter((j) =>
     ["queued", "generating_image", "generating_caption", "composing_prompt"].includes(j.status),
   ).length;
@@ -122,13 +122,17 @@ async function syncProjectStatus(projectId: string) {
     return { ready, total, pending, done: false };
   }
 
-  const finalStatus = ready > 0 ? "ready" : "failed";
+  let finalStatus: "paid" | "ready" | "failed" = "paid";
+  if (ready > 0) finalStatus = "ready";
+  if (ready === 0 && failed > 0 && draft === 0) finalStatus = "failed";
+  if (draft === total) finalStatus = "paid";
+
   await supabase
     .from("projects")
     .update({ status: finalStatus, updated_at: nowIso() })
     .eq("id", projectId);
 
-  return { ready, total, pending: 0, done: true, failed };
+  return { ready, total, pending: 0, done: draft === 0 && ready + failed >= total && total > 0, failed };
 }
 
 export async function getProjectStatusAdmin(projectId: string) {
@@ -182,13 +186,17 @@ export async function regenerateGenerationJob(jobId: string, userId: string) {
 
   const { data: job } = await supabase
     .from("generation_jobs")
-    .select("id, project_id, user_id, status, image_url")
+    .select("id, project_id, user_id, status, image_url, approved_at")
     .eq("id", jobId)
     .eq("user_id", userId)
     .maybeSingle();
 
   if (!job) {
     throw new Error("Görsel bulunamadı");
+  }
+
+  if (job.approved_at) {
+    throw new Error("Onaylanan post yeniden üretilemez");
   }
 
   const isUnproduced = job.status === "failed" || !job.image_url;
@@ -271,6 +279,77 @@ export async function regenerateGenerationJob(jobId: string, userId: string) {
   return { ...status, focusJobId: jobId };
 }
 
+/** Kullanıcı tek bir boş slot için üretim başlatır. */
+export async function requestJobGeneration(jobId: string, userId: string) {
+  const supabase = adminClient();
+
+  const { data: job } = await supabase
+    .from("generation_jobs")
+    .select("id, project_id, user_id, status, image_url, approved_at")
+    .eq("id", jobId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!job) {
+    throw new Error("Post bulunamadı");
+  }
+
+  if (job.approved_at) {
+    throw new Error("Onaylanan post tekrar üretilemez");
+  }
+
+  if (!["draft", "failed"].includes(job.status)) {
+    throw new Error("Bu post zaten üretildi veya üretimde");
+  }
+
+  const { data: busy } = await supabase
+    .from("generation_jobs")
+    .select("id")
+    .eq("project_id", job.project_id)
+    .in("status", ["queued", "composing_prompt", "generating_image", "generating_caption"])
+    .limit(1)
+    .maybeSingle();
+
+  if (busy) {
+    throw new Error("Başka bir post üretiliyor. Bitmesini bekleyin.");
+  }
+
+  await supabase
+    .from("projects")
+    .update({
+      generation_stopped_at: null,
+      status: "generating",
+      updated_at: nowIso(),
+    })
+    .eq("id", job.project_id);
+
+  await supabase
+    .from("generation_jobs")
+    .update({
+      status: "queued",
+      retry_count: 0,
+      image_url: null,
+      thumbnail_url: null,
+      caption_text: null,
+      hashtags: [],
+      error_message: null,
+      approved_at: null,
+      story_image_url: null,
+      story_status: null,
+      updated_at: nowIso(),
+    })
+    .eq("id", jobId);
+
+  scheduleQueueProcessing(job.project_id);
+
+  const status = await getProjectStatusAdmin(job.project_id);
+  if (!status) {
+    throw new Error("Durum alınamadı");
+  }
+
+  return { ...status, focusJobId: jobId };
+}
+
 export async function stopProjectGeneration(projectId: string, userId: string) {
   const supabase = adminClient();
 
@@ -299,8 +378,8 @@ export async function stopProjectGeneration(projectId: string, userId: string) {
   await supabase
     .from("generation_jobs")
     .update({
-      status: "failed",
-      error_message: "Üretim kullanıcı tarafından durduruldu",
+      status: "draft",
+      error_message: null,
       updated_at: stoppedAt,
     })
     .eq("project_id", projectId)
@@ -426,8 +505,6 @@ export async function processOneQueuedJob(projectId: string) {
       finalImageUrl = await applyLogoOverlay(finalImageUrl, context.logoUrl);
     }
 
-    const needsCaption = context.purchasedAddons.includes("caption");
-
     if (isQualityCheckEnabled()) {
       await supabase
         .from("generation_jobs")
@@ -479,8 +556,6 @@ export async function processOneQueuedJob(projectId: string) {
       }
     }
 
-    const caption = needsCaption ? await generateCaption(context, dayId) : null;
-
     const storedImageUrl = await persistGeneratedImage(
       finalImageUrl,
       projectId,
@@ -494,8 +569,8 @@ export async function processOneQueuedJob(projectId: string) {
         status: "ready",
         image_url: storedImageUrl,
         thumbnail_url: storedImageUrl,
-        caption_text: caption?.caption ?? null,
-        hashtags: caption?.hashtags ?? [],
+        caption_text: null,
+        hashtags: [],
         provider: image.provider,
         error_message: null,
         updated_at: nowIso(),
@@ -529,14 +604,8 @@ export async function processOneQueuedJob(projectId: string) {
   }
 
   const status = await getProjectStatusAdmin(projectId);
-  const hasMore =
-    (status?.queued ?? 0) > 0 ||
-    (status?.jobs?.some(
-      (j) => j.status === "failed" && (j.retry_count ?? 0) < MAX_JOB_RETRIES,
-    ) ??
-      false);
 
-  return { processed: true, status, shouldContinue: hasMore };
+  return { processed: true, status, shouldContinue: false };
 }
 
 export async function resumeAllStuckProjects() {

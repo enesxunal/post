@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { approvePostJob } from "@/lib/generation/story-service";
 import { requireSessionUser } from "@/lib/supabase/auth";
 
+export const maxDuration = 300;
+
 export async function POST(request: Request) {
   const user = await requireSessionUser("/login");
   const body = (await request.json()) as { jobId?: string };
