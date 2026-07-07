@@ -8,7 +8,7 @@ import {
   checkGeneratedImageQuality,
   shouldRetryQualityCheck,
 } from "@/lib/ai/quality-checker";
-import { MAX_JOB_RETRIES } from "@/lib/config";
+import { JOB_STUCK_MINUTES, MAX_JOB_RETRIES } from "@/lib/config";
 import { consumeRevisionCredit } from "@/lib/jobs";
 import { projectToBrandContext } from "@/lib/generation/project-service";
 import { resolveAspectRatio } from "@/lib/image-formats";
@@ -55,7 +55,7 @@ export async function findProjectIdByOrderId(userId: string, orderId: string) {
 
 export async function recoverStuckJobs(projectId: string) {
   const supabase = adminClient();
-  const cutoff = new Date(Date.now() - 8 * 60 * 1000).toISOString();
+  const cutoff = new Date(Date.now() - JOB_STUCK_MINUTES * 60 * 1000).toISOString();
 
   await supabase
     .from("generation_jobs")

@@ -5,7 +5,7 @@ import { scheduleQueueProcessing } from "@/lib/generation/schedule-queue";
 import { getProjectStatus } from "@/lib/generation/project-service";
 import { getSessionUser } from "@/lib/supabase/auth";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 async function authorizeQueue(request: Request, projectId: string) {
   const secret = process.env.CRON_SECRET ?? process.env.GENERATION_QUEUE_SECRET ?? "";

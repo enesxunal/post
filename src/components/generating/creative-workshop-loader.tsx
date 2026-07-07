@@ -66,10 +66,29 @@ function getFocusJobProgress(job: JobPreview | undefined) {
   if (job.status === "ready") return 100;
   if (job.status === "failed") return 8;
   if (job.status === "queued") return 28;
-  if (["composing_prompt", "generating_image", "generating_caption"].includes(job.status)) {
-    return 72;
+  if (job.status === "composing_prompt") return 42;
+  if (job.status === "generating_image") return 68;
+  if (job.status === "generating_caption") return 88;
+  return 55;
+}
+
+function getFocusJobStatusLabel(job: JobPreview | undefined) {
+  switch (job?.status) {
+    case "queued":
+      return "Sırada bekliyor";
+    case "composing_prompt":
+      return "Tasarım brief'i hazırlanıyor";
+    case "generating_image":
+      return "AI görsel üretiyor (30–90 sn sürebilir)";
+    case "generating_caption":
+      return "Son kontroller yapılıyor";
+    case "ready":
+      return "Görsel hazır";
+    case "failed":
+      return job.error_message ? `Üretim başarısız: ${job.error_message}` : "Üretim başarısız";
+    default:
+      return "Şu an üretiliyor";
   }
-  return 45;
 }
 
 export function CreativeWorkshopLoader({
@@ -85,8 +104,9 @@ export function CreativeWorkshopLoader({
   const [status, setStatus] = useState<GenerationStatus | null>(null);
   const [previewImages, setPreviewImages] = useState<Record<string, string>>({});
   const [stopping, setStopping] = useState(false);
+  const [showSlowHint, setShowSlowHint] = useState(false);
   const startedRef = useRef(false);
-  const queueStartedRef = useRef(false);
+  const pollTickRef = useRef(0);
 
   const focusJob = useMemo(
     () => status?.jobs?.find((job) => job.id === focusJobId),
@@ -124,9 +144,7 @@ export function CreativeWorkshopLoader({
     return data;
   }, []);
 
-  const kickQueueOnce = useCallback(async (projectId: string) => {
-    if (queueStartedRef.current) return;
-    queueStartedRef.current = true;
+  const kickQueue = useCallback(async (projectId: string) => {
     await fetch("/api/generation/process-queue", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -205,7 +223,7 @@ export function CreativeWorkshopLoader({
           const data = await pollStatus(initialProjectId);
           applyStatus(data);
           if (!data.done && !data.stopped) {
-            await kickQueueOnce(initialProjectId);
+            await kickQueue(initialProjectId);
           }
         } catch {
           setPhase("running");
@@ -244,12 +262,12 @@ export function CreativeWorkshopLoader({
       applyStatus(startData);
 
       if (!startData.done && !startData.stopped) {
-        await kickQueueOnce(startData.projectId);
+        await kickQueue(startData.projectId);
       }
     }
 
     void start();
-  }, [applyStatus, initialProjectId, isRegenerateMode, kickQueueOnce, orderId, pollStatus]);
+  }, [applyStatus, initialProjectId, isRegenerateMode, kickQueue, orderId, pollStatus]);
 
   useEffect(() => {
     if (!status?.jobs?.length) return;
@@ -281,14 +299,33 @@ export function CreativeWorkshopLoader({
 
     const timer = window.setInterval(async () => {
       try {
+        pollTickRef.current += 1;
+        if (pollTickRef.current > 6) setShowSlowHint(true);
         const next = await pollStatus(projectId);
         if (!active) return;
         applyStatus(next);
+
+        const workPending =
+          next.inProgress > 0 ||
+          next.queued > 0 ||
+          (isRegenerateMode &&
+            focusJobId &&
+            next.jobs?.find((job) => job.id === focusJobId)?.status === "queued");
+
+        if (workPending && !next.stopped) {
+          await kickQueue(projectId);
+        }
 
         if (isRegenerateMode && focusJobId) {
           const target = next.jobs?.find((job) => job.id === focusJobId);
           if (target?.status === "ready") {
             setPhase("done");
+          } else if (
+            target?.status === "failed" &&
+            next.inProgress === 0 &&
+            next.queued === 0
+          ) {
+            setPhase("failed");
           }
           return;
         }
@@ -311,6 +348,7 @@ export function CreativeWorkshopLoader({
     isRegenerateMode,
     phase,
     pollStatus,
+    kickQueue,
     status?.projectId,
   ]);
 
@@ -389,16 +427,15 @@ export function CreativeWorkshopLoader({
                 <p className="mt-3 text-xs text-emerald-200/80">
                   {isRegenerateMode ? (
                     <>
-                      {focusJob?.status === "ready"
-                        ? "Görsel hazır"
-                        : focusJob?.status === "failed"
-                          ? focusJob.error_message
-                            ? `Üretim başarısız: ${focusJob.error_message}`
-                            : "Üretim başarısız"
-                          : focusJob?.status === "queued"
-                            ? "Sırada bekliyor"
-                            : "Şu an üretiliyor"}
+                      {getFocusJobStatusLabel(focusJob)}
                       {status.brandName ? ` • ${status.brandName}` : ""}
+                      {showSlowHint &&
+                      focusJob &&
+                      !["ready", "failed", "queued"].includes(focusJob.status) ? (
+                        <span className="mt-1 block text-amber-200/90">
+                          Uzun sürüyorsa sayfayı yenileyin — üretim arka planda devam eder.
+                        </span>
+                      ) : null}
                     </>
                   ) : (
                     <>
