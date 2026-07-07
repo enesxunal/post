@@ -6,6 +6,7 @@ import { applyHeadlineOverlay, useHeadlineOverlayForProvider } from "@/lib/ai/he
 import { applyLogoOverlay } from "@/lib/ai/logo-pipeline";
 import {
   checkGeneratedImageQuality,
+  isQualityCheckEnabled,
   shouldRetryQualityCheck,
 } from "@/lib/ai/quality-checker";
 import { JOB_STUCK_MINUTES, MAX_JOB_RETRIES } from "@/lib/config";
@@ -424,58 +425,60 @@ export async function processOneQueuedJob(projectId: string) {
       finalImageUrl = await applyLogoOverlay(finalImageUrl, context.logoUrl);
     }
 
-    await supabase
-      .from("generation_jobs")
-      .update({ status: "generating_caption", updated_at: nowIso() })
-      .eq("id", nextJob.id);
+    const needsCaption = context.purchasedAddons.includes("caption");
 
-    const day = await getPromptLibraryEntry(dayId);
+    if (isQualityCheckEnabled()) {
+      await supabase
+        .from("generation_jobs")
+        .update({ status: "generating_caption", updated_at: nowIso() })
+        .eq("id", nextJob.id);
 
-    const quality = await checkGeneratedImageQuality({
-      imageUrl: finalImageUrl,
-      expectedHeadline: preview.headline,
-      brandName: context.brandName,
-      brandBrief: preview.brief,
-      dayName: day?.name,
-      dayCategory: day?.category,
-      culturalContext: day?.culturalContext,
-      logoComposited: Boolean(context.logoUrl),
-      headlineOverlay,
-    });
+      const day = await getPromptLibraryEntry(dayId);
 
-    if (shouldRetryQualityCheck(quality)) {
-      const nextRetry = (nextJob.retry_count ?? 0) + 1;
-      if (nextRetry >= MAX_JOB_RETRIES) {
-        await supabase
-          .from("generation_jobs")
-          .update({
-            status: "failed",
-            retry_count: nextRetry,
-            error_message: `Kalite kontrolü: ${quality.issues.join(", ") || "Görsel uygun değil"}`,
-            updated_at: nowIso(),
-          })
-          .eq("id", nextJob.id);
-      } else {
-        await supabase
-          .from("generation_jobs")
-          .update({
-            status: "queued",
-            retry_count: nextRetry,
-            image_url: null,
-            thumbnail_url: null,
-            error_message: `Kalite kontrolü yeniden denenecek: ${quality.issues.join(", ")}`,
-            updated_at: nowIso(),
-          })
-          .eq("id", nextJob.id);
+      const quality = await checkGeneratedImageQuality({
+        imageUrl: finalImageUrl,
+        expectedHeadline: preview.headline,
+        brandName: context.brandName,
+        brandBrief: preview.brief,
+        dayName: day?.name,
+        dayCategory: day?.category,
+        culturalContext: day?.culturalContext,
+        logoComposited: Boolean(context.logoUrl),
+        headlineOverlay,
+      });
+
+      if (shouldRetryQualityCheck(quality)) {
+        const nextRetry = (nextJob.retry_count ?? 0) + 1;
+        if (nextRetry >= MAX_JOB_RETRIES) {
+          await supabase
+            .from("generation_jobs")
+            .update({
+              status: "failed",
+              retry_count: nextRetry,
+              error_message: `Kalite kontrolü: ${quality.issues.join(", ") || "Görsel uygun değil"}`,
+              updated_at: nowIso(),
+            })
+            .eq("id", nextJob.id);
+        } else {
+          await supabase
+            .from("generation_jobs")
+            .update({
+              status: "queued",
+              retry_count: nextRetry,
+              image_url: null,
+              thumbnail_url: null,
+              error_message: `Kalite kontrolü yeniden denenecek: ${quality.issues.join(", ")}`,
+              updated_at: nowIso(),
+            })
+            .eq("id", nextJob.id);
+        }
+
+        const status = await getProjectStatusAdmin(projectId);
+        return { processed: true, qualityRejected: true, status, shouldContinue: true };
       }
-
-      const status = await getProjectStatusAdmin(projectId);
-      return { processed: true, qualityRejected: true, status, shouldContinue: true };
     }
 
-    const caption = context.purchasedAddons.includes("caption")
-      ? await generateCaption(context, dayId)
-      : null;
+    const caption = needsCaption ? await generateCaption(context, dayId) : null;
 
     await supabase
       .from("generation_jobs")

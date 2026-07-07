@@ -37,11 +37,15 @@ export const BRAND_COLORS = BRAND_COLOR_PALETTE.map((item) => item.hex);
 
 export const MAX_JOB_RETRIES = 1;
 export const JOB_STUCK_MINUTES = 3;
-export const GENERATION_POLL_MS = 10000;
+export const GENERATION_POLL_MS = 5000;
 
 /** true: sadece 1 görsel isteği + yerel prompt (marka brief ve vision QC kapalı) */
 export const LEAN_GENERATION_MODE =
   process.env.LEAN_GENERATION_MODE?.trim() !== "false";
+
+/** Gemini vision kalite kontrolü — varsayılan kapalı (hız için) */
+export const QUALITY_CHECK_ENABLED =
+  process.env.QUALITY_CHECK_ENABLED?.trim() === "true";
 
 export const GENERATING_MESSAGES = [
   "Markanız analiz ediliyor...",

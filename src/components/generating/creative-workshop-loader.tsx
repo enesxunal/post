@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { CheckCircle2, Loader2, Octagon } from "lucide-react";
+import { CheckCircle2, Download, Loader2, Octagon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,23 @@ function saveActiveProjectId(projectId: string) {
   } catch {
     // ignore
   }
+}
+
+function slugifyFilename(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9ğüşıöç]+/gi, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function downloadImage(url: string, filename: string) {
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
 }
 
 function getFocusJobProgress(job: JobPreview | undefined) {
@@ -152,6 +169,18 @@ export function CreativeWorkshopLoader({
     }).catch(() => undefined);
   }, []);
 
+  const loadJobPreview = useCallback(async (jobId: string) => {
+    const response = await fetch(`/api/generation/job-image?jobId=${jobId}`, {
+      cache: "no-store",
+    });
+    if (!response.ok) return;
+    const data = (await response.json()) as { imageUrl?: string };
+    if (!data.imageUrl) return;
+    setPreviewImages((current) =>
+      current[jobId] ? current : { ...current, [jobId]: data.imageUrl! },
+    );
+  }, []);
+
   const applyStatus = useCallback(
     (next: GenerationStatus) => {
       setStatus(next);
@@ -160,6 +189,7 @@ export function CreativeWorkshopLoader({
         const target = next.jobs?.find((job) => job.id === focusJobId);
         if (target?.status === "ready") {
           setPhase("done");
+          void loadJobPreview(focusJobId);
           return;
         }
         if (target?.status === "failed" && next.inProgress === 0 && next.queued === 0) {
@@ -184,7 +214,7 @@ export function CreativeWorkshopLoader({
       }
       setPhase("running");
     },
-    [focusJobId, isRegenerateMode],
+    [focusJobId, isRegenerateMode, loadJobPreview],
   );
 
   const stopGeneration = useCallback(async () => {
@@ -274,20 +304,9 @@ export function CreativeWorkshopLoader({
 
     for (const job of status.jobs) {
       if (job.status !== "ready" || previewImages[job.id]) continue;
-
-      void fetch(`/api/generation/job-image?jobId=${job.id}`, { cache: "no-store" })
-        .then(async (response) => {
-          if (!response.ok) return null;
-          return (await response.json()) as { imageUrl?: string };
-        })
-        .then((data) => {
-          if (!data?.imageUrl) return;
-          setPreviewImages((current) =>
-            current[job.id] ? current : { ...current, [job.id]: data.imageUrl! },
-          );
-        });
+      void loadJobPreview(job.id);
     }
-  }, [previewImages, status?.jobs]);
+  }, [loadJobPreview, previewImages, status?.jobs]);
 
   useEffect(() => {
     if (!status?.projectId || phase === "done" || phase === "stopped" || phase === "failed") {
@@ -306,7 +325,6 @@ export function CreativeWorkshopLoader({
         applyStatus(next);
 
         const workPending =
-          next.inProgress > 0 ||
           next.queued > 0 ||
           (isRegenerateMode &&
             focusJobId &&
@@ -320,6 +338,7 @@ export function CreativeWorkshopLoader({
           const target = next.jobs?.find((job) => job.id === focusJobId);
           if (target?.status === "ready") {
             setPhase("done");
+            void loadJobPreview(focusJobId);
           } else if (
             target?.status === "failed" &&
             next.inProgress === 0 &&
@@ -349,6 +368,7 @@ export function CreativeWorkshopLoader({
     phase,
     pollStatus,
     kickQueue,
+    loadJobPreview,
     status?.projectId,
   ]);
 
@@ -358,6 +378,11 @@ export function CreativeWorkshopLoader({
     }, 2200);
     return () => window.clearInterval(messageTimer);
   }, [messages.length]);
+
+  const focusPreviewUrl =
+    isRegenerateMode && focusJobId ? previewImages[focusJobId] : undefined;
+
+  const downloadUrl = focusPreviewUrl ?? readyJobs[0]?.url;
 
   const headline = isRegenerateMode
     ? `${resolvedDayName} görseli yeniden üretiliyor`
@@ -458,14 +483,35 @@ export function CreativeWorkshopLoader({
                       : "Üretim tamamlandı!"}
                   </p>
                 </div>
-                {isRegenerateMode && focusJobId && previewImages[focusJobId] ? (
+                <p className="mt-2 text-sm text-emerald-100/80">
+                  Görseli buradan önizleyip indirebilirsiniz. İsterseniz profile de dönebilirsiniz.
+                </p>
+                {focusPreviewUrl ? (
                   <div className="mt-4 overflow-hidden rounded-2xl border border-emerald-400/30">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={previewImages[focusJobId]}
+                      src={focusPreviewUrl}
                       alt={resolvedDayName}
                       className="aspect-square w-full object-cover"
                     />
+                  </div>
+                ) : isRegenerateMode && focusJobId ? (
+                  <div className="mt-4 flex items-center justify-center gap-2 rounded-2xl border border-emerald-400/20 bg-emerald-950/30 py-12 text-sm text-emerald-200">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Görsel yükleniyor...
+                  </div>
+                ) : null}
+                {!isRegenerateMode && readyJobs.length > 0 ? (
+                  <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {readyJobs.map((job) => (
+                      <div
+                        key={job.id}
+                        className="aspect-square overflow-hidden rounded-xl border border-emerald-400/20"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={job.url} alt="Hazır post" className="h-full w-full object-cover" />
+                      </div>
+                    ))}
                   </div>
                 ) : null}
               </div>
@@ -529,6 +575,21 @@ export function CreativeWorkshopLoader({
             ) : null}
 
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              {phase === "done" && downloadUrl ? (
+                <Button
+                  className="w-full bg-emerald-400 text-emerald-950 hover:bg-emerald-300 sm:w-auto"
+                  onClick={() =>
+                    downloadImage(
+                      downloadUrl,
+                      `${slugifyFilename(resolvedDayName) || "post"}-post.png`,
+                    )
+                  }
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Görseli indir
+                </Button>
+              ) : null}
+
               {status?.projectId && phase !== "done" && phase !== "stopped" && phase !== "failed" ? (
                 <Button
                   variant="outline"
@@ -548,9 +609,14 @@ export function CreativeWorkshopLoader({
               {status?.projectId ? (
                 <Link
                   href={`/projects/${status.projectId}`}
-                  className="inline-flex h-11 w-full items-center justify-center rounded-full bg-emerald-50 px-5 text-sm font-semibold text-emerald-700 sm:w-auto"
+                  className={cn(
+                    "inline-flex h-11 w-full items-center justify-center rounded-full px-5 text-sm font-semibold sm:w-auto",
+                    phase === "done"
+                      ? "border border-emerald-400/40 bg-transparent text-emerald-100 hover:bg-emerald-500/10"
+                      : "bg-emerald-50 text-emerald-700",
+                  )}
                 >
-                  Profilde gör
+                  {phase === "done" ? "Profile git" : "Profilde gör"}
                 </Link>
               ) : (
                 <Link
@@ -573,9 +639,7 @@ export function CreativeWorkshopLoader({
                 : (status?.ready ?? 0)
             }
             focusDayName={isRegenerateMode ? resolvedDayName : undefined}
-            focusImageUrl={
-              isRegenerateMode && focusJobId ? previewImages[focusJobId] : undefined
-            }
+            focusImageUrl={isRegenerateMode ? focusPreviewUrl : undefined}
           />
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { analyzeImageWithGemini } from "@/lib/ai/providers/gemini";
 import { isPlaceholderImageUrl } from "@/lib/ai/image-provider";
 import { isGeminiConfigured } from "@/lib/ai/gemini-config";
+import { QUALITY_CHECK_ENABLED } from "@/lib/config";
 import { buildOccasionCreativeGuide } from "@/lib/ai/occasion-creative-guide";
 import { isLeanGenerationMode } from "@/lib/generation/generation-mode";
 import type { CreativeBrief } from "@/lib/ai/creative-brief";
@@ -125,10 +126,18 @@ function buildFullCheckPrompt(input: QualityCheckContext) {
   ].join("\n");
 }
 
+export function isQualityCheckEnabled() {
+  return QUALITY_CHECK_ENABLED;
+}
+
 export async function checkGeneratedImageQuality(
   input: QualityCheckContext,
 ): Promise<QualityCheckResult> {
   const fallbackPass: QualityCheckResult = { passed: true, issues: [], severity: "low" };
+
+  if (!QUALITY_CHECK_ENABLED) {
+    return fallbackPass;
+  }
 
   if (isPlaceholderImageUrl(input.imageUrl)) {
     return {

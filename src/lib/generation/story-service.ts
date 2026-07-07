@@ -2,6 +2,7 @@ import { composeImagePrompt } from "@/lib/ai/prompt-composer";
 import { generateImage, regenerateImage } from "@/lib/ai/image-provider";
 import {
   checkGeneratedImageQuality,
+  isQualityCheckEnabled,
   shouldRetryQualityCheck,
 } from "@/lib/ai/quality-checker";
 import { buildFormatPromptLine, buildSafeZonePrompt, STORY_FORMAT } from "@/lib/image-formats";
@@ -111,19 +112,21 @@ export async function generateStoryForJob(jobId: string, userId: string) {
     aspectRatio: STORY_FORMAT.aspectRatio,
   });
 
-  const quality = await checkGeneratedImageQuality({
-    imageUrl: image.imageUrl,
-    expectedHeadline: preview.headline,
-    brandName: context.brandName,
-    brandBrief: preview.brief,
-  });
+  if (isQualityCheckEnabled()) {
+    const quality = await checkGeneratedImageQuality({
+      imageUrl: image.imageUrl,
+      expectedHeadline: preview.headline,
+      brandName: context.brandName,
+      brandBrief: preview.brief,
+    });
 
-  if (shouldRetryQualityCheck(quality)) {
-    await supabase
-      .from("generation_jobs")
-      .update({ story_status: "failed" })
-      .eq("id", jobId);
-    throw new Error(`Story kalite kontrolü başarısız: ${quality.issues.join(", ")}`);
+    if (shouldRetryQualityCheck(quality)) {
+      await supabase
+        .from("generation_jobs")
+        .update({ story_status: "failed" })
+        .eq("id", jobId);
+      throw new Error(`Story kalite kontrolü başarısız: ${quality.issues.join(", ")}`);
+    }
   }
 
   await supabase
