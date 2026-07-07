@@ -1,4 +1,6 @@
 import { buildOccasionCreativeGuide } from "@/lib/ai/occasion-creative-guide";
+import type { ArtDirection } from "@/lib/ai/art-direction";
+import { artDirectionToPromptSentence } from "@/lib/ai/art-direction";
 import type { LogoAnalysis } from "@/lib/ai/logo-analysis";
 import { sectorAvoidList } from "@/lib/sectors/build-sector-prompt";
 import { getSectorOptionsFromSeed } from "@/lib/sectors/seed-data";
@@ -47,6 +49,7 @@ export type CreativeBrief = {
     mustHave: string[];
     avoid: string[];
   };
+  artDirection?: ArtDirection;
 };
 
 export type CreativeBriefInput = {
@@ -66,6 +69,7 @@ export type CreativeBriefInput = {
   sectorRule?: SectorRule;
   styleRule?: StyleRule;
   backgroundOnly?: boolean;
+  artDirection?: ArtDirection;
 };
 
 function hashSeed(value: string): number {
@@ -179,20 +183,43 @@ function pickLayout(
   postFormat: PostFormat,
   backgroundOnly: boolean,
   hasLogo: boolean,
+  artDirection?: ArtDirection,
 ): string {
   const format =
     postFormat === "landscape-1350x1080"
       ? "1350x1080 landscape feed layout"
       : "1080x1080 square layout";
-  const styleLayout = styleRule
-    ? shorten(firstSentence(styleRule.compositionHints, 80), 80)
-    : "centered premium layout";
+  const styleLayout = artDirection
+    ? `${artDirection.layout.replace(/-/g, " ")}; text at ${artDirection.textPosition}`
+    : styleRule
+      ? shorten(firstSentence(styleRule.compositionHints, 80), 80)
+      : "centered premium layout";
   const cornerNote = hasLogo
     ? "Leave top-right corner completely empty — real logo is added after generation."
     : backgroundOnly
       ? "Leave the top 22% and top-right corner clean for headline and logo overlay."
       : "Strong readable Turkish headline with safe margins.";
   return `${format}; ${styleLayout}; ${cornerNote}`;
+}
+
+function buildTypographyLine(
+  headline: string,
+  backgroundOnly: boolean,
+  artDirection?: ArtDirection,
+): string {
+  if (backgroundOnly) {
+    return "No typography in image — headline added separately.";
+  }
+
+  if (artDirection) {
+    return (
+      `Render ONE perfectly spelled Turkish headline: "${headline}". ` +
+      `Place text at ${artDirection.textPosition} with ${artDirection.typographyMood.replace(/-/g, " ")} styling. ` +
+      "High contrast, mobile-readable."
+    );
+  }
+
+  return `Render ONE large, bold, perfectly spelled Turkish headline: "${headline}". High contrast, mobile-readable, top-center.`;
 }
 
 function buildLogoUsage(input: CreativeBriefInput): string {
@@ -304,11 +331,15 @@ export function buildCreativeBrief(input: CreativeBriefInput): CreativeBrief {
       designLanguage: pickDesignLanguage(input.styleRule),
     },
     composition: {
-      layout: pickLayout(input.styleRule, input.postFormat ?? "square", backgroundOnly, hasLogo),
+      layout: pickLayout(
+        input.styleRule,
+        input.postFormat ?? "square",
+        backgroundOnly,
+        hasLogo,
+        input.artDirection,
+      ),
       background: pickBackground(input.specialDay, input.styleRule, seed),
-      typography: backgroundOnly
-        ? "No typography in image — headline added separately."
-        : `Render ONE large, bold, perfectly spelled Turkish headline: "${headline}". High contrast, mobile-readable, top-center.`,
+      typography: buildTypographyLine(headline, backgroundOnly, input.artDirection),
       logoPlacement: input.logoUrl
         ? `Logo reserved for ${logoPlacement} overlay after generation.`
         : "No logo placement needed.",
@@ -331,6 +362,7 @@ export function buildCreativeBrief(input: CreativeBriefInput): CreativeBrief {
         hasLogo,
       ),
     },
+    ...(input.artDirection ? { artDirection: input.artDirection } : {}),
   };
 }
 
@@ -364,6 +396,8 @@ export function writeImagePrompt(brief: CreativeBrief, postFormat?: PostFormat):
     "",
     `Composition: ${brief.composition.layout} ${brief.composition.background}. ${brief.composition.typography}`,
     "",
+    brief.artDirection ? artDirectionToPromptSentence(brief.artDirection) : "",
+    brief.artDirection ? "" : "",
     backgroundOnly
       ? `${brief.text.strictTextRule} Leave clean space for headline and logo overlay.`
       : `On-image text: render ONLY "${brief.text.headline}" in perfect Turkish (ğ ü ş ı ö ç). Large, bold, readable headline — no other words, slogans, URLs or footer.`,

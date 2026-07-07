@@ -2,6 +2,12 @@ import type { OnboardingDraft } from "@/lib/onboarding/draft";
 import { analyzeLogo } from "@/lib/ai/logo-analysis";
 import type { LogoAnalysis } from "@/lib/ai/logo-analysis";
 import { expandSelectedDaysForJobs } from "@/lib/selected-days";
+import { getSpecialDayById } from "@/lib/special-days-data";
+import {
+  buildBrandProfile,
+  buildCollectionPlan,
+  type ArtDirection,
+} from "@/lib/ai/art-direction";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ensureUserProfile } from "@/lib/supabase/profiles";
@@ -117,6 +123,24 @@ export async function createProjectWithJobs(
   const expandedDays = expandSelectedDaysForJobs(draft.selectedDays);
   const logoAnalysis = draft.logoUrl ? await analyzeLogo(draft.logoUrl) : null;
 
+  const brandProfile = buildBrandProfile({
+    brandName: draft.brandName,
+    sector: draft.sector,
+    visualStyle: draft.visualStyle,
+    primaryColor: primaryColor,
+  });
+
+  const collectionDays = expandedDays.map((day) => {
+    const specialDay = getSpecialDayById(day.dayId);
+    return {
+      dayId: day.dayId,
+      category: specialDay?.category ?? ("popular" as const),
+      variantIndex: day.variantIndex,
+    };
+  });
+
+  const collectionPlan = buildCollectionPlan(brandProfile, collectionDays);
+
   const { data: project, error: projectError } = await supabase
     .from("projects")
     .insert({
@@ -141,12 +165,13 @@ export async function createProjectWithJobs(
     throw new Error(projectError?.message ?? "Proje oluşturulamadı");
   }
 
-  const jobsPayload = expandedDays.map((day) => ({
+  const jobsPayload = expandedDays.map((day, index) => ({
     project_id: project.id,
     user_id: userId,
     type: day.dayId,
     status: "draft" as const,
     provider: "gemini",
+    art_direction: collectionPlan[index] as ArtDirection,
   }));
 
   const { error: jobsError } = await supabase.from("generation_jobs").insert(jobsPayload);

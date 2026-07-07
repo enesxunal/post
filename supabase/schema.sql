@@ -151,6 +151,8 @@ create table if not exists generation_jobs (
   approved_at timestamptz,
   story_image_url text,
   story_status text,
+  art_direction jsonb,
+  design_metadata jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

@@ -1,4 +1,11 @@
 import { composeImagePrompt } from "@/lib/ai/prompt-composer";
+import {
+  artDirectionToMetadata,
+  assignArtDirectionForDay,
+  buildBrandProfile,
+  regenerateArtDirection,
+  type ArtDirection,
+} from "@/lib/ai/art-direction";
 import { getPromptLibraryEntry } from "@/lib/ai/prompt-library";
 import { generateImage, isPlaceholderImageUrl } from "@/lib/ai/image-provider";
 import { applyHeadlineOverlay, useHeadlineOverlayForProvider } from "@/lib/ai/headline-pipeline";
@@ -16,6 +23,8 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { scheduleQueueProcessing } from "@/lib/generation/schedule-queue";
 import { persistGeneratedImage } from "@/lib/storage/generated-images";
+import { getSpecialDayById } from "@/lib/special-days-data";
+import type { SpecialDayCategory } from "@/types/domain";
 
 type JobRow = {
   id: string;
@@ -24,7 +33,67 @@ type JobRow = {
   type: string;
   status: string;
   retry_count: number;
+  art_direction: unknown;
 };
+
+function parseArtDirection(raw: unknown): ArtDirection | null {
+  if (!raw || typeof raw !== "object") return null;
+  const candidate = raw as ArtDirection;
+  if (!candidate.layout || !candidate.textPosition) return null;
+  return candidate;
+}
+
+async function loadProjectArtMemory(projectId: string, excludeJobId?: string) {
+  const supabase = adminClient();
+  const { data } = await supabase
+    .from("generation_jobs")
+    .select("id, art_direction, design_metadata, created_at")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: true });
+
+  return (data ?? [])
+    .filter((row) => row.id !== excludeJobId)
+    .map((row) => parseArtDirection(row.art_direction) ?? parseArtDirection(row.design_metadata))
+    .filter((value): value is ArtDirection => Boolean(value));
+}
+
+async function ensureJobArtDirection(
+  job: JobRow,
+  project: {
+    brand_name: string;
+    sector: string;
+    visual_style: string;
+    primary_color: string;
+  },
+) {
+  const existing = parseArtDirection(job.art_direction);
+  if (existing) return existing;
+
+  const memory = await loadProjectArtMemory(job.project_id, job.id);
+  const day = getSpecialDayById(job.type);
+  const category = (day?.category ?? "popular") as SpecialDayCategory;
+  const brandProfile = buildBrandProfile({
+    brandName: project.brand_name,
+    sector: project.sector,
+    visualStyle: project.visual_style as import("@/types/domain").VisualStyle,
+    primaryColor: project.primary_color,
+  });
+
+  const artDirection = assignArtDirectionForDay(
+    { dayId: job.type, category },
+    memory.length,
+    memory,
+    brandProfile,
+  );
+
+  const supabase = adminClient();
+  await supabase
+    .from("generation_jobs")
+    .update({ art_direction: artDirection, updated_at: nowIso() })
+    .eq("id", job.id);
+
+  return artDirection;
+}
 
 function adminClient() {
   const client = createSupabaseAdminClient();
@@ -75,7 +144,7 @@ async function pickNextJob(projectId: string): Promise<JobRow | null> {
 
   const { data: queued } = await supabase
     .from("generation_jobs")
-    .select("id, project_id, user_id, type, status, retry_count")
+    .select("id, project_id, user_id, type, status, retry_count, art_direction")
     .eq("project_id", projectId)
     .eq("status", "queued")
     .order("created_at", { ascending: true })
@@ -86,7 +155,7 @@ async function pickNextJob(projectId: string): Promise<JobRow | null> {
 
   const { data: retryable } = await supabase
     .from("generation_jobs")
-    .select("id, project_id, user_id, type, status, retry_count")
+    .select("id, project_id, user_id, type, status, retry_count, art_direction")
     .eq("project_id", projectId)
     .eq("status", "failed")
     .lt("retry_count", MAX_JOB_RETRIES)
@@ -186,7 +255,7 @@ export async function regenerateGenerationJob(jobId: string, userId: string) {
 
   const { data: job } = await supabase
     .from("generation_jobs")
-    .select("id, project_id, user_id, status, image_url, approved_at")
+    .select("id, project_id, user_id, status, image_url, approved_at, type, art_direction")
     .eq("id", jobId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -208,7 +277,7 @@ export async function regenerateGenerationJob(jobId: string, userId: string) {
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, remaining_credits, bonus_credits_granted")
+    .select("id, remaining_credits, bonus_credits_granted, brand_name, sector, visual_style, primary_color")
     .eq("id", job.project_id)
     .eq("user_id", userId)
     .maybeSingle();
@@ -240,6 +309,21 @@ export async function regenerateGenerationJob(jobId: string, userId: string) {
   }
 
   const queueTime = new Date(0).toISOString();
+  const day = getSpecialDayById(job.type);
+  const category = (day?.category ?? "popular") as SpecialDayCategory;
+  const projectMemory = await loadProjectArtMemory(job.project_id, jobId);
+  const brandProfile = buildBrandProfile({
+    brandName: project.brand_name,
+    sector: project.sector,
+    visualStyle: project.visual_style as import("@/types/domain").VisualStyle,
+    primaryColor: project.primary_color,
+  });
+  const nextArtDirection = regenerateArtDirection(
+    parseArtDirection(job.art_direction),
+    projectMemory,
+    { dayId: job.type, category },
+    brandProfile,
+  );
 
   await supabase
     .from("projects")
@@ -263,6 +347,8 @@ export async function regenerateGenerationJob(jobId: string, userId: string) {
       approved_at: null,
       story_image_url: null,
       story_status: null,
+      art_direction: nextArtDirection,
+      design_metadata: null,
       created_at: queueTime,
       updated_at: nowIso(),
     })
@@ -476,11 +562,17 @@ export async function processOneQueuedJob(projectId: string) {
   const dayId = nextJob.type;
 
   try {
-    const preview = await composeImagePrompt(context, dayId);
+    const artDirection = await ensureJobArtDirection(nextJob, project);
+    const preview = await composeImagePrompt(context, dayId, { artDirection });
 
     await supabase
       .from("generation_jobs")
-      .update({ status: "generating_image", prompt: preview.prompt, updated_at: nowIso() })
+      .update({
+        status: "generating_image",
+        prompt: preview.prompt,
+        art_direction: artDirection,
+        updated_at: nowIso(),
+      })
       .eq("id", nextJob.id);
 
     const image = await generateImage(preview.prompt, [], {
@@ -573,6 +665,7 @@ export async function processOneQueuedJob(projectId: string) {
         hashtags: [],
         provider: image.provider,
         error_message: null,
+        design_metadata: artDirectionToMetadata(artDirection),
         updated_at: nowIso(),
       })
       .eq("id", nextJob.id);

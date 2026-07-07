@@ -9,9 +9,14 @@ import { isOpenAIConfigured, isOpenAITextFreeMode } from "@/lib/ai/openai-config
 import { getStyleRule } from "@/lib/styles/repository";
 import { getSectorRule } from "@/lib/sectors/repository";
 import type { BrandContext, PromptPreview } from "@/types/domain";
+import type { ArtDirection } from "@/lib/ai/art-direction";
 
 export type { CreativeBrief } from "@/lib/ai/creative-brief";
 export { pickHeadlineForBrand } from "@/lib/ai/creative-brief";
+
+export type ComposeImagePromptOptions = {
+  artDirection?: ArtDirection;
+};
 
 function usesTextFreeBackground(): boolean {
   if (process.env.HEADLINE_OVERLAY === "true") return true;
@@ -29,6 +34,7 @@ function usesTextFreeBackground(): boolean {
 export async function composeImagePrompt(
   context: BrandContext,
   dayId: string,
+  options?: ComposeImagePromptOptions,
 ): Promise<PromptPreview> {
   const day = await getPromptLibraryEntry(dayId);
   const sectorRule = await getSectorRule(context.sector);
@@ -67,6 +73,7 @@ export async function composeImagePrompt(
       sectorRule,
       styleRule,
       backgroundOnly,
+      artDirection: options?.artDirection,
     });
 
     return {
@@ -92,6 +99,7 @@ export async function composeImagePrompt(
     sectorRule,
     styleRule,
     backgroundOnly,
+    artDirection: options?.artDirection,
   });
 
   return {
