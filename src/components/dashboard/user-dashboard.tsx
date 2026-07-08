@@ -81,6 +81,12 @@ export type DashboardJob = {
   errorMessage?: string | null;
 };
 
+const addonLabels: Record<string, string> = {
+  caption: "Caption paketi",
+  story: "Story paketi",
+  calendar: "Takvim paketi",
+};
+
 type UserDashboardProps = {
   user: DashboardProfile;
   project: DashboardProject | null;
@@ -114,11 +120,16 @@ export function UserDashboard({
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [copiedCaption, setCopiedCaption] = useState(false);
+  const [revisionNote, setRevisionNote] = useState("");
 
   useEffect(() => {
     setJobs(initialJobs);
     setSelectedJobId((current) => current ?? initialJobs[0]?.id);
   }, [initialJobs]);
+
+  useEffect(() => {
+    setRevisionNote("");
+  }, [selectedJobId]);
 
   useEffect(() => {
     if (!liveGenerating || !project?.id) return;
@@ -267,7 +278,10 @@ export function UserDashboard({
       const response = await fetch("/api/generation/regenerate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId: selectedJob.id }),
+        body: JSON.stringify({
+          jobId: selectedJob.id,
+          reason: revisionNote.trim() || undefined,
+        }),
       });
       const data = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(data.error ?? "Yeniden üretilemedi");
@@ -341,6 +355,9 @@ export function UserDashboard({
                 <StatBox label="Üretim" value={String(profile.postsGenerating)} />
                 <StatBox label="Toplam" value={String(profile.postsTotal)} />
               </div>
+              <p className="mt-4 text-xs leading-5 text-slate-500">
+                Hesap bilgileri aşağıda özet olarak gösterilir. Düzenleme ekranı yakında eklenecek.
+              </p>
             </div>
           </Card>
 
@@ -392,9 +409,9 @@ export function UserDashboard({
                   </p>
                 </div>
                 {jobs.length > 0 ? (
-                  <Button variant="outline">
+                  <Button variant="outline" disabled>
                     <Download className="mr-2 h-4 w-4" />
-                    Tümünü ZIP indir
+                    Toplu indirme yakında
                   </Button>
                 ) : null}
               </div>
@@ -429,7 +446,7 @@ export function UserDashboard({
                           type="button"
                           onClick={() => setSelectedJobId(job.id)}
                           className={cn(
-                            "overflow-hidden rounded-[24px] border bg-white text-left transition hover:-translate-y-0.5",
+                            "group overflow-hidden rounded-[26px] border bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md",
                             job.status === "draft" && "border-dashed border-slate-200",
                             selectedJobId === job.id
                               ? "border-emerald-400 ring-2 ring-emerald-200"
@@ -457,6 +474,20 @@ export function UserDashboard({
                               <p className="text-xs text-white/80">{job.dateLabel}</p>
                             </div>
                           </div>
+                          <div className="flex items-center justify-between px-4 py-3">
+                            <p className="text-xs font-medium text-slate-500">
+                              {job.status === "ready"
+                                ? "Görsel hazır"
+                                : job.status === "draft"
+                                  ? "Henüz üretilmedi"
+                                  : job.status === "failed"
+                                    ? "Tekrar deneyin"
+                                    : "İşleniyor"}
+                            </p>
+                            <span className="text-xs text-emerald-700 transition group-hover:translate-x-0.5">
+                              İncele
+                            </span>
+                          </div>
                         </button>
                       );
                     })}
@@ -476,11 +507,24 @@ export function UserDashboard({
                           lazy={false}
                         />
                       </div>
-                      <div>
+                      <div className="space-y-2">
                         <h2 className="text-xl font-semibold text-slate-950">
                           {selectedJob.dayName}
                         </h2>
                         <p className="text-sm text-slate-500">{selectedJob.dateLabel}</p>
+                        <div className="flex flex-wrap gap-2">
+                          <Badge className={cn("border-0", statusMap[selectedJob.status as keyof typeof statusMap].className)}>
+                            {statusMap[selectedJob.status as keyof typeof statusMap].label}
+                          </Badge>
+                          <Badge className="border border-emerald-200 bg-white text-slate-700">
+                            Format: {getPostFormatLabel(postFormat)}
+                          </Badge>
+                          {selectedJob.approvedAt ? (
+                            <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">
+                              Onaylandı
+                            </Badge>
+                          ) : null}
+                        </div>
                       </div>
                       {selectedJob.status === "failed" && selectedJob.errorMessage ? (
                         <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
@@ -613,6 +657,24 @@ export function UserDashboard({
                           </Button>
                         ) : null}
                       </div>
+                      {canRevise ? (
+                        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4">
+                          <label className="block">
+                            <span className="text-sm font-medium text-slate-800">
+                              Revize notu
+                            </span>
+                            <span className="mt-1 block text-xs leading-5 text-slate-500">
+                              Ne değişmesini istediğinizi yazın. AI yeni üretimde bunu dikkate alır.
+                            </span>
+                            <textarea
+                              value={revisionNote}
+                              onChange={(event) => setRevisionNote(event.target.value)}
+                              placeholder="Örn: Başlık daha büyük olsun, arka plan daha premium ve mağaza hissi versin, altın tonları azalt."
+                              className="mt-3 min-h-[110px] w-full rounded-2xl border border-emerald-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
+                            />
+                          </label>
+                        </div>
+                      ) : null}
                       <Button variant="secondary" className="w-full">
                         <CalendarPlus2 className="mr-2 h-4 w-4" />
                         Takvime ekle
@@ -631,17 +693,32 @@ export function UserDashboard({
                 <h1 className="mt-2 text-2xl font-semibold text-slate-950">
                   Hesap ve marka bilgileri
                 </h1>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Buradaki bilgiler onboarding ve hesap verilerinizden gelir. Düzenleme alanları
+                  yakında eklenecek; şimdilik sadece temiz bir özet gösteriyoruz.
+                </p>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <InfoField
-                  label="Ad Soyad"
-                  value={`${profile.firstName} ${profile.lastName}`.trim()}
-                />
-                <InfoField label="E-posta" value={profile.email} />
-                <InfoField label="İşletme adı" value={profile.businessName} />
-                <InfoField label="Sektör" value={profile.sector} />
-                <InfoField label="Görsel stil" value={profile.visualStyle} />
-                <InfoField label="Üyelik" value={profile.memberSince} />
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="rounded-3xl border border-emerald-100 bg-white p-5">
+                  <p className="text-sm font-semibold text-slate-900">Hesap özeti</p>
+                  <div className="mt-4 grid gap-3">
+                    <InfoField
+                      label="Ad Soyad"
+                      value={`${profile.firstName} ${profile.lastName}`.trim()}
+                    />
+                    <InfoField label="E-posta" value={profile.email} />
+                    <InfoField label="Üyelik başlangıcı" value={profile.memberSince} />
+                  </div>
+                </div>
+                <div className="rounded-3xl border border-emerald-100 bg-white p-5">
+                  <p className="text-sm font-semibold text-slate-900">Marka özeti</p>
+                  <div className="mt-4 grid gap-3">
+                    <InfoField label="İşletme adı" value={profile.businessName} />
+                    <InfoField label="Sektör" value={profile.sector} />
+                    <InfoField label="Görsel stil" value={profile.visualStyle} />
+                    <InfoField label="Paket" value={profile.packageName} />
+                  </div>
+                </div>
               </div>
               <div className="flex items-center gap-3 rounded-2xl border border-emerald-100 p-4">
                 <span
@@ -674,7 +751,9 @@ export function UserDashboard({
                 <p className="text-sm font-medium text-slate-800">Ek paketler</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {profile.addons.length > 0 ? (
-                    profile.addons.map((addon) => <Badge key={addon}>{addon}</Badge>)
+                    profile.addons.map((addon) => (
+                      <Badge key={addon}>{addonLabels[addon] ?? addon}</Badge>
+                    ))
                   ) : (
                     <p className="text-sm text-slate-500">Henüz ek paket yok.</p>
                   )}
@@ -730,10 +809,11 @@ function NavItem({
 }
 
 function InfoField({ label, value }: { label: string; value: string }) {
+  const resolved = value?.trim() ? value : "Henüz belirtilmedi";
   return (
     <div className="rounded-2xl border border-emerald-100 bg-white px-4 py-3">
       <p className="text-xs text-slate-500">{label}</p>
-      <p className="mt-1 text-sm font-medium text-slate-900">{value}</p>
+      <p className="mt-1 text-sm font-medium text-slate-900">{resolved}</p>
     </div>
   );
 }

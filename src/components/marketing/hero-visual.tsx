@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 
-import { PostMockCard } from "@/components/marketing/post-mock-card";
+import { ShowcasePostImage } from "@/components/marketing/showcase-post-image";
 import { APP_NAME, BASE_PACKAGE_PRICE } from "@/lib/config";
 import { heroShowcase } from "@/lib/marketing-showcase";
 import { formatCurrency } from "@/lib/utils";
@@ -26,10 +26,11 @@ export function HeroVisual() {
           transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
           className="relative z-20 mx-auto w-[78%] shadow-2xl"
         >
-          <PostMockCard
+          <ShowcasePostImage
             post={main}
             size="lg"
             showBadge={`Tek ödeme ${formatCurrency(BASE_PACKAGE_PRICE)}`}
+            priority
           />
         </motion.div>
 
@@ -43,7 +44,7 @@ export function HeroVisual() {
           }}
           className="absolute -right-2 top-16 z-10 w-[38%] rotate-6"
         >
-          <PostMockCard post={second} size="sm" />
+          <ShowcasePostImage post={second} size="sm" />
         </motion.div>
 
         <motion.div
@@ -56,7 +57,7 @@ export function HeroVisual() {
           }}
           className="absolute -left-2 bottom-10 z-30 w-[36%] -rotate-6"
         >
-          <PostMockCard post={third} size="sm" />
+          <ShowcasePostImage post={third} size="sm" />
         </motion.div>
       </motion.div>
 

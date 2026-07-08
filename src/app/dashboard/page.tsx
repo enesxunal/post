@@ -3,6 +3,8 @@ import { UserDashboard } from "@/components/dashboard/user-dashboard";
 import { decodeProjectMeta } from "@/lib/generation/project-service";
 import { mapGenerationJobsForDashboard } from "@/lib/generation/map-jobs";
 import { findProjectIdByOrderId } from "@/lib/generation/queue-processor";
+import { getSectorOptionsFromSeed } from "@/lib/sectors/seed-data";
+import { resolveStyleName } from "@/lib/styles/seed-data";
 import { requireSessionUser } from "@/lib/supabase/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -10,6 +12,7 @@ type ProjectRow = {
   id: string;
   brand_name: string;
   brand_description: string | null;
+  sector: string;
   primary_color: string;
   visual_style: string;
   remaining_credits: number;
@@ -40,6 +43,7 @@ export default async function DashboardPage() {
       id,
       brand_name,
       brand_description,
+      sector,
       primary_color,
       visual_style,
       remaining_credits,
@@ -80,6 +84,12 @@ export default async function DashboardPage() {
     : new Date().toLocaleDateString("tr-TR", { month: "long", year: "numeric" });
 
   const postsGenerating = jobs.filter((job) => job.status === "generating").length;
+  const sectorLabel =
+    meta?.customSector ??
+    (project
+      ? getSectorOptionsFromSeed().find((item) => item.key === project.sector)?.label ?? "—"
+      : "—");
+  const styleLabel = project?.visual_style ? resolveStyleName(project.visual_style) : "—";
 
   let paidOrderNeedsSetup = false;
   if (!project) {
@@ -109,8 +119,8 @@ export default async function DashboardPage() {
         lastName: user.lastName,
         email: user.email,
         businessName: project?.brand_name ?? "Henüz proje yok",
-        sector: "—",
-        visualStyle: project?.visual_style ?? "—",
+        sector: sectorLabel,
+        visualStyle: styleLabel,
         primaryColor: project?.primary_color ?? "#16A34A",
         logoInitial: (project?.brand_name ?? user.firstName).charAt(0).toUpperCase(),
         packageName: "Ana Paket",

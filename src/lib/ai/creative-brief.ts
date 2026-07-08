@@ -50,6 +50,7 @@ export type CreativeBrief = {
     mustHave: string[];
     avoid: string[];
   };
+  userDirection?: string;
   artDirection?: ArtDirection;
 };
 
@@ -335,6 +336,11 @@ function brandDescriptionSnippet(description?: string): string | undefined {
   return shorten(firstSentence(description, 100), 100);
 }
 
+function normalizeUserDirection(userNote?: string): string | undefined {
+  if (!userNote?.trim()) return undefined;
+  return shorten(userNote.trim(), 220);
+}
+
 export function buildCreativeBrief(input: CreativeBriefInput): CreativeBrief {
   const seed = `${input.brandName}:${input.specialDay.id}:${input.sector}:${input.selectedStyle}:${input.brandColor}`;
   const sectorLabel = resolveSectorLabel(input);
@@ -354,6 +360,7 @@ export function buildCreativeBrief(input: CreativeBriefInput): CreativeBrief {
   const backgroundOnly = input.backgroundOnly ?? false;
   const hasLogo = Boolean(input.logoUrl);
   const logoUsage = buildLogoUsage(input);
+  const userDirection = normalizeUserDirection(input.userNote);
 
   return {
     occasion: {
@@ -408,6 +415,7 @@ export function buildCreativeBrief(input: CreativeBriefInput): CreativeBrief {
         hasLogo,
       ),
     },
+    ...(userDirection ? { userDirection } : {}),
     ...(input.artDirection ? { artDirection: input.artDirection } : {}),
   };
 }
@@ -443,6 +451,8 @@ export function writeImagePrompt(brief: CreativeBrief, postFormat?: PostFormat):
     `SECTOR IDENTITY: Design must feel specific to a ${brief.brand.sector} business — ${brief.brand.sectorCue}.`,
     `The customer should think "this is MY store/brand's post" — not a generic holiday image.`,
     "",
+    brief.userDirection ? `REVISION NOTE FROM USER: ${brief.userDirection}` : "",
+    brief.userDirection ? "" : "",
     `STYLE: ${brief.style.name} — ${brief.style.designLanguage}.`,
     `Brand color ${brief.brand.color} integrated into the design. ${colorRule}`,
     "",

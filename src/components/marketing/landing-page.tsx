@@ -20,7 +20,7 @@ import {
 
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { HeroVisual } from "@/components/marketing/hero-visual";
-import { PostMockCard } from "@/components/marketing/post-mock-card";
+import { ShowcasePostImage } from "@/components/marketing/showcase-post-image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
@@ -207,11 +207,12 @@ export function LandingPage() {
           <div className="mt-10 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
             {heroShowcase.map((post) => (
               <div
-                key={post.day}
+                key={post.id}
                 className="transition duration-300 hover:-translate-y-1 hover:scale-[1.02]"
               >
-                <PostMockCard post={post} size="md" />
-                <p className="mt-3 text-center text-xs text-slate-500">{post.day}</p>
+                <ShowcasePostImage post={post} size="md" />
+                <p className="mt-3 text-center text-xs font-medium text-slate-300">{post.day}</p>
+                <p className="text-center text-[10px] text-slate-500">{post.sector}</p>
               </div>
             ))}
           </div>
@@ -318,24 +319,80 @@ export function LandingPage() {
             <div className="relative hidden items-center justify-center bg-emerald-700/40 p-8 lg:flex">
               <div className="grid w-full max-w-xs grid-cols-2 gap-3">
                 {heroShowcase.slice(0, 4).map((post) => (
-                  <PostMockCard key={post.day} post={post} size="sm" />
+                  <ShowcasePostImage key={post.id} post={post} size="sm" />
                 ))}
               </div>
             </div>
           </div>
         </Card>
 
-        <footer className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-emerald-100 pt-8 text-sm text-slate-500 sm:flex-row">
-          <p>
-            © {new Date().getFullYear()} {APP_NAME}. Tüm hakları saklıdır. · {APP_DOMAIN}
-          </p>
-          <div className="flex gap-6">
-            <Link href="/onboarding" className="hover:text-emerald-700">
-              Paketi Başlat
-            </Link>
-            <Link href="/login" className="hover:text-emerald-700">
-              Giriş
-            </Link>
+        <section className="mt-12">
+          <SectionTitle
+            eyebrow="S.S.S."
+            title="En çok sorulan sorular"
+            description="Satın alma, üretim ve kullanım akışıyla ilgili kısa cevaplar."
+          />
+          <div className="mt-8 grid gap-4 md:grid-cols-2">
+            {[
+              [
+                "Bu sistem abonelik mi?",
+                "Hayır. Ana paket tek seferlik satın alınır. Abonelik veya aylık zorunlu ödeme yoktur.",
+              ],
+              [
+                "Görseller hemen mi oluşuyor?",
+                "Ödeme sonrası panelinizde boş kartlar açılır. Her kartı tek tek üretir, beğenmezseniz revize notu yazarak tekrar oluşturabilirsiniz.",
+              ],
+              [
+                "Logoyu kendim yerleştiriyor muyum?",
+                "Hayır. Logo otomatik olarak en uygun alana eklenir. Böylece görsel daha profesyonel görünür.",
+              ],
+              [
+                "Caption ve story nasıl çalışıyor?",
+                "Ek paket seçtiyseniz post onayından sonra caption ve story de otomatik hazırlanır.",
+              ],
+            ].map(([question, answer]) => (
+              <Card key={question} className="rounded-3xl border-emerald-100 p-5">
+                <p className="text-base font-semibold text-slate-950">{question}</p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{answer}</p>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        <footer className="mt-12 rounded-[28px] border border-emerald-100 bg-white/80 px-6 py-8 shadow-sm">
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-md">
+              <BrandLogo />
+              <p className="mt-4 text-sm leading-6 text-slate-600">
+                KOBİ'ler için özel gün postlarını tek akışta hazırlayan, logo ve marka diline
+                uyumlu sosyal medya tasarım platformu.
+              </p>
+              <p className="mt-3 text-sm text-slate-500">{APP_DOMAIN}</p>
+            </div>
+            <div className="grid gap-8 sm:grid-cols-2">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Hızlı Erişim</p>
+                <div className="mt-3 flex flex-col gap-2 text-sm text-slate-600">
+                  <Link href="/onboarding" className="hover:text-emerald-700">
+                    Paketi Başlat
+                  </Link>
+                  <Link href="/login" className="hover:text-emerald-700">
+                    Giriş Yap
+                  </Link>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Ürün</p>
+                <div className="mt-3 flex flex-col gap-2 text-sm text-slate-600">
+                  <span>30 özel gün postu</span>
+                  <span>Revizyon kredileri</span>
+                  <span>Caption ve story eklentileri</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="mt-8 border-t border-emerald-100 pt-4 text-sm text-slate-500">
+            © {new Date().getFullYear()} {APP_NAME}. Tüm hakları saklıdır.
           </div>
         </footer>
       </section>
@@ -374,9 +431,11 @@ function PanelPreview() {
       <div className="grid grid-cols-3 gap-2">
         {heroShowcase.slice(0, 6).map((post, i) => (
           <div
-            key={post.day}
-            className={`aspect-square rounded-lg bg-gradient-to-br ${post.gradient} ${i === 0 ? "ring-2 ring-emerald-500 ring-offset-1" : ""}`}
-          />
+            key={post.id}
+            className={i === 0 ? "rounded-lg ring-2 ring-emerald-500 ring-offset-1" : "rounded-lg"}
+          >
+            <ShowcasePostImage post={post} size="sm" />
+          </div>
         ))}
       </div>
       <div className="mt-3 space-y-2">

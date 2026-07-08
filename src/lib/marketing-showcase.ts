@@ -1,39 +1,54 @@
-/** Anasayfa vitrin verisi — fotoğraf yok, renk ve metin odaklı. */
+/** Anasayfa vitrin — gradient placeholder veya public/marketing/ altındaki gerçek görsel */
 export const heroShowcase = [
   {
+    id: "29-ekim",
     day: "29 Ekim",
     subtitle: "Cumhuriyet Bayramımız kutlu olsun",
     accent: "#DC2626",
     gradient: "from-rose-600 via-red-700 to-rose-950",
     pattern: "stars" as const,
+    imageSrc: "/marketing/showcase-29-ekim.png",
+    sector: "poust marka postu",
   },
   {
+    id: "ramazan-bayrami",
     day: "Ramazan Bayramı",
     subtitle: "Bayramınız mübarek olsun",
-    accent: "#16A34A",
+    accent: "#38C661",
     gradient: "from-emerald-500 via-green-600 to-emerald-900",
     pattern: "crescent" as const,
+    imageSrc: "/marketing/showcase-ramazan-bayrami.png",
+    sector: "poust marka postu",
   },
   {
+    id: "anneler-gunu",
     day: "Anneler Günü",
     subtitle: "Sevgiyle kutlarız",
     accent: "#DB2777",
     gradient: "from-pink-400 via-rose-500 to-fuchsia-800",
     pattern: "hearts" as const,
+    imageSrc: "/marketing/showcase-anneler-gunu.png",
+    sector: "poust marka postu",
   },
   {
+    id: "hayirli-cumalar",
     day: "Hayırlı Cumalar",
     subtitle: "Huzurlu ve saygılı ton",
     accent: "#0F766E",
     gradient: "from-teal-500 via-emerald-600 to-teal-950",
     pattern: "lines" as const,
+    imageSrc: "/marketing/showcase-hayirli-cumalar.png",
+    sector: "poust marka postu",
   },
   {
+    id: "kandil",
     day: "Kandil",
     subtitle: "Kandiliniz mübarek olsun",
     accent: "#7C3AED",
     gradient: "from-violet-500 via-purple-600 to-indigo-950",
     pattern: "glow" as const,
+    imageSrc: "/marketing/showcase-kandil.png",
+    sector: "poust marka postu",
   },
 ] as const;
 

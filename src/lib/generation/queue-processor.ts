@@ -36,6 +36,7 @@ type JobRow = {
   status: string;
   retry_count: number;
   art_direction: unknown;
+  design_metadata?: unknown;
 };
 
 function parseArtDirection(raw: unknown): ArtDirection | null {
@@ -43,6 +44,14 @@ function parseArtDirection(raw: unknown): ArtDirection | null {
   const candidate = raw as ArtDirection;
   if (!candidate.layout || !candidate.textPosition) return null;
   return candidate;
+}
+
+function parseRevisionNote(raw: unknown): string | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const candidate = raw as { revisionNote?: unknown };
+  return typeof candidate.revisionNote === "string" && candidate.revisionNote.trim()
+    ? candidate.revisionNote.trim()
+    : undefined;
 }
 
 async function loadProjectArtMemory(projectId: string, excludeJobId?: string) {
@@ -146,7 +155,7 @@ async function pickNextJob(projectId: string): Promise<JobRow | null> {
 
   const { data: queued } = await supabase
     .from("generation_jobs")
-    .select("id, project_id, user_id, type, status, retry_count, art_direction")
+    .select("id, project_id, user_id, type, status, retry_count, art_direction, design_metadata")
     .eq("project_id", projectId)
     .eq("status", "queued")
     .order("created_at", { ascending: true })
@@ -157,7 +166,7 @@ async function pickNextJob(projectId: string): Promise<JobRow | null> {
 
   const { data: retryable } = await supabase
     .from("generation_jobs")
-    .select("id, project_id, user_id, type, status, retry_count, art_direction")
+    .select("id, project_id, user_id, type, status, retry_count, art_direction, design_metadata")
     .eq("project_id", projectId)
     .eq("status", "failed")
     .lt("retry_count", MAX_JOB_RETRIES)
@@ -252,7 +261,7 @@ export async function getProjectStatusAdmin(projectId: string) {
   };
 }
 
-export async function regenerateGenerationJob(jobId: string, userId: string) {
+export async function regenerateGenerationJob(jobId: string, userId: string, reason?: string) {
   const supabase = adminClient();
 
   const { data: job } = await supabase
@@ -335,6 +344,7 @@ export async function regenerateGenerationJob(jobId: string, userId: string) {
       dayId: job.type,
       sector: project.sector,
       style: project.visual_style,
+      reason,
       previousArtDirection: job.art_direction ?? null,
       previousPromptVersionRefs: job.prompt_version_refs ?? null,
     });
@@ -365,7 +375,7 @@ export async function regenerateGenerationJob(jobId: string, userId: string) {
       story_image_url: null,
       story_status: null,
       art_direction: nextArtDirection,
-      design_metadata: null,
+      design_metadata: reason?.trim() ? { revisionNote: reason.trim() } : null,
       created_at: queueTime,
       updated_at: nowIso(),
     })
@@ -580,12 +590,16 @@ export async function processOneQueuedJob(projectId: string) {
 
   try {
     const artDirection = await ensureJobArtDirection(nextJob, project);
+    const revisionNote = parseRevisionNote(nextJob.design_metadata);
     const promptVersionRefs = await resolvePromptVersionRefs({
       dayId,
       sector: project.sector,
       style: project.visual_style,
     });
-    const preview = await composeImagePrompt(context, dayId, { artDirection });
+    const preview = await composeImagePrompt(context, dayId, {
+      artDirection,
+      userNote: revisionNote,
+    });
 
     await supabase
       .from("generation_jobs")
