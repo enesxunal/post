@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 
 import { calculatePackageTotal } from "@/lib/checkout/calculate-total";
+import { getAppUrl } from "@/lib/config";
 import { createToslaOrder } from "@/lib/orders/service";
 import { createPaymentSession } from "@/lib/payments/tosla";
 import { getToslaEnvironment, isToslaConfigured } from "@/lib/payments/tosla-config";
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
   const draft = body.draft;
   const addons = body.addons?.length ? body.addons : (draft?.purchasedAddons ?? []);
   const amount = calculatePackageTotal(addons);
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = getAppUrl();
 
   const internalOrder = await createToslaOrder(
     {

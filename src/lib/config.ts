@@ -1,6 +1,18 @@
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "poust";
 export const APP_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN ?? "poust.app";
-export const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://poust.app";
+/** Kanonik canlı adres — SEO, sitemap, ödeme callback */
+export const CANONICAL_APP_URL = "https://www.poust.app";
+export const CANONICAL_HOST = "www.poust.app";
+export const APEX_HOST = "poust.app";
+
+export function getAppUrl(): string {
+  const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (fromEnv) return fromEnv.replace(/\/$/, "");
+  if (process.env.NODE_ENV === "production") return CANONICAL_APP_URL;
+  return "http://localhost:3000";
+}
+
+export const APP_URL = getAppUrl();
 
 /** Logo gradyanı — poust marka rengi */
 export const BRAND_GRADIENT = {

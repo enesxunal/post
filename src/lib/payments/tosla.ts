@@ -5,6 +5,7 @@ import {
   TOSLA_CURRENCY_TRY,
 } from "@/lib/payments/tosla-config";
 import { buildToslaAuthFields, verifyToslaCallbackHash } from "@/lib/payments/tosla-hash";
+import { getAppUrl } from "@/lib/config";
 
 export interface PaymentSessionInput {
   orderId: string;
@@ -51,7 +52,7 @@ export async function createPaymentSession(input: PaymentSessionInput) {
   const baseUrl = getToslaBaseUrl();
   const callbackUrl =
     process.env.TOSLA_CALLBACK_URL?.trim() ??
-    `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/payments/tosla/callback`;
+    `${getAppUrl()}/api/payments/tosla/callback`;
 
   const body = {
     ...buildToslaAuthFields(),

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { markOrderPaid } from "@/lib/orders/service";
+import { getAppUrl } from "@/lib/config";
 import {
   getToslaEnvironment,
   isToslaConfigured,
@@ -12,7 +13,7 @@ import {
   verifyPaymentCallback,
 } from "@/lib/payments/tosla";
 
-const appUrl = () => process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const appUrl = () => getAppUrl();
 
 export async function POST(request: Request) {
   const contentType = request.headers.get("content-type") ?? "";

@@ -410,7 +410,7 @@ export function LandingPage() {
                 KOBİ'ler için özel gün postlarını tek akışta hazırlayan, logo ve marka diline
                 uyumlu sosyal medya tasarım platformu.
               </p>
-              <p className="mt-3 text-sm text-slate-500">{APP_DOMAIN}</p>
+              <p className="mt-3 text-sm text-slate-500">www.{APP_DOMAIN}</p>
             </div>
             <div className="grid gap-8 sm:grid-cols-2">
               <div>

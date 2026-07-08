@@ -27,6 +27,16 @@ const nextConfig: NextConfig = {
       resolvedAnonKey,
     NEXT_PUBLIC_SUPABASE_PROJECT_ID: projectId,
   },
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "poust.app" }],
+        destination: "https://www.poust.app/:path*",
+        permanent: true,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

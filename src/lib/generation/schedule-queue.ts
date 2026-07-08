@@ -1,11 +1,9 @@
+import { getAppUrl } from "@/lib/config";
+
 const QUEUE_PATH = "/api/generation/process-queue";
 
 function getQueueSecret() {
   return process.env.CRON_SECRET ?? process.env.GENERATION_QUEUE_SECRET ?? "";
-}
-
-function getAppUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 }
 
 export async function triggerQueueProcessing(projectId: string) {
