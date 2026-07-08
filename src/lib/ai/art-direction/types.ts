@@ -60,6 +60,59 @@ export const COLOR_BALANCES = [
 
 export type ColorBalance = (typeof COLOR_BALANCES)[number];
 
+export const SECTOR_LAYER_INTENSITIES = ["subtle", "balanced", "hero"] as const;
+
+export type SectorLayerIntensity = (typeof SECTOR_LAYER_INTENSITIES)[number];
+
+export const SECTOR_INTEGRATION_STYLES = [
+  "foreground-object",
+  "background-atmosphere",
+  "layered-scene",
+  "editorial-product-scene",
+  "minimal-symbolic",
+  "lifestyle-environment",
+  "abstract-brand-scene",
+] as const;
+
+export type SectorIntegrationStyle = (typeof SECTOR_INTEGRATION_STYLES)[number];
+
+export type SectorLayer = {
+  enabled: boolean;
+  intensity: SectorLayerIntensity;
+  elements: string[];
+  integrationStyle: SectorIntegrationStyle;
+};
+
+export const LOGO_PLACEMENTS = [
+  "top-left",
+  "top-right",
+  "bottom-left",
+  "bottom-right",
+  "bottom-center",
+] as const;
+
+export type LogoPlacement = (typeof LOGO_PLACEMENTS)[number];
+
+export const LOGO_TREATMENTS = [
+  "natural-corner",
+  "badge",
+  "card",
+  "glass-surface",
+  "minimal-mark",
+] as const;
+
+export type LogoTreatment = (typeof LOGO_TREATMENTS)[number];
+
+export const BRAND_COLOR_USAGES = ["accent", "balanced", "dominant"] as const;
+
+export type BrandColorUsage = (typeof BRAND_COLOR_USAGES)[number];
+
+export type BrandIntegration = {
+  logoPlacement: LogoPlacement;
+  logoTreatment: LogoTreatment;
+  colorUsage: BrandColorUsage;
+};
+
 export type ArtDirection = {
   layout: LayoutVariant;
   textPosition: TextPosition;
@@ -68,6 +121,8 @@ export type ArtDirection = {
   density: DensityLevel;
   motifStrategy: string;
   colorBalance: ColorBalance;
+  sectorLayer: SectorLayer;
+  brandIntegration: BrandIntegration;
   antiRepeatNote?: string;
 };
 
@@ -79,6 +134,8 @@ export type GeneratedDesignMetadata = {
   density: string;
   motifStrategy: string;
   colorBalance: string;
+  sectorLayer?: SectorLayer;
+  brandIntegration?: BrandIntegration;
 };
 
 export type BrandCreativeProfile = {
@@ -86,6 +143,9 @@ export type BrandCreativeProfile = {
   sector: string;
   visualStyle: VisualStyle;
   primaryColor: string;
+  /** Sektör native element havuzu (koleksiyon çeşitliliği için) */
+  sectorElements?: string[];
+  sectorNativeScene?: string;
 };
 
 export type CollectionDayInput = {

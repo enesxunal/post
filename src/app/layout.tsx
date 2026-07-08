@@ -17,22 +17,51 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
   title: {
-    default: `${APP_NAME} | KOBİ özel gün postları`,
+    default: `${APP_NAME} | KOBİ özel gün Instagram postları`,
     template: `%s | ${APP_NAME}`,
   },
   description:
-    "Küçük ve orta ölçekli işletmeler için özel gün sosyal medya postlarını otomatik hazırlayan platform.",
+    "Cuma mesajları, bayram postları, 30 Ağustos ve Cumhuriyet Bayramı görselleri: KOBİ'ler için markaya özel özel gün Instagram postlarını otomatik hazırlayan platform.",
   applicationName: APP_NAME,
+  keywords: [
+    "özel gün postu",
+    "cuma mesajları",
+    "30 ağustos özel postlar",
+    "bayram postu",
+    "instagram işletme postu",
+    "kobi sosyal medya",
+    "ramazan bayramı mesajı",
+    APP_NAME,
+  ],
+  authors: [{ name: APP_NAME, url: APP_URL }],
+  creator: APP_NAME,
+  publisher: APP_NAME,
   icons: {
     icon: "/poust-favicon.png",
     apple: "/poust-favicon.png",
   },
+  alternates: {
+    canonical: APP_URL,
+  },
   openGraph: {
-    title: APP_NAME,
+    title: `${APP_NAME} | KOBİ özel gün Instagram postları`,
+    description:
+      "Marka logonuz ve renklerinizle özel gün sosyal medya postlarını dakikalar içinde üretin.",
     siteName: APP_NAME,
     url: APP_URL,
     locale: "tr_TR",
     type: "website",
+    images: [{ url: "/poust-logo.png", alt: APP_NAME }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${APP_NAME} | KOBİ özel gün postları`,
+    description: "Cuma, bayram ve milli gün Instagram postlarını markanıza özel üretin.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
   },
 };
 

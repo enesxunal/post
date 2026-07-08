@@ -7,6 +7,7 @@ import {
   buildBrandProfile,
 } from "@/lib/ai/art-direction/collection-planner";
 import { getCategoryLayouts } from "@/lib/ai/art-direction/layouts";
+import { buildSectorLayer } from "@/lib/ai/art-direction/sector-layer";
 import type {
   ArtDirection,
   BrandCreativeProfile,
@@ -47,14 +48,29 @@ export function regenerateArtDirection(
 
   if (!previous) return next;
 
+  // Always force a fresh sector element set on regenerate so results don't collapse
+  // back into the same greeting-card + sector prop combo.
+  const forcedSectorLayer = buildSectorLayer(
+    brandProfile,
+    day.category,
+    index + 17,
+    [previous, ...projectMemory],
+    `${day.dayId}:regen`,
+  );
+
+  next = {
+    ...next,
+    sectorLayer: forcedSectorLayer,
+    antiRepeatNote:
+      "Regenerate: keep the same special day and brand, but change composition and sector-native elements. Avoid a generic greeting-card layout.",
+  };
+
   if (hasMinimumDifference(previous, next)) return next;
 
   const alternateLayout = pickAlternateLayout(previous.layout, day.category, projectMemory);
   next = {
     ...next,
     layout: alternateLayout,
-    antiRepeatNote:
-      "Different from the previous version of this post; avoid repeating the same composition.",
   };
 
   if (!hasMinimumDifference(previous, next)) {

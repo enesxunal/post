@@ -1,8 +1,10 @@
 import type {
   ArtDirection,
+  BrandIntegration,
   ColorBalance,
   DensityLevel,
   LayoutVariant,
+  SectorLayer,
   TextPosition,
   TypographyMood,
   VisualFocus,
@@ -60,6 +62,14 @@ const COLOR_BALANCE_LABELS: Record<ColorBalance, string> = {
   balanced: "Dengeli",
 };
 
+function formatSectorLayer(layer: SectorLayer) {
+  return `${layer.intensity} · ${layer.integrationStyle} · ${layer.elements.join(", ")}`;
+}
+
+function formatBrandIntegration(integration: BrandIntegration) {
+  return `${integration.logoPlacement} · ${integration.logoTreatment} · renk: ${integration.colorUsage}`;
+}
+
 export function formatArtDirectionForDisplay(direction: ArtDirection) {
   return [
     { key: "layout", label: "Düzen", value: LAYOUT_LABELS[direction.layout] ?? direction.layout },
@@ -93,6 +103,24 @@ export function formatArtDirectionForDisplay(direction: ArtDirection) {
       label: "Renk dengesi",
       value: COLOR_BALANCE_LABELS[direction.colorBalance] ?? direction.colorBalance,
     },
+    ...(direction.sectorLayer
+      ? [
+          {
+            key: "sectorLayer",
+            label: "Sektör katmanı",
+            value: formatSectorLayer(direction.sectorLayer),
+          },
+        ]
+      : []),
+    ...(direction.brandIntegration
+      ? [
+          {
+            key: "brandIntegration",
+            label: "Marka yerleşimi",
+            value: formatBrandIntegration(direction.brandIntegration),
+          },
+        ]
+      : []),
     ...(direction.antiRepeatNote
       ? [{ key: "antiRepeatNote", label: "Çeşitlilik notu", value: direction.antiRepeatNote }]
       : []),

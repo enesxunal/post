@@ -1,4 +1,6 @@
-import type { LayoutVariant, TypographyMood } from "@/lib/ai/art-direction/types";
+import { brandIntegrationToPromptPhrase } from "@/lib/ai/art-direction/brand-integration";
+import { sectorLayerToPromptPhrase } from "@/lib/ai/art-direction/sector-layer";
+import type { ArtDirection, LayoutVariant, TypographyMood } from "@/lib/ai/art-direction/types";
 
 const LAYOUT_PHRASES: Record<LayoutVariant, string> = {
   "centered-hero-typography": "centered hero typography layout",
@@ -38,27 +40,30 @@ const COLOR_PHRASES: Record<string, string> = {
 };
 
 export function artDirectionToPromptSentence(
-  direction: import("@/lib/ai/art-direction/types").ArtDirection,
+  direction: ArtDirection,
+  sectorLabel?: string,
 ): string {
   const layout = LAYOUT_PHRASES[direction.layout];
   const typo = TYPOGRAPHY_PHRASES[direction.typographyMood];
   const focus = FOCUS_PHRASES[direction.visualFocus] ?? direction.visualFocus;
   const color = COLOR_PHRASES[direction.colorBalance] ?? direction.colorBalance;
 
-  let sentence =
-    `Art direction: use a ${layout} with ${typo} typography, ` +
-    `${direction.density} visual density, ${focus}, and ${color}.`;
+  const parts = [
+    `Art direction: ${layout}; text at ${direction.textPosition}; ${typo} typography; ${direction.density} density; ${focus}; ${color}.`,
+    direction.motifStrategy ? `Occasion motif: ${direction.motifStrategy}.` : "",
+    direction.sectorLayer
+      ? sectorLayerToPromptPhrase(direction.sectorLayer, sectorLabel ?? "local business")
+      : "",
+    direction.brandIntegration
+      ? brandIntegrationToPromptPhrase(direction.brandIntegration)
+      : "",
+    direction.antiRepeatNote ?? "",
+  ];
 
-  if (direction.motifStrategy) {
-    sentence += ` Motif: ${direction.motifStrategy}.`;
-  }
+  let sentence = parts.filter(Boolean).join(" ");
 
-  if (direction.antiRepeatNote) {
-    sentence += ` ${direction.antiRepeatNote}`;
-  }
-
-  if (sentence.length > 320) {
-    sentence = `${sentence.slice(0, 317).trim()}…`;
+  if (sentence.length > 520) {
+    sentence = `${sentence.slice(0, 517).trim()}…`;
   }
 
   return sentence;

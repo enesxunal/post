@@ -2,11 +2,11 @@
 
 Üretilen görselleri şuraya kaydet:
 
-`public/marketing/showcase-29-ekim.png`
-`public/marketing/showcase-ramazan-bayrami.png`
-`public/marketing/showcase-anneler-gunu.png`
-`public/marketing/showcase-hayirli-cumalar.png`
-`public/marketing/showcase-kandil.png`
+`public/marketing/showcase-29-ekim.jpg`
+`public/marketing/showcase-ramazan-bayrami.jpg`
+`public/marketing/showcase-anneler-gunu.jpg`
+`public/marketing/showcase-hayirli-cumalar.jpg`
+`public/marketing/showcase-kandil.jpg`
 
 **Format:** 1080×1080 (kare) · PNG veya JPG · Logo çizme (logoyu siz flow'a referans olarak vereceksiniz)
 
@@ -16,7 +16,7 @@
 
 ## 1 — 29 Ekim · poust marka postu
 
-**Dosya:** `showcase-29-ekim.png`
+**Dosya:** `showcase-29-ekim.jpg`
 
 ```
 DESIGN BRIEF: Premium Turkish small-business Instagram 1080x1080 square post. Commissioned from a senior graphic designer — polished brand social media creative, NOT a Canva template.
@@ -48,7 +48,7 @@ OUTPUT FORMAT: 1080x1080 pixels square Instagram feed post (1:1).
 
 ## 2 — Ramazan Bayramı · poust marka postu
 
-**Dosya:** `showcase-ramazan-bayrami.png`
+**Dosya:** `showcase-ramazan-bayrami.jpg`
 
 ```
 DESIGN BRIEF: Premium Turkish small-business Instagram 1080x1080 square post. Senior graphic designer quality — NOT Canva drag-and-drop.
@@ -78,7 +78,7 @@ OUTPUT FORMAT: 1080x1080 square (1:1).
 
 ## 3 — Anneler Günü · poust marka postu
 
-**Dosya:** `showcase-anneler-gunu.png`
+**Dosya:** `showcase-anneler-gunu.jpg`
 
 ```
 DESIGN BRIEF: Premium Turkish Instagram 1080x1080 square post for poust's own Mother's Day greeting.
@@ -108,7 +108,7 @@ OUTPUT: 1080x1080 square Instagram post.
 
 ## 4 — Hayırlı Cumalar · poust marka postu
 
-**Dosya:** `showcase-hayirli-cumalar.png`
+**Dosya:** `showcase-hayirli-cumalar.jpg`
 
 ```
 DESIGN BRIEF: Premium Turkish Instagram 1080x1080 square post — poust brand Friday greeting.
@@ -138,7 +138,7 @@ OUTPUT: 1080x1080 square (1:1).
 
 ## 5 — Kandil · poust marka postu
 
-**Dosya:** `showcase-kandil.png`
+**Dosya:** `showcase-kandil.jpg`
 
 ```
 DESIGN BRIEF: Premium Turkish Instagram 1080x1080 square post — poust brand kandil greeting.

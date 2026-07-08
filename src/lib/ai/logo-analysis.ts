@@ -5,7 +5,7 @@ export type LogoAnalysis = {
   dominantColors: string[];
   background: "transparent" | "light" | "dark" | "unknown";
   complexity: "simple" | "medium" | "complex";
-  bestPlacement: "bottom-right" | "bottom-center" | "top-right" | "top-left";
+  bestPlacement: "bottom-right" | "bottom-center" | "bottom-left" | "top-right" | "top-left";
   usageNote: string;
 };
 

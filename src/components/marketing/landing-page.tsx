@@ -59,6 +59,12 @@ export function LandingPage() {
           <BrandLogo />
           <div className="flex items-center gap-3 sm:gap-5">
             <Link
+              href="/blog"
+              className="hidden text-sm text-slate-600 transition hover:text-emerald-700 sm:block"
+            >
+              Blog
+            </Link>
+            <Link
               href="/login"
               className="hidden text-sm text-slate-600 transition hover:text-emerald-700 sm:block"
             >
@@ -328,6 +334,43 @@ export function LandingPage() {
 
         <section className="mt-12">
           <SectionTitle
+            eyebrow="Blog"
+            title="İnsanlar ne arıyorsa ona göre yazılar"
+            description="Cuma mesajları, 30 Ağustos özel postlar, bayram kutlamaları ve mesleklere özel rehberler — organik arama trafiği için."
+          />
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              ["Cuma mesajları", "/blog?kategori=ozel-gun&konu=friday-blessing"],
+              ["30 Ağustos özel postlar", "/blog?kategori=ozel-gun&konu=30-agustos"],
+              ["Ramazan Bayramı mesajı", "/blog?kategori=ozel-gun&konu=ramadan-feast"],
+              ["Güzellik salonu postları", "/blog?kategori=meslek&konu=beauty"],
+              ["Kafe / restoran içerikleri", "/blog?kategori=meslek&konu=cafe"],
+              ["Diş kliniği postları", "/blog?kategori=meslek&konu=dental"],
+            ].map(([label, href]) => (
+              <Link
+                key={label}
+                href={href}
+                className="rounded-3xl border border-emerald-100 bg-white/90 p-5 text-sm font-medium text-slate-800 shadow-sm transition hover:border-emerald-300 hover:text-emerald-800"
+              >
+                {label}
+                <span className="mt-2 block text-xs font-normal text-slate-500">
+                  Rehberi oku →
+                </span>
+              </Link>
+            ))}
+          </div>
+          <div className="mt-6">
+            <Link href="/blog">
+              <Button variant="outline" className="h-11">
+                Tüm blog yazılarını gör
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </section>
+
+        <section className="mt-12">
+          <SectionTitle
             eyebrow="S.S.S."
             title="En çok sorulan sorular"
             description="Satın alma, üretim ve kullanım akışıyla ilgili kısa cevaplar."
@@ -375,6 +418,9 @@ export function LandingPage() {
                 <div className="mt-3 flex flex-col gap-2 text-sm text-slate-600">
                   <Link href="/onboarding" className="hover:text-emerald-700">
                     Paketi Başlat
+                  </Link>
+                  <Link href="/blog" className="hover:text-emerald-700">
+                    Blog & rehberler
                   </Link>
                   <Link href="/login" className="hover:text-emerald-700">
                     Giriş Yap

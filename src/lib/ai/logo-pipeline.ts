@@ -90,10 +90,11 @@ async function regionBusyScore(
   return { variance, mean };
 }
 
-/** Üretilen görselde en sakin bölgeyi bulur — logo oraya yerleştirilir. */
+/** En sakin bölgeyi bulur; preferred verilirse önce onu dener. */
 export async function detectBestLogoPlacement(
   imageBuffer: Buffer,
   logoAnalysis?: LogoAnalysis | null,
+  preferred?: Placement | null,
 ): Promise<Placement> {
   const image = sharp(imageBuffer);
   const meta = await image.metadata();
@@ -113,6 +114,7 @@ export async function detectBestLogoPlacement(
       left: Math.round((width - regionW) / 2),
       top: height - regionH - margin,
     },
+    { placement: "bottom-left", left: margin, top: height - regionH - margin },
   ];
 
   const scores = await Promise.all(
@@ -129,9 +131,16 @@ export async function detectBestLogoPlacement(
 
   scores.sort((a, b) => a.variance - b.variance);
 
+  if (preferred) {
+    const preferredScore = scores.find((item) => item.placement === preferred);
+    if (preferredScore && preferredScore.variance <= scores[0]!.variance * 1.55) {
+      return preferred;
+    }
+  }
+
   if (logoAnalysis?.logoType === "wordmark") {
     const bottomCenter = scores.find((item) => item.placement === "bottom-center");
-    if (bottomCenter && bottomCenter.variance <= scores[0].variance * 1.35) {
+    if (bottomCenter && bottomCenter.variance <= scores[0]!.variance * 1.35) {
       return "bottom-center";
     }
   }
@@ -174,11 +183,12 @@ async function buildLogoBacking(
     .toBuffer();
 }
 
-/** Üretilen görsele gerçek logoyu bindirir — konum görsele göre otomatik seçilir. */
+/** Üretilen görsele gerçek logoyu bindirir — konum art direction + görsel boş alanına göre. */
 export async function applyLogoOverlay(
   imageUrl: string,
   logoUrl: string,
   logoAnalysis?: LogoAnalysis | null,
+  preferredPlacement?: Placement | null,
 ): Promise<string> {
   const logoBuffer = await rasterizeLogo(logoUrl);
   if (!logoBuffer) return imageUrl;
@@ -191,7 +201,11 @@ export async function applyLogoOverlay(
   const width = meta.width ?? 1080;
   const height = meta.height ?? 1080;
 
-  const placement = await detectBestLogoPlacement(imageBuffer, logoAnalysis);
+  const placement = await detectBestLogoPlacement(
+    imageBuffer,
+    logoAnalysis,
+    preferredPlacement ?? null,
+  );
 
   const maxLogoW = Math.round(width * 0.24);
   const maxLogoH = Math.round(height * 0.16);
@@ -217,6 +231,10 @@ export async function applyLogoOverlay(
     case "top-right":
       left = width - logoW - margin;
       top = margin;
+      break;
+    case "bottom-left":
+      left = margin;
+      top = height - logoH - margin;
       break;
     case "bottom-center":
       left = Math.round((width - logoW) / 2);

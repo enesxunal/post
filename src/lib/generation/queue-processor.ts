@@ -3,6 +3,7 @@ import {
   artDirectionToMetadata,
   assignArtDirectionForDay,
   buildBrandProfile,
+  normalizeArtDirection,
   regenerateArtDirection,
   type ArtDirection,
 } from "@/lib/ai/art-direction";
@@ -24,6 +25,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { scheduleQueueProcessing } from "@/lib/generation/schedule-queue";
 import { persistGeneratedImage } from "@/lib/storage/generated-images";
 import { getSpecialDayById } from "@/lib/special-days-data";
+import { getSectorRuleFromSeed } from "@/lib/sectors/seed-data";
 import { recordRevisionFeedback } from "@/lib/trend-brain/repository";
 import { resolvePromptVersionRefs } from "@/lib/trend-brain/prompt-versions";
 import type { SpecialDayCategory } from "@/types/domain";
@@ -39,11 +41,11 @@ type JobRow = {
   design_metadata?: unknown;
 };
 
-function parseArtDirection(raw: unknown): ArtDirection | null {
-  if (!raw || typeof raw !== "object") return null;
-  const candidate = raw as ArtDirection;
-  if (!candidate.layout || !candidate.textPosition) return null;
-  return candidate;
+function parseArtDirection(
+  raw: unknown,
+  options?: { sectorKey?: string; category?: SpecialDayCategory },
+): ArtDirection | null {
+  return normalizeArtDirection(raw, options);
 }
 
 function parseRevisionNote(raw: unknown): string | undefined {
@@ -52,6 +54,23 @@ function parseRevisionNote(raw: unknown): string | undefined {
   return typeof candidate.revisionNote === "string" && candidate.revisionNote.trim()
     ? candidate.revisionNote.trim()
     : undefined;
+}
+
+function brandProfileFromProject(project: {
+  brand_name: string;
+  sector: string;
+  visual_style: string;
+  primary_color: string;
+}) {
+  const sectorRule = getSectorRuleFromSeed(project.sector);
+  return buildBrandProfile({
+    brandName: project.brand_name,
+    sector: project.sector,
+    visualStyle: project.visual_style as import("@/types/domain").VisualStyle,
+    primaryColor: project.primary_color,
+    sectorElements: sectorRule?.suitableElements,
+    sectorNativeScene: sectorRule?.visualCues,
+  });
 }
 
 async function loadProjectArtMemory(projectId: string, excludeJobId?: string) {
@@ -77,18 +96,16 @@ async function ensureJobArtDirection(
     primary_color: string;
   },
 ) {
-  const existing = parseArtDirection(job.art_direction);
-  if (existing) return existing;
-
-  const memory = await loadProjectArtMemory(job.project_id, job.id);
   const day = getSpecialDayById(job.type);
   const category = (day?.category ?? "popular") as SpecialDayCategory;
-  const brandProfile = buildBrandProfile({
-    brandName: project.brand_name,
-    sector: project.sector,
-    visualStyle: project.visual_style as import("@/types/domain").VisualStyle,
-    primaryColor: project.primary_color,
+  const existing = parseArtDirection(job.art_direction, {
+    sectorKey: project.sector,
+    category,
   });
+  if (existing?.sectorLayer && existing?.brandIntegration) return existing;
+
+  const memory = await loadProjectArtMemory(job.project_id, job.id);
+  const brandProfile = brandProfileFromProject(project);
 
   const artDirection = assignArtDirectionForDay(
     { dayId: job.type, category },
@@ -323,14 +340,12 @@ export async function regenerateGenerationJob(jobId: string, userId: string, rea
   const day = getSpecialDayById(job.type);
   const category = (day?.category ?? "popular") as SpecialDayCategory;
   const projectMemory = await loadProjectArtMemory(job.project_id, jobId);
-  const brandProfile = buildBrandProfile({
-    brandName: project.brand_name,
-    sector: project.sector,
-    visualStyle: project.visual_style as import("@/types/domain").VisualStyle,
-    primaryColor: project.primary_color,
-  });
+  const brandProfile = brandProfileFromProject(project);
   const nextArtDirection = regenerateArtDirection(
-    parseArtDirection(job.art_direction),
+    parseArtDirection(job.art_direction, {
+      sectorKey: project.sector,
+      category,
+    }),
     projectMemory,
     { dayId: job.type, category },
     brandProfile,
@@ -635,6 +650,7 @@ export async function processOneQueuedJob(projectId: string) {
         finalImageUrl,
         context.logoUrl,
         context.logoAnalysis ?? undefined,
+        artDirection.brandIntegration?.logoPlacement ?? null,
       );
     }
 

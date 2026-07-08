@@ -110,11 +110,15 @@ export function buildAntiRepeatNote(previous: ArtDirection[]): string | undefine
   return undefined;
 }
 
+function sectorElementsSignature(direction: ArtDirection): string {
+  return (direction.sectorLayer?.elements ?? []).slice().sort().join("|");
+}
+
 export function hasMinimumDifference(
   previous: ArtDirection,
   next: ArtDirection,
 ): boolean {
-  const keys: (keyof ArtDirection)[] = [
+  const keys: Array<keyof ArtDirection> = [
     "layout",
     "textPosition",
     "visualFocus",
@@ -124,7 +128,19 @@ export function hasMinimumDifference(
     "colorBalance",
   ];
 
-  return keys.some((key) => previous[key] !== next[key]);
+  if (keys.some((key) => previous[key] !== next[key])) return true;
+
+  if (sectorElementsSignature(previous) !== sectorElementsSignature(next)) return true;
+
+  if (
+    previous.sectorLayer?.integrationStyle !== next.sectorLayer?.integrationStyle ||
+    previous.brandIntegration?.logoPlacement !== next.brandIntegration?.logoPlacement ||
+    previous.brandIntegration?.logoTreatment !== next.brandIntegration?.logoTreatment
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 export function scoreLayoutDiversity(directions: ArtDirection[]): number {

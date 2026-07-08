@@ -7,7 +7,7 @@ export const heroShowcase = [
     accent: "#DC2626",
     gradient: "from-rose-600 via-red-700 to-rose-950",
     pattern: "stars" as const,
-    imageSrc: "/marketing/showcase-29-ekim.png",
+    imageSrc: "/marketing/showcase-29-ekim.jpg",
     sector: "poust marka postu",
   },
   {
@@ -17,7 +17,7 @@ export const heroShowcase = [
     accent: "#38C661",
     gradient: "from-emerald-500 via-green-600 to-emerald-900",
     pattern: "crescent" as const,
-    imageSrc: "/marketing/showcase-ramazan-bayrami.png",
+    imageSrc: "/marketing/showcase-ramazan-bayrami.jpg",
     sector: "poust marka postu",
   },
   {
@@ -27,7 +27,7 @@ export const heroShowcase = [
     accent: "#DB2777",
     gradient: "from-pink-400 via-rose-500 to-fuchsia-800",
     pattern: "hearts" as const,
-    imageSrc: "/marketing/showcase-anneler-gunu.png",
+    imageSrc: "/marketing/showcase-anneler-gunu.jpg",
     sector: "poust marka postu",
   },
   {
@@ -37,7 +37,7 @@ export const heroShowcase = [
     accent: "#0F766E",
     gradient: "from-teal-500 via-emerald-600 to-teal-950",
     pattern: "lines" as const,
-    imageSrc: "/marketing/showcase-hayirli-cumalar.png",
+    imageSrc: "/marketing/showcase-hayirli-cumalar.jpg",
     sector: "poust marka postu",
   },
   {
@@ -47,7 +47,7 @@ export const heroShowcase = [
     accent: "#7C3AED",
     gradient: "from-violet-500 via-purple-600 to-indigo-950",
     pattern: "glow" as const,
-    imageSrc: "/marketing/showcase-kandil.png",
+    imageSrc: "/marketing/showcase-kandil.jpg",
     sector: "poust marka postu",
   },
 ] as const;

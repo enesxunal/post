@@ -151,8 +151,12 @@ export async function generateStoryForJob(jobId: string, userId: string) {
     "Keep the same colors, mood, typography style and brand logo from the reference.",
     "Extend background naturally for vertical format — do NOT crop out the main message.",
     "Do not add new slogans or service text. Recompose vertically with agency quality.",
-    preview.brief?.composition.layout,
-    preview.brief?.text.strictTextRule,
+    preview.brief?.artDirection.layout
+      ? `Keep composition DNA: ${preview.brief.artDirection.layout}, sector cues: ${preview.brief.sector.elements.join(", ")}.`
+      : "",
+    preview.brief?.backgroundOnly
+      ? "Absolutely no text, letters, numbers, logos, URLs or UI in the image."
+      : `ONLY the headline "${preview.headline}" may appear on the image.`,
   ]
     .filter(Boolean)
     .join("\n");

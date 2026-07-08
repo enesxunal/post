@@ -1,16 +1,11 @@
 import { NextResponse } from "next/server";
 
-import { formatArtDirectionForDisplay } from "@/lib/ai/art-direction/labels";
-import type { ArtDirection } from "@/lib/ai/art-direction";
+import {
+  formatArtDirectionForDisplay,
+  normalizeArtDirection,
+} from "@/lib/ai/art-direction";
 import { getSessionUser } from "@/lib/supabase/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-function parseArtDirection(raw: unknown): ArtDirection | null {
-  if (!raw || typeof raw !== "object") return null;
-  const candidate = raw as ArtDirection;
-  if (!candidate.layout || !candidate.textPosition) return null;
-  return candidate;
-}
 
 /** Üretim detayı — art direction, metadata ve prompt. */
 export async function GET(request: Request) {
@@ -39,7 +34,7 @@ export async function GET(request: Request) {
   }
 
   const artDirection =
-    parseArtDirection(job.art_direction) ?? parseArtDirection(job.design_metadata);
+    normalizeArtDirection(job.art_direction) ?? normalizeArtDirection(job.design_metadata);
 
   return NextResponse.json({
     jobId: job.id,

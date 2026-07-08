@@ -12,6 +12,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ensureUserProfile } from "@/lib/supabase/profiles";
 import { normalizeStyleKey } from "@/lib/styles/style-key-map";
+import { getSectorRuleFromSeed } from "@/lib/sectors/seed-data";
 import type { AddonKey, BrandContext, PostFormat, SectorKey, VisualStyle } from "@/types/domain";
 
 const META_SEPARATOR = "\n<!--POST_META:";
@@ -153,6 +154,8 @@ export async function createProjectWithJobs(
     sector: draft.sector,
     visualStyle: draft.visualStyle,
     primaryColor: primaryColor,
+    sectorElements: getSectorRuleFromSeed(draft.sector)?.suitableElements,
+    sectorNativeScene: getSectorRuleFromSeed(draft.sector)?.visualCues,
   });
 
   const collectionDays = expandedDays.map((day) => {

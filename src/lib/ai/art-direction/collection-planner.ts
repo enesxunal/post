@@ -4,10 +4,12 @@ import {
   filterMotifsForCategory,
   pickTextPosition,
 } from "@/lib/ai/art-direction/anti-repeat";
+import { buildBrandIntegration } from "@/lib/ai/art-direction/brand-integration";
 import {
   getCategoryLayouts,
   LAYOUT_VISUAL_FOCUS,
 } from "@/lib/ai/art-direction/layouts";
+import { buildSectorLayer } from "@/lib/ai/art-direction/sector-layer";
 import type {
   ArtDirection,
   BrandCreativeProfile,
@@ -50,9 +52,9 @@ const MOTIF_BY_CATEGORY: Record<SpecialDayCategory, string[]> = {
   holiday: [
     "warm hospitality table",
     "golden celebration light",
-    "family gathering mood",
     "elegant bayram pattern",
     "gift and sharing symbols",
+    "respectful festive glow",
   ],
   religious: [
     "soft crescent light",
@@ -103,14 +105,18 @@ const STYLE_TYPOGRAPHY: Record<VisualStyle, TypographyMood[]> = {
 function pickColorBalance(category: SpecialDayCategory, index: number): ColorBalance {
   switch (category) {
     case "national":
-      return index % 4 === 0 ? "balanced" : "occasion-dominant";
+      return "occasion-dominant";
     case "religious":
     case "friday":
+      return index % 4 === 0 ? "brand-accent" : "occasion-dominant";
+    case "holiday":
       return index % 3 === 0 ? "brand-accent" : "occasion-dominant";
     case "campaign":
       return index % 2 === 0 ? "brand-dominant" : "balanced";
-    case "holiday":
-      return index % 2 === 0 ? "occasion-dominant" : "brand-accent";
+    case "sectoral":
+      return index % 2 === 0 ? "balanced" : "brand-accent";
+    case "popular":
+      return index % 2 === 0 ? "balanced" : "brand-accent";
     default:
       return index % 3 === 0 ? "brand-accent" : "balanced";
   }
@@ -136,8 +142,7 @@ function pickTypography(
   const seed = `${visualStyle}:${category}:${index}`;
   const recent = previous.slice(-3).map((d) => d.typographyMood);
   const fresh = pool.filter((m) => !recent.includes(m));
-  const chosen = pickBySeed(fresh.length ? fresh : pool, seed, pool[0]!);
-  return chosen;
+  return pickBySeed(fresh.length ? fresh : pool, seed, pool[0]!);
 }
 
 function pickVisualFocus(
@@ -164,12 +169,16 @@ export function buildBrandProfile(input: {
   sector: string;
   visualStyle: VisualStyle;
   primaryColor: string;
+  sectorElements?: string[];
+  sectorNativeScene?: string;
 }): BrandCreativeProfile {
   return {
     brandName: input.brandName,
     sector: input.sector,
     visualStyle: input.visualStyle,
     primaryColor: input.primaryColor,
+    ...(input.sectorElements?.length ? { sectorElements: input.sectorElements } : {}),
+    ...(input.sectorNativeScene ? { sectorNativeScene: input.sectorNativeScene } : {}),
   };
 }
 
@@ -188,7 +197,12 @@ export function assignArtDirectionForDay(
 
   const textPosition = pickTextPosition(layout, index, previousDirections);
   const visualFocus = pickVisualFocus(layout, category, index, previousDirections);
-  const typographyMood = pickTypography(brandProfile.visualStyle, category, index, previousDirections);
+  const typographyMood = pickTypography(
+    brandProfile.visualStyle,
+    category,
+    index,
+    previousDirections,
+  );
   const density = pickDensity(category, index);
   const colorBalance = pickColorBalance(category, index);
 
@@ -198,6 +212,22 @@ export function assignArtDirectionForDay(
     MOTIF_BY_CATEGORY[category],
   );
   const motifStrategy = pickBySeed(motifPool, `${seedBase}:motif`, motifPool[0]!);
+
+  const sectorLayer = buildSectorLayer(
+    brandProfile,
+    category,
+    index,
+    previousDirections,
+    day.dayId,
+  );
+
+  const brandIntegration = buildBrandIntegration(
+    brandProfile.visualStyle,
+    colorBalance,
+    index,
+    previousDirections,
+    seedBase,
+  );
 
   const antiRepeatNote = buildAntiRepeatNote(previousDirections);
 
@@ -209,6 +239,8 @@ export function assignArtDirectionForDay(
     density,
     motifStrategy,
     colorBalance,
+    sectorLayer,
+    brandIntegration,
     ...(antiRepeatNote ? { antiRepeatNote } : {}),
   };
 }
@@ -237,5 +269,7 @@ export function artDirectionToMetadata(
     density: direction.density,
     motifStrategy: direction.motifStrategy,
     colorBalance: direction.colorBalance,
+    sectorLayer: direction.sectorLayer,
+    brandIntegration: direction.brandIntegration,
   };
 }
