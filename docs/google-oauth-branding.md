@@ -102,6 +102,59 @@ Kendi mail sunucun veya Resend/SendGrid ile `noreply@poust.app` gönderen adresi
 
 ## 4. Alttaki supabase.co yazısını tamamen kaldırmak (ileri seviye)
 
-Supabase **Custom Domain** (ücretli plan): örn. `auth.poust.app`
+Google giriş ekranının **üstünde** uygulama adı (Poust) Branding onayından sonra görünür.  
+**Alttaki** `jpavgsimjqbkuikwevnl.supabase.co uygulamasına devam edin` metni ise OAuth’un teknik dönüş adresidir — Supabase kullandığınız sürece Google bunu gösterir.
 
-Bu ayarlandığında Google ekranında `auth.poust.app` görünür. Şimdilik zorunlu değil; üstte “Poust” yazması çoğu kullanıcı için yeterli.
+### Seçenek A — Ücretsiz (şimdilik)
+
+- Üstte **Poust** yazması çoğu kullanıcı için yeterli.
+- Alttaki `supabase.co` satırı teknik bir uyarıdır; güvenlik riski değildir.
+
+### Seçenek B — Custom Auth Domain (ücretli Supabase plan)
+
+Supabase → **Project Settings** → **Custom Domains** → örn. `auth.poust.app`
+
+1. DNS’e Supabase’in verdiği CNAME kaydını ekleyin  
+2. Supabase’de domaini doğrulayın  
+3. Google Cloud → OAuth redirect URI’leri güncel kalır (Supabase callback aynı)  
+4. Giriş ekranında altta `auth.poust.app` görünür  
+
+Bu işlem DNS + Supabase Pro plan gerektirir.
+
+---
+
+## 5. Kurumsal e-posta (onay / giriş mailleri)
+
+Varsayılan Supabase mailleri `noreply@mail.app.supabase.io` benzeri bir adresten gider. Kurumsal görünüm için:
+
+### Supabase SMTP ayarı
+
+Supabase → **Project Settings** → **Authentication** → **SMTP Settings**
+
+| Alan | Örnek |
+|------|--------|
+| Host | `smtp.gmail.com` veya hosting sağlayıcınız |
+| Port | `587` |
+| User | `noreply@poust.app` veya `destek@poust.app` |
+| Sender name | `poust` |
+| Sender email | `noreply@poust.app` |
+
+**Gmail Workspace / Google Workspace** kullanıyorsanız uygulama şifresi veya OAuth SMTP gerekir.  
+**Hosting (cPanel, Turhost vb.)** üzerinden `noreply@poust.app` mailbox açıp SMTP bilgilerini girin.
+
+### E-posta şablonları
+
+**Authentication** → **Email Templates** — tüm şablonları Türkçeleştirin (kayıt onayı, şifre sıfırlama).
+
+Örnek konu: `poust hesabınızı doğrulayın`  
+Gönderen: `noreply@poust.app` (SMTP ayarlandıktan sonra)
+
+### Google OAuth onay maili
+
+Google Cloud doğrulama sonucu `enesunal700@gmail.com` adresine gelir — bu Google’ın kendi mailidir, Supabase SMTP ile değiştirilemez. Müşterilere giden mailler SMTP ile kurumsal olur.
+
+---
+
+## 6. Alttaki supabase.co — özet
+
+Custom domain olmadan alttaki yazı **tamamen** kalkmaz; üstteki marka adı Branding onayı ile düzelir.

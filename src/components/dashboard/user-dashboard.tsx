@@ -28,6 +28,7 @@ import {
   buildShareCaption,
   downloadIcsFile,
 } from "@/lib/share/publish-schedule";
+import { buildSharePageUrl } from "@/lib/share/share-page-url";
 import { DASHBOARD_POLL_MS } from "@/lib/config";
 import { mapJobStatus } from "@/lib/generation/map-jobs";
 import { getPostFormatLabel, getPreviewAspectClass } from "@/lib/image-formats";
@@ -104,6 +105,8 @@ type UserDashboardProps = {
   emptyMessage?: string;
   /** Arka planda üretim devam ediyorsa hafif polling (sayfa yenilemeden) */
   liveGenerating?: boolean;
+  /** Takvim linkinden veya /dashboard?job= ile açılan post */
+  initialSelectedJobId?: string;
 };
 
 export function UserDashboard({
@@ -116,6 +119,7 @@ export function UserDashboard({
   hasCalendarAddon = false,
   emptyMessage,
   liveGenerating = false,
+  initialSelectedJobId,
 }: UserDashboardProps) {
   const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
@@ -124,7 +128,11 @@ export function UserDashboard({
   const selectTab = (next: DashboardTab) => {
     startTransition(() => setTab(next));
   };
-  const [selectedJobId, setSelectedJobId] = useState(initialJobs[0]?.id);
+  const [selectedJobId, setSelectedJobId] = useState(
+    initialSelectedJobId && initialJobs.some((job) => job.id === initialSelectedJobId)
+      ? initialSelectedJobId
+      : initialJobs[0]?.id,
+  );
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [copiedCaption, setCopiedCaption] = useState(false);
@@ -132,8 +140,13 @@ export function UserDashboard({
 
   useEffect(() => {
     setJobs(initialJobs);
+    if (initialSelectedJobId && initialJobs.some((job) => job.id === initialSelectedJobId)) {
+      setSelectedJobId(initialSelectedJobId);
+      setTab("gallery");
+      return;
+    }
     setSelectedJobId((current) => current ?? initialJobs[0]?.id);
-  }, [initialJobs]);
+  }, [initialJobs, initialSelectedJobId]);
 
   useEffect(() => {
     setRevisionNote("");
@@ -251,6 +264,7 @@ export function UserDashboard({
   async function prepareShareKit() {
     if (!selectedJob || !project) return;
     const text = buildShareCaption({
+      jobId: selectedJob.id,
       dayId: selectedJob.dayId,
       dayName: selectedJob.dayName,
       dateLabel: selectedJob.dateLabel,
@@ -268,6 +282,7 @@ export function UserDashboard({
   function addToCalendarIcs() {
     if (!selectedJob || !project) return;
     downloadIcsFile({
+      jobId: selectedJob.id,
       dayId: selectedJob.dayId,
       dayName: selectedJob.dayName,
       dateLabel: selectedJob.dateLabel,
@@ -280,6 +295,7 @@ export function UserDashboard({
   function openGoogleCalendar() {
     if (!selectedJob || !project) return;
     const url = buildGoogleCalendarUrl({
+      jobId: selectedJob.id,
       dayId: selectedJob.dayId,
       dayName: selectedJob.dayName,
       dateLabel: selectedJob.dateLabel,
@@ -784,13 +800,19 @@ export function UserDashboard({
                         <div className="space-y-3 rounded-2xl border border-sky-100 bg-sky-50/50 p-4">
                           <p className="text-sm font-semibold text-slate-900">Paylaşım takvimi</p>
                           <p className="text-xs leading-5 text-slate-600">
-                            Görsel + açıklama ile hatırlatıcı ekleyin. Meta Business Suite veya
-                            Instagram&apos;da manuel paylaşım için paket hazırlayın.
+                            Hatırlatıcıya tıklayınca paylaşım sayfası açılır — görsel indirme ve metin
+                            kopyalama tek ekranda.
                           </p>
                           <Button variant="secondary" className="w-full" onClick={() => void prepareShareKit()}>
                             <Copy className="mr-2 h-4 w-4" />
                             Paylaşım paketi (metin + görsel)
                           </Button>
+                          <Link
+                            href={buildSharePageUrl(selectedJob.id)}
+                            className="block rounded-2xl border border-sky-200 bg-white px-4 py-3 text-center text-sm font-medium text-sky-800 hover:bg-sky-50"
+                          >
+                            Paylaşım sayfasını önizle
+                          </Link>
                           <div className="grid grid-cols-2 gap-2">
                             <Button variant="outline" className="w-full" onClick={addToCalendarIcs}>
                               <CalendarPlus2 className="mr-2 h-4 w-4" />
@@ -803,6 +825,7 @@ export function UserDashboard({
                           {selectedJob.caption ? (
                             <p className="text-[11px] leading-4 text-slate-500">
                               Önizleme: {buildShareCaption({
+                                jobId: selectedJob.id,
                                 dayId: selectedJob.dayId,
                                 dayName: selectedJob.dayName,
                                 dateLabel: selectedJob.dateLabel,

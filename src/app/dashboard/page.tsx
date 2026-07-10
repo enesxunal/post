@@ -32,7 +32,12 @@ type ProjectRow = {
   }> | null;
 };
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ job?: string }>;
+}) {
+  const { job: initialJobId } = await searchParams;
   const user = await requireSessionUser("/dashboard");
   const supabase = await createSupabaseServerClient();
 
@@ -152,6 +157,7 @@ export default async function DashboardPage() {
           ? "Ödemeniz onaylandı ama paket kurulumu yarım kalmış. Aşağıdaki butona tıklayıp formu tekrar doldurun — yeniden ödeme gerekmez."
           : undefined
       }
+      initialSelectedJobId={initialJobId}
     />
     </>
   );

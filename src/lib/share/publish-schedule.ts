@@ -1,6 +1,8 @@
 import { getSpecialDayById } from "@/lib/special-days-data";
+import { buildSharePageUrl } from "@/lib/share/share-page-url";
 
 export type PublishScheduleInput = {
+  jobId: string;
   dayId: string;
   dayName: string;
   dateLabel: string;
@@ -74,31 +76,40 @@ export function buildShareCaption(input: PublishScheduleInput): string {
   return (input.caption?.trim() || `${input.brandName} — ${input.dayName} paylaşımı`) + tags;
 }
 
-export function buildIcsEvent(input: PublishScheduleInput): { filename: string; content: string } {
-  const start = resolvePublishDate(input.dayId, input.dateLabel);
-  const end = new Date(start.getTime() + 30 * 60 * 1000);
-  const caption = buildShareCaption(input);
+function buildCalendarDescription(input: PublishScheduleInput, caption: string) {
+  const shareUrl = buildSharePageUrl(input.jobId);
   const day = getSpecialDayById(input.dayId);
   const movableNote = MOVABLE_HINTS[input.dayId] ?? MOVABLE_HINTS[day?.dateValue ?? ""] ?? "";
 
-  const description = [
+  return [
     `Marka: ${input.brandName}`,
+    "",
+    "Paylaşım sayfası (görsel indir + metin kopyala):",
+    shareUrl,
     "",
     "Instagram / Facebook paylaşım metni:",
     caption,
     "",
     "Adımlar:",
-    "1) poust panelinden görseli indir",
-    "2) Metni kopyala",
-    "3) Meta Business Suite veya Instagram'da paylaş",
+    "1) Yukarıdaki bağlantıya tıklayın",
+    "2) Görseli indirin",
+    "3) Metni kopyalayıp Instagram veya Meta Business Suite'te paylaşın",
     movableNote ? `\nNot: ${movableNote}` : "",
     "",
     "poust.app",
   ]
     .filter(Boolean)
     .join("\n");
+}
 
-  const uid = `${input.dayId}-${start.getTime()}@poust.app`;
+export function buildIcsEvent(input: PublishScheduleInput): { filename: string; content: string } {
+  const start = resolvePublishDate(input.dayId, input.dateLabel);
+  const end = new Date(start.getTime() + 30 * 60 * 1000);
+  const caption = buildShareCaption(input);
+  const shareUrl = buildSharePageUrl(input.jobId);
+  const description = buildCalendarDescription(input, caption);
+
+  const uid = `${input.jobId}-${start.getTime()}@poust.app`;
   const content = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -112,10 +123,11 @@ export function buildIcsEvent(input: PublishScheduleInput): { filename: string; 
     `DTEND:${formatIcsUtc(end)}`,
     `SUMMARY:${escapeIcs(`${input.brandName} — ${input.dayName} paylaşımı`)}`,
     `DESCRIPTION:${escapeIcs(description)}`,
+    `URL:${shareUrl}`,
     "BEGIN:VALARM",
     "TRIGGER:-PT30M",
     "ACTION:DISPLAY",
-    "DESCRIPTION:Paylaşım zamanı yaklaşıyor",
+    `DESCRIPTION:${escapeIcs(`Paylaşım zamanı: ${input.dayName}`)}`,
     "END:VALARM",
     "END:VEVENT",
     "END:VCALENDAR",
@@ -135,12 +147,15 @@ export function buildGoogleCalendarUrl(input: PublishScheduleInput): string {
   const start = resolvePublishDate(input.dayId, input.dateLabel);
   const end = new Date(start.getTime() + 30 * 60 * 1000);
   const caption = buildShareCaption(input);
+  const shareUrl = buildSharePageUrl(input.jobId);
+  const details = buildCalendarDescription(input, caption);
 
   const params = new URLSearchParams({
     action: "TEMPLATE",
     text: `${input.brandName} — ${input.dayName}`,
     dates: `${formatGoogleCalendarDate(start)}/${formatGoogleCalendarDate(end)}`,
-    details: `Paylaşım metni:\n${caption}\n\nGörseli poust panelinden indirip Instagram veya Meta Business Suite ile paylaşın.`,
+    details,
+    location: shareUrl,
   });
 
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
