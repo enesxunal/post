@@ -46,6 +46,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
+      url: `${appUrl}/gizlilik`,
+      lastModified: now,
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${appUrl}/kullanim-sartlari`,
+      lastModified: now,
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
       url: `${appUrl}/onboarding`,
       lastModified: now,
       changeFrequency: "monthly",

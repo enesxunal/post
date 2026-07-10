@@ -32,7 +32,8 @@ export const addonOptions: AddonOption[] = [
   {
     key: "calendar",
     label: "Paylaşım takvimi",
-    description: "Panel içi takvim görünümü ve ICS export.",
+    description:
+      "Onaylı postlar için takvim hatırlatıcısı (.ics), Google Takvim ve Instagram/Meta paylaşım paketi.",
     price: CALENDAR_ADDON_PRICE,
   },
 ];

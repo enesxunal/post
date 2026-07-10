@@ -23,6 +23,11 @@ import { Card } from "@/components/ui/card";
 import { LazyJobImage } from "@/components/dashboard/lazy-job-image";
 import { JobProductionDetails } from "@/components/dashboard/job-production-details";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import {
+  buildGoogleCalendarUrl,
+  buildShareCaption,
+  downloadIcsFile,
+} from "@/lib/share/publish-schedule";
 import { DASHBOARD_POLL_MS } from "@/lib/config";
 import { mapJobStatus } from "@/lib/generation/map-jobs";
 import { getPostFormatLabel, getPreviewAspectClass } from "@/lib/image-formats";
@@ -67,6 +72,7 @@ export type DashboardProject = {
 
 export type DashboardJob = {
   id: string;
+  dayId: string;
   dayName: string;
   dateLabel: string;
   status: string;
@@ -94,6 +100,7 @@ type UserDashboardProps = {
   postFormat?: PostFormat;
   hasStoryAddon?: boolean;
   hasCaptionAddon?: boolean;
+  hasCalendarAddon?: boolean;
   emptyMessage?: string;
   /** Arka planda üretim devam ediyorsa hafif polling (sayfa yenilemeden) */
   liveGenerating?: boolean;
@@ -106,6 +113,7 @@ export function UserDashboard({
   postFormat = "square",
   hasStoryAddon = false,
   hasCaptionAddon = false,
+  hasCalendarAddon = false,
   emptyMessage,
   liveGenerating = false,
 }: UserDashboardProps) {
@@ -194,6 +202,62 @@ export function UserDashboard({
     await navigator.clipboard.writeText(`${selectedJob.caption}${tags}`);
     setCopiedCaption(true);
     window.setTimeout(() => setCopiedCaption(false), 2000);
+  }
+
+  async function downloadPostImage() {
+    if (!selectedJob || selectedJob.status !== "ready") return;
+    const url = selectedJob.imageUrl ?? `/api/generation/job-image?jobId=${selectedJob.id}`;
+    if (url.startsWith("/")) {
+      const response = await fetch(url);
+      const data = (await response.json()) as { imageUrl?: string };
+      if (data.imageUrl) {
+        window.open(data.imageUrl, "_blank", "noopener,noreferrer");
+      }
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  async function prepareShareKit() {
+    if (!selectedJob || !project) return;
+    const text = buildShareCaption({
+      dayId: selectedJob.dayId,
+      dayName: selectedJob.dayName,
+      dateLabel: selectedJob.dateLabel,
+      brandName: project.brandName,
+      caption: selectedJob.caption,
+      hashtags: selectedJob.hashtags,
+    });
+    await navigator.clipboard.writeText(text);
+    await downloadPostImage();
+    alert(
+      "Paylaşım paketi hazır:\n\n1) Görsel açıldı\n2) Metin panoya kopyalandı\n\nInstagram veya Meta Business Suite'te görseli seçip metni yapıştırın.",
+    );
+  }
+
+  function addToCalendarIcs() {
+    if (!selectedJob || !project) return;
+    downloadIcsFile({
+      dayId: selectedJob.dayId,
+      dayName: selectedJob.dayName,
+      dateLabel: selectedJob.dateLabel,
+      brandName: project.brandName,
+      caption: selectedJob.caption,
+      hashtags: selectedJob.hashtags,
+    });
+  }
+
+  function openGoogleCalendar() {
+    if (!selectedJob || !project) return;
+    const url = buildGoogleCalendarUrl({
+      dayId: selectedJob.dayId,
+      dayName: selectedJob.dayName,
+      dateLabel: selectedJob.dateLabel,
+      brandName: project.brandName,
+      caption: selectedJob.caption,
+      hashtags: selectedJob.hashtags,
+    });
+    window.open(url, "_blank", "noopener,noreferrer");
   }
 
   async function approvePost() {
@@ -636,7 +700,12 @@ export function UserDashboard({
                       ) : null}
 
                       <div className="grid grid-cols-2 gap-2">
-                        <Button variant="outline" className="w-full" disabled={selectedJob.status !== "ready"}>
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          disabled={selectedJob.status !== "ready"}
+                          onClick={() => void downloadPostImage()}
+                        >
                           <Download className="mr-2 h-4 w-4" />
                           İndir
                         </Button>
@@ -675,10 +744,41 @@ export function UserDashboard({
                           </label>
                         </div>
                       ) : null}
-                      <Button variant="secondary" className="w-full">
-                        <CalendarPlus2 className="mr-2 h-4 w-4" />
-                        Takvime ekle
-                      </Button>
+                      {hasCalendarAddon && selectedJob.status === "ready" && selectedJob.approvedAt ? (
+                        <div className="space-y-3 rounded-2xl border border-sky-100 bg-sky-50/50 p-4">
+                          <p className="text-sm font-semibold text-slate-900">Paylaşım takvimi</p>
+                          <p className="text-xs leading-5 text-slate-600">
+                            Görsel + açıklama ile hatırlatıcı ekleyin. Meta Business Suite veya
+                            Instagram&apos;da manuel paylaşım için paket hazırlayın.
+                          </p>
+                          <Button variant="secondary" className="w-full" onClick={() => void prepareShareKit()}>
+                            <Copy className="mr-2 h-4 w-4" />
+                            Paylaşım paketi (metin + görsel)
+                          </Button>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button variant="outline" className="w-full" onClick={addToCalendarIcs}>
+                              <CalendarPlus2 className="mr-2 h-4 w-4" />
+                              .ics indir
+                            </Button>
+                            <Button variant="outline" className="w-full" onClick={openGoogleCalendar}>
+                              Google Takvim
+                            </Button>
+                          </div>
+                          {selectedJob.caption ? (
+                            <p className="text-[11px] leading-4 text-slate-500">
+                              Önizleme: {buildShareCaption({
+                                dayId: selectedJob.dayId,
+                                dayName: selectedJob.dayName,
+                                dateLabel: selectedJob.dateLabel,
+                                brandName: project?.brandName ?? profile.businessName,
+                                caption: selectedJob.caption,
+                                hashtags: selectedJob.hashtags,
+                              }).slice(0, 120)}
+                              …
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </Card>
                   ) : null}
                 </div>

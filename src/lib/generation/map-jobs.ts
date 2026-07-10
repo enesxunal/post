@@ -36,6 +36,7 @@ export function mapGenerationJobsForDashboard(
     const day = getSpecialDayById(job.type);
     return {
       id: job.id,
+      dayId: job.type,
       dayName: day?.name ?? "Özel gün postu",
       dateLabel: day?.dateValue ?? new Date(job.created_at).toLocaleDateString("tr-TR"),
       status: mapJobStatus(job.status),

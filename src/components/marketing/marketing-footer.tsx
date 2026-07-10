@@ -35,6 +35,12 @@ export function MarketingFooter() {
               <Link href="/iletisim" className="hover:text-emerald-700">
                 İletişim
               </Link>
+              <Link href="/gizlilik" className="hover:text-emerald-700">
+                Gizlilik
+              </Link>
+              <Link href="/kullanim-sartlari" className="hover:text-emerald-700">
+                Kullanım şartları
+              </Link>
             </div>
           </div>
 

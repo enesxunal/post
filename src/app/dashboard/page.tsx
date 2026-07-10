@@ -146,6 +146,7 @@ export default async function DashboardPage() {
       postFormat={meta?.postFormat ?? "square"}
       hasStoryAddon={meta?.purchasedAddons.includes("story") ?? false}
       hasCaptionAddon={meta?.purchasedAddons.includes("caption") ?? false}
+      hasCalendarAddon={meta?.purchasedAddons.includes("calendar") ?? false}
       emptyMessage={
         paidOrderNeedsSetup
           ? "Ödemeniz onaylandı ama paket kurulumu yarım kalmış. Aşağıdaki butona tıklayıp formu tekrar doldurun — yeniden ödeme gerekmez."
