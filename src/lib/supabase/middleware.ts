@@ -32,6 +32,17 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
+  const authCode = request.nextUrl.searchParams.get("code");
+
+  if (authCode && pathname !== "/auth/callback") {
+    const callbackUrl = request.nextUrl.clone();
+    callbackUrl.pathname = "/auth/callback";
+    if (!callbackUrl.searchParams.has("next")) {
+      callbackUrl.searchParams.set("next", "/dashboard");
+    }
+    return NextResponse.redirect(callbackUrl);
+  }
+
   const isProtected =
     pathname.startsWith("/dashboard") || pathname.startsWith("/projects");
 

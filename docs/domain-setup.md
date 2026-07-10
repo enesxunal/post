@@ -45,11 +45,16 @@ Supabase → **Authentication** → **URL Configuration**
 
 | Alan | Değer |
 |------|--------|
-| Site URL | `https://www.poust.app` |
+| Site URL | `https://www.poust.app` (**localhost yazmayın**) |
 | Redirect URLs | `https://www.poust.app/auth/callback` |
 | | `https://poust.app/auth/callback` (yedek) |
+| | `http://localhost:3000/auth/callback` (sadece yerel geliştirme) |
 
-Google ile giriş varsa Google Cloud Console'da da authorized redirect URI olarak `https://www.poust.app/auth/callback` ekleyin.
+> **Önemli:** Site URL `localhost` kalırsa canlı siteden Google girişi sizi `localhost:3000/?code=...` adresine atar. Canlıda mutlaka `https://www.poust.app` olmalı.
+
+Google ile giriş: Google Cloud → **Authorized redirect URIs** listesinde Supabase callback olmalı:
+`https://jpavgsimjqbkukwevnl.supabase.co/auth/v1/callback`  
+(poust uygulama callback’i `https://www.poust.app/auth/callback` — bunu Supabase Redirect URLs’e ekleyin, Google’a değil)
 
 ---
 
@@ -70,4 +75,8 @@ Otomatik üretilen dosyalar:
 - `https://www.poust.app/sitemap.xml`
 - `https://www.poust.app/robots.txt`
 
-Google Search Console'a `www.poust.app` mülkünü ekleyip sitemap'i gönderin.
+Google Search Console'a `https://www.poust.app` mülkünü ekleyin:
+
+1. Doğrulama: HTML dosyası `google7973783f09363249.html` (zaten `public/` içinde)
+2. Sitemap gönderin: `https://www.poust.app/sitemap.xml`
+3. Google OAuth doğrulaması için Search Console hesabı, Cloud Console ile **aynı Gmail** olmalı — ayrıntılar: `docs/google-oauth-branding.md`

@@ -15,12 +15,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { BrandColorSelector } from "@/components/onboarding/brand-color-selector";
 import { PostFormatSelector } from "@/components/onboarding/post-format-selector";
+import { SpecialDaySelector } from "@/components/onboarding/special-day-selector";
 import { addonOptions, sectors } from "@/lib/mock-data";
 import { BASE_PACKAGE_PRICE, MAX_SELECTED_DAYS } from "@/lib/config";
 import { buildQuickPackageDays } from "@/lib/special-days-data";
 import { saveOnboardingDraft } from "@/lib/onboarding/draft";
+import { countSelectedSlots } from "@/lib/selected-days";
 import { formatCurrency } from "@/lib/utils";
-import type { AddonKey, PostFormat, SectorKey, VisualStyle } from "@/types/domain";
+import type { AddonKey, PostFormat, SectorKey, SelectedDayEntry, VisualStyle } from "@/types/domain";
 
 const schema = z.object({
   brandName: z.string().min(2, "İşletme adı gerekli."),
@@ -36,6 +38,8 @@ export function BasicOnboardingForm({ onBack }: { onBack: () => void }) {
   const [step, setStep] = useState(0);
   const [selectedAddons, setSelectedAddons] = useState<AddonKey[]>([]);
   const [postFormat, setPostFormat] = useState<PostFormat>("square");
+  const [selectedDays, setSelectedDays] = useState<SelectedDayEntry[]>([]);
+  const [daysInitializedForSector, setDaysInitializedForSector] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -62,9 +66,19 @@ export function BasicOnboardingForm({ onBack }: { onBack: () => void }) {
     );
   }
 
+  const usedDaySlots = countSelectedSlots(selectedDays);
+  const daysRemaining = MAX_SELECTED_DAYS - usedDaySlots;
+  const canContinueDays = usedDaySlots === MAX_SELECTED_DAYS;
+
+  function initializeRecommendedDays(sector: string) {
+    if (daysInitializedForSector !== sector) {
+      setSelectedDays(buildQuickPackageDays(sector as SectorKey, MAX_SELECTED_DAYS));
+      setDaysInitializedForSector(sector);
+    }
+  }
+
   function buildDraft() {
     const values = form.getValues();
-    const selectedDays = buildQuickPackageDays(values.sector as SectorKey, MAX_SELECTED_DAYS);
 
     return {
       brandName: values.brandName,
@@ -126,7 +140,7 @@ export function BasicOnboardingForm({ onBack }: { onBack: () => void }) {
             <Badge className="bg-emerald-100 text-emerald-800">Hızlı kurulum</Badge>
             <h1 className="mt-2 text-3xl font-semibold text-slate-950">Birkaç bilgi, hazır paket</h1>
             <p className="mt-1 text-sm text-slate-600">
-              30 özel gün, modern stil ve standart logo konumu otomatik ayarlanır.
+              30 popüler özel gün önerilir; isterseniz değiştirebilirsiniz.
             </p>
           </div>
           <button type="button" onClick={onBack} className="text-sm font-medium text-slate-500">
@@ -169,12 +183,29 @@ export function BasicOnboardingForm({ onBack }: { onBack: () => void }) {
                 </div>
               </Field>
             </div>
+          ) : step === 1 ? (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-950">Özel günleriniz</h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Sektörünüze göre en popüler 30 gün seçildi. İstemediğinizi çıkarıp yerine başka gün
+                  ekleyebilirsiniz.
+                </p>
+              </div>
+              <SpecialDaySelector
+                selectedDays={selectedDays}
+                onChange={setSelectedDays}
+                sector={watched.sector as SectorKey | undefined}
+                buildAutoComplete={buildQuickPackageDays}
+                autoCompleteLabel="Önerilen 30 günü yükle"
+              />
+            </div>
           ) : (
             <div className="space-y-4">
               <Card className="p-5">
                 <CardTitle>Ana paket</CardTitle>
                 <CardDescription className="mt-2">
-                  30 özel gün (otomatik), modern stil, 10 revizyon hakkı.
+                  {MAX_SELECTED_DAYS} özel gün, modern stil, 10 revizyon hakkı.
                 </CardDescription>
                 <p className="mt-4 text-3xl font-semibold">{formatCurrency(BASE_PACKAGE_PRICE)}</p>
               </Card>
@@ -201,11 +232,21 @@ export function BasicOnboardingForm({ onBack }: { onBack: () => void }) {
             </div>
           )}
 
+          {step === 1 && !canContinueDays && (
+            <p className="mt-4 text-center text-sm text-amber-700">
+              Devam etmek için {daysRemaining} gün daha seçin veya &quot;Önerilen 30 günü yükle&quot;
+              butonunu kullanın.
+            </p>
+          )}
+
           <div className="mt-6 flex justify-between border-t border-emerald-100 pt-4">
             <Button
               type="button"
               variant="ghost"
-              onClick={() => (step === 0 ? onBack() : setStep(0))}
+              onClick={() => {
+                if (step === 0) onBack();
+                else setStep(step - 1);
+              }}
             >
               Geri
             </Button>
@@ -214,9 +255,15 @@ export function BasicOnboardingForm({ onBack }: { onBack: () => void }) {
                 type="button"
                 onClick={async () => {
                   const valid = await form.trigger();
-                  if (valid) setStep(1);
+                  if (!valid) return;
+                  initializeRecommendedDays(form.getValues().sector);
+                  setStep(1);
                 }}
               >
+                Özel günlere geç
+              </Button>
+            ) : step === 1 ? (
+              <Button type="button" disabled={!canContinueDays} onClick={() => setStep(2)}>
                 Pakete geç
               </Button>
             ) : (

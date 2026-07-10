@@ -13,7 +13,7 @@ export const howToSteps: HowToStep[] = [
     summary:
       "İlk ekranda iki seçenek görürsünüz. Acele ediyorsanız Hızlı Başla yeterli; özel başlık veya stil notu yazmak istiyorsanız Detaylı Kurulum'u seçin.",
     tips: [
-      "Hızlı mod ~2 dakikada biter, özel günler otomatik seçilir.",
+      "Hızlı modda 30 popüler özel gün önerilir; isterseniz değiştirirsiniz.",
       "Detaylı modda her gün için ayrı başlık ve görsel yönlendirmesi yazabilirsiniz.",
     ],
     mockup: "mode",

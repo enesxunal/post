@@ -9,6 +9,10 @@ export function getAppUrl(): string {
   const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/$/, "");
 
   if (fromEnv) {
+    // Canlıda yanlışlıkla localhost env girilmişse www kullan
+    if (process.env.NODE_ENV === "production" && fromEnv.includes("localhost")) {
+      return CANONICAL_APP_URL;
+    }
     // Eski Vercel preview URL veya apex domain → kanonik www kullan
     if (
       fromEnv.includes("vercel.app") ||

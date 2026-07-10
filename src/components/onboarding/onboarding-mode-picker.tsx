@@ -31,8 +31,8 @@ export function OnboardingModePicker({ onSelect }: OnboardingModePickerProps) {
               </div>
               <h2 className="mt-4 text-xl font-semibold text-slate-950">Hızlı Başla</h2>
               <p className="mt-2 text-sm leading-6 text-slate-600">
-                İşletme adı, sektör, renk ve logo — gerisini biz hallederiz. Özel günler ve stil
-                otomatik seçilir.
+                İşletme adı, sektör, renk ve logo — ardından önerilen 30 özel günü onaylayın veya
+                değiştirin.
               </p>
               <p className="mt-4 text-xs font-medium text-emerald-700">~2 dakika</p>
             </Card>

@@ -183,6 +183,7 @@ export function UserDashboard({
   const selectedJob = jobs.find((job) => job.id === selectedJobId) ?? jobs[0];
   const remainingCredits = project?.remainingCredits ?? 0;
   const previewAspect = getPreviewAspectClass(postFormat);
+  const readyJobs = jobs.filter((job) => job.status === "ready");
 
   async function handleLogout() {
     if (!supabase) {
@@ -216,6 +217,35 @@ export function UserDashboard({
       return;
     }
     window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  async function downloadAllPosts() {
+    if (!project?.id || readyJobs.length === 0) return;
+
+    setActionLoading("bulk-download");
+    try {
+      const params = new URLSearchParams({ projectId: project.id });
+      if (hasStoryAddon) params.set("includeStory", "1");
+
+      const response = await fetch(`/api/generation/bulk-download?${params.toString()}`);
+      if (!response.ok) {
+        const data = (await response.json().catch(() => ({}))) as { error?: string };
+        alert(data.error ?? "Toplu indirme başarısız oldu.");
+        return;
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = `${project.brandName}-postlar.zip`;
+      anchor.click();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      alert("Toplu indirme sırasında bir hata oluştu.");
+    } finally {
+      setActionLoading(null);
+    }
   }
 
   async function prepareShareKit() {
@@ -472,10 +502,16 @@ export function UserDashboard({
                     <span className="ml-1 text-emerald-700">Format: {getPostFormatLabel(postFormat)}</span>
                   </p>
                 </div>
-                {jobs.length > 0 ? (
-                  <Button variant="outline" disabled>
+                {readyJobs.length > 0 ? (
+                  <Button
+                    variant="outline"
+                    disabled={actionLoading === "bulk-download"}
+                    onClick={() => void downloadAllPosts()}
+                  >
                     <Download className="mr-2 h-4 w-4" />
-                    Toplu indirme yakında
+                    {actionLoading === "bulk-download"
+                      ? "ZIP hazırlanıyor..."
+                      : `Toplu indir (${readyJobs.length})`}
                   </Button>
                 ) : null}
               </div>

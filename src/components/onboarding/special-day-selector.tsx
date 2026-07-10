@@ -27,12 +27,17 @@ interface SpecialDaySelectorProps {
   selectedDays: SelectedDayEntry[];
   onChange: (entries: SelectedDayEntry[]) => void;
   sector?: SectorKey;
+  /** Varsayılan: buildAutoSelectedDays — hızlı kurulumda buildQuickPackageDays verilebilir */
+  buildAutoComplete?: (sector?: SectorKey, max?: number) => SelectedDayEntry[];
+  autoCompleteLabel?: string;
 }
 
 export function SpecialDaySelector({
   selectedDays,
   onChange,
   sector,
+  buildAutoComplete = buildAutoSelectedDays,
+  autoCompleteLabel = "Otomatik tamamla",
 }: SpecialDaySelectorProps) {
   const [activeCategory, setActiveCategory] = useState<SpecialDayCategory | "all">("all");
 
@@ -46,7 +51,7 @@ export function SpecialDaySelector({
   }, [activeCategory]);
 
   function handleAutoComplete() {
-    onChange(buildAutoSelectedDays(sector, MAX_SELECTED_DAYS));
+    onChange(buildAutoComplete(sector, MAX_SELECTED_DAYS));
   }
 
   return (
@@ -78,7 +83,7 @@ export function SpecialDaySelector({
           </div>
           <Button type="button" variant="secondary" onClick={handleAutoComplete}>
             <Sparkles className="mr-2 h-4 w-4" />
-            Otomatik tamamla
+            {autoCompleteLabel}
           </Button>
         </div>
       </div>
