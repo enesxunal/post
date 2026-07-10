@@ -6,10 +6,27 @@ export const CANONICAL_HOST = "www.poust.app";
 export const APEX_HOST = "poust.app";
 
 export function getAppUrl(): string {
-  const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (fromEnv) return fromEnv.replace(/\/$/, "");
+  const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/$/, "");
+
+  if (fromEnv) {
+    // Eski Vercel preview URL veya apex domain → kanonik www kullan
+    if (
+      fromEnv.includes("vercel.app") ||
+      fromEnv === `https://${APEX_HOST}` ||
+      fromEnv === `http://${APEX_HOST}`
+    ) {
+      return CANONICAL_APP_URL;
+    }
+    return fromEnv;
+  }
+
   if (process.env.NODE_ENV === "production") return CANONICAL_APP_URL;
   return "http://localhost:3000";
+}
+
+/** SEO / sitemap / metadata için her zaman güncel kanonik URL */
+export function getCanonicalAppUrl(): string {
+  return getAppUrl();
 }
 
 export const APP_URL = getAppUrl();

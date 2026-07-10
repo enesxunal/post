@@ -1,15 +1,16 @@
 import type { MetadataRoute } from "next";
 
-import { APP_URL } from "@/lib/config";
+import { getCanonicalAppUrl } from "@/lib/config";
 
 export default function robots(): MetadataRoute.Robots {
+  const appUrl = getCanonicalAppUrl();
   return {
     rules: {
       userAgent: "*",
       allow: "/",
       disallow: ["/admin/", "/api/", "/dashboard/", "/checkout/", "/payment/", "/orders/", "/projects/"],
     },
-    sitemap: `${APP_URL}/sitemap.xml`,
-    host: APP_URL,
+    sitemap: `${appUrl}/sitemap.xml`,
+    host: appUrl,
   };
 }
