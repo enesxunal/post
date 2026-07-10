@@ -6,8 +6,13 @@ import {
   buildBrandIntegration,
   buildSectorLayer,
   defaultBrandIntegrationForCategory,
-  DEFAULT_SECTOR_ELEMENTS,
 } from "@/lib/ai/art-direction";
+import type { SectorKey } from "@/types/domain";
+import {
+  getSectorNativeProfile,
+  mergeSectorAvoidList,
+  mergeSectorElementPool,
+} from "@/lib/ai/sector-native-profiles";
 import type { LogoAnalysis } from "@/lib/ai/logo-analysis";
 import { sectorAvoidList } from "@/lib/sectors/build-sector-prompt";
 import { getSectorOptionsFromSeed } from "@/lib/sectors/seed-data";
@@ -41,6 +46,7 @@ export type CreativeBrief = {
     nativeScene: string;
     elements: string[];
     avoid: string[];
+    blendHint: string;
   };
   style: {
     name: string;
@@ -98,16 +104,10 @@ export type CreativeBriefInput = {
 };
 
 const COMMERCIAL_DESIGN_AVOID = [
-  "generic greeting card",
-  "plain title plus decoration",
-  "stock template",
-  "canva template",
-  "stock photo family",
-  "family hugging",
-  "black footer bar",
-  "photo with text strip at bottom",
-  "clip art",
-  "flat boring gradient only",
+  "occasion wallpaper with headline sticker",
+  "corner logo pasted on flat background",
+  "poust app UI",
+  "saas product dashboard",
 ];
 
 function hashSeed(value: string): number {
@@ -199,34 +199,41 @@ function pickPrimaryVisualIdea(day: SpecialDay, seed: string): string {
   return shorten(fromGuide || firstSentence(day.visualDirection, 110) || day.name, 110);
 }
 
-function pickNativeScene(rule: SectorRule | undefined, sectorKey: string, seed: string): string {
-  if (rule) {
+function pickNativeScene(
+  rule: SectorRule | undefined,
+  sectorKey: SectorKey,
+  seed: string,
+): string {
+  const profile = getSectorNativeProfile(sectorKey);
+  if (rule?.visualCues?.trim()) {
     const element = pickBySeed(rule.suitableElements, `${seed}:scene`, "");
     const cue = firstSentence(rule.visualCues, 90);
-    return shorten([cue, element ? `with ${element}` : ""].filter(Boolean).join(" "), 120);
+    return shorten(
+      [profile.nativeScene, cue, element ? `featuring ${element}` : ""].filter(Boolean).join(" — "),
+      150,
+    );
   }
-  const pool = DEFAULT_SECTOR_ELEMENTS[sectorKey] ?? DEFAULT_SECTOR_ELEMENTS.other!;
-  return shorten(`premium ${sectorKey} business atmosphere with ${pool[0]}`, 100);
+  return profile.nativeScene;
 }
 
 function pickDesignLanguage(rule: StyleRule | undefined, styleName: string): string {
   if (!rule) {
     const fallbacks: Record<string, string> = {
-      Modern: "clean contemporary social-media composition with clear hierarchy",
-      Minimal: "generous negative space, refined sparse layout, restrained detail",
-      Kurumsal: "trustworthy orderly corporate polish and structured grids",
-      Samimi: "warm approachable local-business feeling and soft hospitality",
-      Premium: "agency-grade elegant high-perception finish and layered depth",
-      Renkli: "vivid energetic dynamic attention-grabbing layout",
+      Modern: "clean contemporary social-first layout, clear hierarchy, confident spacing",
+      Minimal: "generous negative space, refined sparse composition, calm restrained detail",
+      Kurumsal: "trustworthy structured grid, orderly corporate polish, formal balance",
+      Samimi: "warm approachable local-business charm, soft hospitality, human scale",
+      Premium: "agency-grade elegant finish, layered depth, high-perception editorial quality",
+      Renkli: "vivid energetic dynamic contrast, scroll-stopping rhythm, bold accents",
     };
     return fallbacks[styleName] ?? "clean contemporary social-first design";
   }
-  return shorten(
-    firstSentence(rule.compositionHints, 90) ||
-      firstSentence(rule.visualCues, 90) ||
-      rule.promptModifier,
-    90,
-  );
+  const parts = [
+    firstSentence(rule.compositionHints, 70),
+    firstSentence(rule.typographyHints, 60),
+    firstSentence(rule.visualCues, 70),
+  ].filter(Boolean);
+  return shorten(parts.join("; ") || rule.promptModifier, 120);
 }
 
 function buildLogoUsage(input: CreativeBriefInput, placement: string, treatment: string): string {
@@ -241,20 +248,21 @@ function buildLogoUsage(input: CreativeBriefInput, placement: string, treatment:
 
 function buildAvoidList(
   day: SpecialDay,
+  sectorKey: SectorKey,
   sectorRule: SectorRule | undefined,
   styleRule: StyleRule | undefined,
   hasLogo: boolean,
 ): string[] {
   const guide = buildOccasionCreativeGuide(day);
-  const raw = [
+  const seedAvoid = [
     ...(hasLogo
       ? ["AI-drawn logo", "watermark", "company name corner text", "duplicate logos"]
       : []),
     ...COMMERCIAL_DESIGN_AVOID,
     ...guide.avoid,
     day.avoidRules,
-    ...(sectorRule ? sectorAvoidList(sectorRule).slice(0, 3) : []),
-    ...(styleRule ? styleAvoidList(styleRule).slice(0, 2) : []),
+    ...(sectorRule ? sectorAvoidList(sectorRule) : []),
+    ...(styleRule ? styleAvoidList(styleRule) : []),
     "extra slogans",
     "misspelled Turkish",
     "clutter",
@@ -262,10 +270,12 @@ function buildAvoidList(
   ]
     .filter(Boolean)
     .flatMap((item) => String(item).split(/[,;|]/))
-    .map((item) => item.trim().toLowerCase())
+    .map((item) => item.trim())
     .filter(Boolean);
 
-  return [...new Set(raw)].slice(0, 10).map((item) => shorten(item, 42));
+  return mergeSectorAvoidList(sectorKey, seedAvoid)
+    .slice(0, 12)
+    .map((item) => shorten(item, 42));
 }
 
 function ensureArtDirection(input: CreativeBriefInput, seed: string): ArtDirection {
@@ -283,10 +293,13 @@ function ensureArtDirection(input: CreativeBriefInput, seed: string): ArtDirecti
         sector: input.sector,
         visualStyle: input.selectedStyle,
         primaryColor: input.brandColor,
-        sectorElements: input.sectorRule?.suitableElements,
-        sectorNativeScene: input.sectorRule
-          ? firstSentence(input.sectorRule.visualCues, 80)
-          : undefined,
+        sectorElements: mergeSectorElementPool(
+          input.sector,
+          input.sectorRule?.suitableElements,
+        ),
+        sectorNativeScene:
+          input.sectorRule?.visualCues?.trim() ||
+          getSectorNativeProfile(input.sector).nativeScene,
       },
       category,
       0,
@@ -354,13 +367,11 @@ export function buildCreativeBrief(input: CreativeBriefInput): CreativeBrief {
   const art = ensureArtDirection(input, seed);
   const styleName = resolveStyleName(input.selectedStyle);
 
+  const sectorProfile = getSectorNativeProfile(input.sector);
   const sectorElements =
     art.sectorLayer.elements.length > 0
       ? art.sectorLayer.elements
-      : (input.sectorRule?.suitableElements ?? DEFAULT_SECTOR_ELEMENTS[input.sector] ?? []).slice(
-          0,
-          2,
-        );
+      : mergeSectorElementPool(input.sector, input.sectorRule?.suitableElements).slice(0, 3);
 
   return {
     occasion: {
@@ -384,7 +395,11 @@ export function buildCreativeBrief(input: CreativeBriefInput): CreativeBrief {
       name: sectorLabel,
       nativeScene: pickNativeScene(input.sectorRule, input.sector, seed),
       elements: sectorElements,
-      avoid: input.sectorRule ? sectorAvoidList(input.sectorRule).slice(0, 4) : [],
+      avoid: mergeSectorAvoidList(
+        input.sector,
+        input.sectorRule ? sectorAvoidList(input.sectorRule) : [],
+      ).slice(0, 6),
+      blendHint: sectorProfile.blendHint,
     },
     style: {
       name: styleName,
@@ -412,7 +427,13 @@ export function buildCreativeBrief(input: CreativeBriefInput): CreativeBrief {
     },
     text: { headline },
     constraints: {
-      avoid: buildAvoidList(input.specialDay, input.sectorRule, input.styleRule, hasLogo),
+      avoid: buildAvoidList(
+        input.specialDay,
+        input.sector,
+        input.sectorRule,
+        input.styleRule,
+        hasLogo,
+      ),
     },
     backgroundOnly,
     ...(userDirection ? { userDirection } : {}),
@@ -445,15 +466,14 @@ export function writeImagePrompt(brief: CreativeBrief, postFormat?: PostFormat):
       : brief.sector.elements.slice(0, 4).join(", ");
 
   const integration = brief.artDirection.sectorLayer.integrationStyle.replace(/-/g, " ");
-  const sectorAvoid = brief.sector.avoid.slice(0, 3).join(", ");
   const placement = brief.artDirection.brandIntegration.logoPlacement.replace(/-/g, " ");
 
   const parts: string[] = [
     `Create a ${sizeLabel} premium branded Instagram post for ${brief.brand.name}, a ${brief.sector.name} business, for ${brief.occasion.name}.`,
-    `This must NOT look like a generic holiday greeting card. It should feel custom-made for this brand and sector.`,
+    `This must NOT look like a generic holiday greeting card. It should feel art-directed and custom-made for this brand and sector — a sector-native branded scene, not occasion wallpaper with a headline sticker.`,
     `Occasion layer: ${brief.occasion.emotionalGoal}, shown through ${brief.occasion.culturalSignal} / ${brief.occasion.primaryVisualIdea}.`,
-    `Sector-native layer: integrate ${sectorElements || brief.sector.nativeScene} as natural parts of the scene, with ${integration}. These elements should make the design feel specific to a ${brief.sector.name} business without overpowering the special day.`,
-    `Style layer: ${brief.style.name} — ${brief.style.designLanguage}.`,
+    `Sector-native layer: integrate ${sectorElements || brief.sector.nativeScene} as natural parts of the scene, with ${integration}. ${brief.sector.blendHint} These elements should make the design feel specific to a ${brief.sector.name} business without overpowering the special day.`,
+    `Style layer: ${brief.style.name} — ${brief.style.designLanguage}. Style shapes layout density and typography character; it is not just a color filter.`,
     `Brand layer: use brand color ${brief.brand.color} with ${colorRule}. ${brief.brand.logoUsage}`,
     `Composition: ${brief.artDirection.layout.replace(/-/g, " ")}, text ${brief.artDirection.textPosition}, ${brief.artDirection.typographyMood.replace(/-/g, " ")}, ${brief.artDirection.density} density, premium agency-quality finish, mobile-readable Turkish headline.`,
   ];
@@ -471,7 +491,7 @@ export function writeImagePrompt(brief: CreativeBrief, postFormat?: PostFormat):
   }
 
   parts.push(
-    `Avoid: generic greeting card, plain title plus decoration, stock template, clutter, extra slogans, misspelled Turkish${sectorAvoid ? `, ${sectorAvoid}` : ""}.`,
+    `Avoid: ${brief.constraints.avoid.slice(0, 8).join(", ")}.`,
   );
 
   let prompt = parts.join("\n\n").replace(/\n{3,}/g, "\n\n").trim();
@@ -481,6 +501,7 @@ export function writeImagePrompt(brief: CreativeBrief, postFormat?: PostFormat):
       `Scene identity: ${brief.sector.nativeScene}.`,
       brief.brand.description ? `Brand note: ${brief.brand.description}.` : "",
       `Motif: ${brief.artDirection.motifStrategy}. Focus: ${brief.artDirection.visualFocus.replace(/-/g, " ")}.`,
+      `Quality bar: this special day should feel staged for ${brief.brand.name} in the ${brief.sector.name} sector — never a stock celebration template.`,
       brief.rawArtDirection
         ? artDirectionToPromptSentence(brief.rawArtDirection, brief.sector.name)
         : "",

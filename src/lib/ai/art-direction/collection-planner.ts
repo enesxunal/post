@@ -10,6 +10,10 @@ import {
   LAYOUT_VISUAL_FOCUS,
 } from "@/lib/ai/art-direction/layouts";
 import { buildSectorLayer } from "@/lib/ai/art-direction/sector-layer";
+import {
+  getSectorNativeProfile,
+  mergeSectorElementPool,
+} from "@/lib/ai/sector-native-profiles";
 import type {
   ArtDirection,
   BrandCreativeProfile,
@@ -21,7 +25,7 @@ import type {
   TypographyMood,
   VisualFocus,
 } from "@/lib/ai/art-direction/types";
-import type { SpecialDayCategory, VisualStyle } from "@/types/domain";
+import type { SectorKey, SpecialDayCategory, VisualStyle } from "@/types/domain";
 
 function hashSeed(value: string): number {
   let hash = 0;
@@ -172,13 +176,16 @@ export function buildBrandProfile(input: {
   sectorElements?: string[];
   sectorNativeScene?: string;
 }): BrandCreativeProfile {
+  const sectorKey = input.sector as SectorKey;
+  const profile = getSectorNativeProfile(sectorKey);
+
   return {
     brandName: input.brandName,
     sector: input.sector,
     visualStyle: input.visualStyle,
     primaryColor: input.primaryColor,
-    ...(input.sectorElements?.length ? { sectorElements: input.sectorElements } : {}),
-    ...(input.sectorNativeScene ? { sectorNativeScene: input.sectorNativeScene } : {}),
+    sectorElements: mergeSectorElementPool(sectorKey, input.sectorElements),
+    sectorNativeScene: input.sectorNativeScene?.trim() || profile.nativeScene,
   };
 }
 

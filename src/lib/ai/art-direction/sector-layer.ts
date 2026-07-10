@@ -5,7 +5,11 @@ import type {
   SectorLayerIntensity,
 } from "@/lib/ai/art-direction/types";
 import { SECTOR_INTEGRATION_STYLES } from "@/lib/ai/art-direction/types";
-import type { SpecialDayCategory, VisualStyle } from "@/types/domain";
+import {
+  mergeSectorElementPool,
+  SECTOR_NATIVE_PROFILES,
+} from "@/lib/ai/sector-native-profiles";
+import type { SectorKey, SpecialDayCategory, VisualStyle } from "@/types/domain";
 
 function hashSeed(value: string): number {
   let hash = 0;
@@ -20,137 +24,10 @@ function pickBySeed<T>(items: T[], seed: string, fallback: T): T {
   return items[hashSeed(seed) % items.length]!;
 }
 
-/** Sektöre göre varsayılan premium native element havuzları */
-export const DEFAULT_SECTOR_ELEMENTS: Record<string, string[]> = {
-  beauty: [
-    "soft beauty textures",
-    "elegant salon light",
-    "skincare product reflection",
-    "silk fabric fold",
-    "premium feminine atmosphere",
-    "clean mirror glow",
-  ],
-  cafe: [
-    "warm table setting",
-    "coffee steam",
-    "dessert plate detail",
-    "cozy hospitality light",
-    "latte cup",
-    "fresh bakery warmth",
-  ],
-  dental: [
-    "bright hygienic clinic light",
-    "soft white medical surfaces",
-    "calm confidence atmosphere",
-    "minimal clinical cleanliness",
-    "gentle light reflections",
-  ],
-  "real-estate": [
-    "modern city silhouette",
-    "architectural lines",
-    "warm window light",
-    "home lifestyle hint",
-    "confident corporate structure",
-  ],
-  agency: [
-    "subtle glass UI cards",
-    "content planning surfaces",
-    "modern digital depth layers",
-    "soft abstract brand panels",
-    "premium startup atmosphere",
-  ],
-  education: [
-    "clean notebook texture",
-    "soft learning atmosphere",
-    "academic calm light",
-    "inspiring classroom warmth",
-  ],
-  boutique: [
-    "fabric texture",
-    "gift packaging",
-    "retail display hint",
-    "shopping bag silhouette",
-    "chic product vignette",
-  ],
-  fitness: [
-    "clean fitness object",
-    "energetic motion hint",
-    "studio lighting",
-    "strong but premium athletic atmosphere",
-  ],
-  nutrition: [
-    "fresh wellness produce",
-    "natural food texture",
-    "balanced lifestyle light",
-    "clean green vitality",
-  ],
-  "auto-service": [
-    "clean vehicle detail",
-    "headlight reflection",
-    "metallic surface texture",
-    "trustworthy service atmosphere",
-  ],
-  veterinary: [
-    "gentle pet care warmth",
-    "soft clinic calm",
-    "friendly trustworthy atmosphere",
-  ],
-  law: [
-    "refined institutional texture",
-    "classic corporate calm",
-    "subtle trust symbols",
-  ],
-  accounting: [
-    "clean desk atmosphere",
-    "precise corporate order",
-    "trustworthy finance calm",
-  ],
-  hotel: [
-    "hospitality lounge light",
-    "premium travel warmth",
-    "welcoming lobby atmosphere",
-  ],
-  photography: [
-    "studio softboxes glow",
-    "editorial lens atmosphere",
-    "creative depth of field",
-  ],
-  construction: [
-    "architectural blueprint lines",
-    "solid structure texture",
-    "modern building silhouette",
-  ],
-  cleaning: [
-    "fresh sparkling surfaces",
-    "clean service atmosphere",
-    "bright hygienic light",
-  ],
-  "flower-gift": [
-    "floral bouquet detail",
-    "gift wrap ribbon",
-    "soft romantic texture",
-  ],
-  barber: [
-    "barbershop mirror glow",
-    "clean grooming tools",
-    "classic masculine warmth",
-  ],
-  jewelry: [
-    "metallic sparkle detail",
-    "luxury velvet texture",
-    "refined boutique display",
-  ],
-  ecommerce: [
-    "unboxing product scene",
-    "clean retail packaging",
-    "modern shopping energy",
-  ],
-  other: [
-    "local business warmth",
-    "trustworthy service cue",
-    "neighborhood brand atmosphere",
-  ],
-};
+/** Geriye dönük uyumluluk */
+export const DEFAULT_SECTOR_ELEMENTS: Record<string, string[]> = Object.fromEntries(
+  Object.entries(SECTOR_NATIVE_PROFILES).map(([key, profile]) => [key, profile.elements]),
+);
 
 const INTEGRATION_BY_STYLE: Record<VisualStyle, SectorIntegrationStyle[]> = {
   modern: ["layered-scene", "abstract-brand-scene", "foreground-object", "lifestyle-environment"],
@@ -179,10 +56,10 @@ function intensityForCategory(category: SpecialDayCategory): SectorLayerIntensit
 export function resolveSectorElementPool(
   brandProfile: BrandCreativeProfile,
 ): string[] {
-  if (brandProfile.sectorElements?.length) {
-    return brandProfile.sectorElements;
-  }
-  return DEFAULT_SECTOR_ELEMENTS[brandProfile.sector] ?? DEFAULT_SECTOR_ELEMENTS.other!;
+  return mergeSectorElementPool(
+    brandProfile.sector as SectorKey,
+    brandProfile.sectorElements,
+  );
 }
 
 export function filterSectorElementsForAntiRepeat(
@@ -219,7 +96,8 @@ export function buildSectorLayer(
     resolveSectorElementPool(brandProfile),
   );
 
-  const elementCount = category === "sectoral" ? 3 : 2;
+  const elementCount =
+    category === "sectoral" ? 3 : category === "national" || category === "religious" ? 2 : 3;
   const elements: string[] = [];
   let working = [...pool];
   for (let i = 0; i < elementCount && working.length; i += 1) {
@@ -262,8 +140,8 @@ export function sectorLayerToPromptPhrase(
         : "Balance sector cues with the occasion atmosphere";
 
   return (
-    `Sector-native layer: integrate ${layer.elements.join(", ")} as natural parts of the scene ` +
-    `using a ${layer.integrationStyle.replace(/-/g, " ")} approach for a ${sectorLabel} business. ` +
-    `${intensityNote}. Do not let sector props overpower the special day.`
+    `Sector-native layer: integrate ${layer.elements.join(", ")} as natural parts of a ${sectorLabel} scene ` +
+    `using a ${layer.integrationStyle.replace(/-/g, " ")} approach. ` +
+    `${intensityNote}. Build a sector-native branded scene — not occasion wallpaper with a headline sticker.`
   );
 }
