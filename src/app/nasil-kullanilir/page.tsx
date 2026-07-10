@@ -24,7 +24,7 @@ export default function HowToUsePage() {
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(16,185,129,0.14),transparent),linear-gradient(180deg,#f7fdf9_0%,#ffffff_50%,#f0fdf4_100%)]">
       <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
-        <MarketingHeader showHomeLink />
+        <MarketingHeader />
 
         <main className="py-10 sm:py-14">
           <div className="max-w-2xl">

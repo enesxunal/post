@@ -22,6 +22,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     {
+      url: `${appUrl}/fiyatlandirma`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.85,
+    },
+    {
       url: `${appUrl}/nasil-kullanilir`,
       lastModified: now,
       changeFrequency: "monthly",
@@ -38,12 +44,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.8,
-    },
-    {
-      url: `${appUrl}/pricing`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.7,
     },
     {
       url: `${appUrl}/login`,

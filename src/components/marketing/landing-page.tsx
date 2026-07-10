@@ -401,6 +401,9 @@ export function LandingPage() {
                   <Link href="/onboarding" className="hover:text-emerald-700">
                     Paketi Başlat
                   </Link>
+                  <Link href="/fiyatlandirma" className="hover:text-emerald-700">
+                    Fiyatlandırma
+                  </Link>
                   <Link href="/nasil-kullanilir" className="hover:text-emerald-700">
                     Nasıl kullanılır
                   </Link>
@@ -506,6 +509,9 @@ function PricingCard() {
           <Button variant="secondary" className="h-12 w-full bg-white text-emerald-700 hover:bg-emerald-50">
             Postlarımı Oluştur
           </Button>
+        </Link>
+        <Link href="/fiyatlandirma" className="mt-3 block text-center text-sm font-medium text-white/90 hover:text-white">
+          Fiyat detayları →
         </Link>
       </div>
     </Card>

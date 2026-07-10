@@ -1,5 +1,6 @@
-import { LandingPage } from "@/components/marketing/landing-page";
+import { redirect } from "next/navigation";
 
-export default function PricingPage() {
-  return <LandingPage />;
+/** Eski /pricing adresi → Türkçe fiyatlandırma sayfası */
+export default function PricingRedirectPage() {
+  redirect("/fiyatlandirma");
 }
