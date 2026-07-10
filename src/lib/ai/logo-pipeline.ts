@@ -159,31 +159,36 @@ async function loadImageBuffer(imageUrl: string): Promise<Buffer | null> {
   return Buffer.from(await response.arrayBuffer());
 }
 
-async function buildLogoBacking(
-  logoW: number,
-  logoH: number,
+async function recolorLogoForBackground(
+  logoBuffer: Buffer,
   regionMean: number,
 ): Promise<Buffer> {
-  const padX = Math.round(logoW * 0.18);
-  const padY = Math.round(logoH * 0.22);
-  const w = logoW + padX * 2;
-  const h = logoH + padY * 2;
-  const light = regionMean < 128;
-  const fill = light ? { r: 255, g: 255, b: 255, alpha: 0.82 } : { r: 15, g: 23, b: 42, alpha: 0.55 };
+  const lightBackground = regionMean >= 128;
+  const target = lightBackground
+    ? { r: 15, g: 23, b: 42 }
+    : { r: 255, g: 255, b: 255 };
 
-  return sharp({
-    create: {
-      width: w,
-      height: h,
-      channels: 4,
-      background: fill,
-    },
+  const { data, info } = await sharp(logoBuffer)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  for (let i = 0; i < data.length; i += 4) {
+    const alpha = data[i + 3] ?? 0;
+    if (alpha < 24) continue;
+    data[i] = target.r;
+    data[i + 1] = target.g;
+    data[i + 2] = target.b;
+  }
+
+  return sharp(data, {
+    raw: { width: info.width, height: info.height, channels: 4 },
   })
     .png()
     .toBuffer();
 }
 
-/** Üretilen görsele gerçek logoyu bindirir — konum art direction + görsel boş alanına göre. */
+/** Üretilen görsele gerçek logoyu bindirir — arka plana göre renk uyarlar, kutu eklemez. */
 export async function applyLogoOverlay(
   imageUrl: string,
   logoUrl: string,
@@ -254,18 +259,10 @@ export async function applyLogoOverlay(
     h: logoH + margin * 2,
   });
 
-  const backing = await buildLogoBacking(logoW, logoH, regionStats.mean);
-  const backingMeta = await sharp(backing).metadata();
-  const backingW = backingMeta.width ?? logoW;
-  const backingH = backingMeta.height ?? logoH;
-  const backingLeft = left - Math.round((backingW - logoW) / 2);
-  const backingTop = top - Math.round((backingH - logoH) / 2);
+  const adaptedLogo = await recolorLogoForBackground(resizedLogo, regionStats.mean);
 
   const output = await base
-    .composite([
-      { input: backing, left: Math.max(0, backingLeft), top: Math.max(0, backingTop) },
-      { input: resizedLogo, left, top },
-    ])
+    .composite([{ input: adaptedLogo, left, top }])
     .png()
     .toBuffer();
 

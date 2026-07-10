@@ -1,4 +1,8 @@
-import { normalizePostFormat } from "@/lib/image-formats";
+import {
+  buildFormatPromptLine,
+  buildSafeZonePrompt,
+  normalizePostFormat,
+} from "@/lib/image-formats";
 import { buildOccasionCreativeGuide } from "@/lib/ai/occasion-creative-guide";
 import type { ArtDirection } from "@/lib/ai/art-direction";
 import {
@@ -246,6 +250,30 @@ function buildLogoUsage(input: CreativeBriefInput, placement: string, treatment:
   );
 }
 
+const SECULAR_NATIONAL_DAY_IDS = new Set([
+  "29-ekim",
+  "30-agustos",
+  "23-nisan",
+  "19-mayis",
+  "1-mayis",
+  "15-temmuz",
+  "10-kasim",
+  "1-kasim",
+]);
+
+const RELIGIOUS_ARCHITECTURE_AVOID = [
+  "mosque",
+  "minaret",
+  "cami",
+  "mihrab",
+  "Islamic prayer hall",
+  "Ottoman skyline",
+  "Blue Mosque",
+  "Hagia Sophia silhouette",
+  "religious architecture in window view",
+  "dome and minaret skyline",
+];
+
 function buildAvoidList(
   day: SpecialDay,
   sectorKey: SectorKey,
@@ -254,12 +282,15 @@ function buildAvoidList(
   hasLogo: boolean,
 ): string[] {
   const guide = buildOccasionCreativeGuide(day);
+  const secularNational =
+    day.category === "national" || SECULAR_NATIONAL_DAY_IDS.has(day.id);
   const seedAvoid = [
     ...(hasLogo
       ? ["AI-drawn logo", "watermark", "company name corner text", "duplicate logos"]
       : []),
     ...COMMERCIAL_DESIGN_AVOID,
     ...guide.avoid,
+    ...(secularNational ? RELIGIOUS_ARCHITECTURE_AVOID : []),
     day.avoidRules,
     ...(sectorRule ? sectorAvoidList(sectorRule) : []),
     ...(styleRule ? styleAvoidList(styleRule) : []),
@@ -274,7 +305,7 @@ function buildAvoidList(
     .filter(Boolean);
 
   return mergeSectorAvoidList(sectorKey, seedAvoid)
-    .slice(0, 12)
+    .slice(0, 14)
     .map((item) => shorten(item, 42));
 }
 
@@ -469,7 +500,10 @@ export function writeImagePrompt(brief: CreativeBrief, postFormat?: PostFormat):
   const placement = brief.artDirection.brandIntegration.logoPlacement.replace(/-/g, " ");
 
   const parts: string[] = [
+    buildFormatPromptLine(postFormat),
+    buildSafeZonePrompt("post", postFormat),
     `Create a ${sizeLabel} premium branded Instagram post for ${brief.brand.name}, a ${brief.sector.name} business, for ${brief.occasion.name}.`,
+    `Occasion-first rule: ${brief.occasion.name} identity must be obvious — use ONLY symbols and atmosphere that belong to THIS specific day. Never borrow religious imagery (mosque, minaret) for secular national days like Republic Day.`,
     `This must NOT look like a generic holiday greeting card. It should feel art-directed and custom-made for this brand and sector — a sector-native branded scene, not occasion wallpaper with a headline sticker.`,
     `Occasion layer: ${brief.occasion.emotionalGoal}, shown through ${brief.occasion.culturalSignal} / ${brief.occasion.primaryVisualIdea}.`,
     `Sector-native layer: integrate ${sectorElements || brief.sector.nativeScene} as natural parts of the scene, with ${integration}. ${brief.sector.blendHint} These elements should make the design feel specific to a ${brief.sector.name} business without overpowering the special day.`,

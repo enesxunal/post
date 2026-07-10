@@ -39,7 +39,7 @@ const CATEGORY_BASE: Record<SpecialDayCategory, OccasionCreativeGuide> = {
       "Başlık büyük ve okunaklı; arka planda günün ruhunu taşıyan dekor",
     ],
     moodKeywords: ["gururlu", "saygılı", "coşkulu", "kurumsal", "sıcak"],
-    avoid: [...UNIVERSAL_AVOID, "politik parti sembolü", "distorted flag"],
+    avoid: [...UNIVERSAL_AVOID, "politik parti sembolü", "distorted flag", "mosque", "minaret", "religious architecture"],
   },
   holiday: {
     soul: "İşletmenin müşterilerine profesyonel bayram kutlama grafiği — markalı sosyal medya tasarımı. Kişisel aile kartı veya stok fotoğraf DEĞİL.",
@@ -149,12 +149,32 @@ const SLUG_OVERRIDES: Partial<Record<string, Partial<OccasionCreativeGuide>>> = 
     avoid: ["cold empty dark gradient only", "typo in Turkish subtext"],
   },
   "29-ekim": {
+    soul: "Laik Cumhuriyet gururu — Türk bayrağı, kırmızı-beyaz, modern kutlama. Dini veya Osmanlı turistik siluet DEĞİL.",
+    visualMetaphors: [
+      "Türk bayrağı kompozisyonu",
+      "kırmızı-beyaz ışık ve derinlik",
+      "cumhuriyet poster estetiği",
+      "modern Türkiye kutlama grafiği",
+    ],
     culturalElements: [
       "Türk bayrağı veya güçlü kırmızı-beyaz kompozisyon",
       "cumhuriyet gururu",
-      "modern Türkiye kutlama estetiği",
+      "laik milli kutlama estetiği",
     ],
-    avoid: ["credit card or chip metaphor", "sci-fi podium", "no flag on Republic Day"],
+    avoid: [
+      "mosque",
+      "minaret",
+      "cami",
+      "Ottoman skyline",
+      "Blue Mosque",
+      "Hagia Sophia",
+      "religious architecture",
+      "Islamic dome in background",
+      "tourist Istanbul mosque view",
+      "credit card or chip metaphor",
+      "sci-fi podium",
+      "no flag on Republic Day",
+    ],
   },
   "30-agustos": {
     culturalElements: ["zafer ve gurur", "Türk bayrağı motifi", "kırmızı-beyaz"],

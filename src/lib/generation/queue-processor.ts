@@ -11,6 +11,7 @@ import { getPromptLibraryEntry } from "@/lib/ai/prompt-library";
 import { generateImage, isPlaceholderImageUrl } from "@/lib/ai/image-provider";
 import { applyHeadlineOverlay, useHeadlineOverlayForProvider } from "@/lib/ai/headline-pipeline";
 import { applyLogoOverlay } from "@/lib/ai/logo-pipeline";
+import { normalizeGeneratedImageSize } from "@/lib/ai/normalize-output-image";
 import {
   checkGeneratedImageQuality,
   isQualityCheckEnabled,
@@ -637,6 +638,10 @@ export async function processOneQueuedJob(projectId: string) {
     }
 
     let finalImageUrl = image.imageUrl;
+    finalImageUrl = await normalizeGeneratedImageSize(
+      finalImageUrl,
+      context.postFormat ?? "square",
+    );
     const headlineOverlay = useHeadlineOverlayForProvider(image.provider);
 
     if (headlineOverlay) {

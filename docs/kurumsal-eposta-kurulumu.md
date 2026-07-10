@@ -49,23 +49,18 @@ Bundan sonra onay mailleri **sizin domaininizden** gider.
 
 ---
 
-## Adım 3 — Onay maili şablonu (Türkçe)
+## Adım 3 — Onay maili şablonu (hazır HTML)
+
+Hazır şablon dosyası: **`docs/email-templates/confirm-signup.html`**
 
 1. Supabase → **Authentication** → **Email Templates**  
 2. **Confirm signup** şablonunu seçin  
 3. **Subject (konu):** `poust hesabınızı doğrulayın`  
-4. **Body** — `{{ .ConfirmationURL }}` satırını silmeyin:
+4. **Body:** `confirm-signup.html` dosyasının **tüm içeriğini** kopyalayıp yapıştırın  
+5. **`{{ .ConfirmationURL }}` satırlarını silmeyin** — onay linki budur  
+6. **Save**
 
-```html
-<h2>poust'a hoş geldiniz</h2>
-<p>Merhaba,</p>
-<p>Hesabınızı aktifleştirmek için aşağıdaki bağlantıya tıklayın:</p>
-<p><a href="{{ .ConfirmationURL }}">Hesabımı doğrula</a></p>
-<p>Bu işlemi siz yapmadıysanız bu e-postayı yok sayabilirsiniz.</p>
-<p>— poust ekibi<br>destek@poust.app</p>
-```
-
-5. **Save**
+SMTP olmadan da şablon kaydedilir; mail yine Supabase üzerinden gider, sadece tasarım sizin olur.
 
 ---
 

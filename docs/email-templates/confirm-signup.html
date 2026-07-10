@@ -1,0 +1,161 @@
+<!--
+  poust — Kayıt onay e-postası (Confirm signup)
+  Supabase → Authentication → Email Templates → Confirm signup → Body alanına yapıştırın.
+
+  Konu (Subject):
+  poust hesabınızı doğrulayın
+
+  ÖNEMLİ: {{ .ConfirmationURL }} satırını silmeyin — onay linki budur.
+-->
+
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>poust hesap doğrulama</title>
+  </head>
+  <body
+    style="
+      margin: 0;
+      padding: 0;
+      background-color: #f4faf6;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
+        sans-serif;
+      color: #0f172a;
+      -webkit-font-smoothing: antialiased;
+    "
+  >
+    <table
+      role="presentation"
+      width="100%"
+      cellpadding="0"
+      cellspacing="0"
+      border="0"
+      style="background-color: #f4faf6; padding: 32px 16px"
+    >
+      <tr>
+        <td align="center">
+          <table
+            role="presentation"
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+            style="max-width: 520px; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #d1fae5"
+          >
+            <!-- Logo -->
+            <tr>
+              <td align="center" style="padding: 36px 32px 20px">
+                <img
+                  src="https://www.poust.app/poust-logo.png"
+                  alt="poust"
+                  width="140"
+                  style="display: block; border: 0; max-width: 140px; height: auto"
+                />
+              </td>
+            </tr>
+
+            <!-- İçerik -->
+            <tr>
+              <td style="padding: 0 32px 8px">
+                <h1
+                  style="
+                    margin: 0;
+                    font-size: 22px;
+                    line-height: 1.35;
+                    font-weight: 600;
+                    color: #0f172a;
+                    text-align: center;
+                  "
+                >
+                  Hesabınızı doğrulayın
+                </h1>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding: 12px 32px 0">
+                <p style="margin: 0; font-size: 15px; line-height: 1.65; color: #475569; text-align: center">
+                  poust'a hoş geldiniz. Özel gün postlarınızı hazırlamaya başlamak için e-posta
+                  adresinizi onaylayın.
+                </p>
+              </td>
+            </tr>
+
+            <!-- Buton -->
+            <tr>
+              <td align="center" style="padding: 28px 32px 8px">
+                <a
+                  href="{{ .ConfirmationURL }}"
+                  style="
+                    display: inline-block;
+                    background-color: #16a34a;
+                    color: #ffffff;
+                    text-decoration: none;
+                    font-size: 15px;
+                    font-weight: 600;
+                    line-height: 1;
+                    padding: 14px 28px;
+                    border-radius: 999px;
+                  "
+                >
+                  Hesabımı doğrula
+                </a>
+              </td>
+            </tr>
+
+            <!-- Yedek link -->
+            <tr>
+              <td style="padding: 16px 32px 0">
+                <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #64748b; text-align: center">
+                  Buton çalışmazsa bu bağlantıyı tarayıcınıza yapıştırın:
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 32px 0">
+                <p style="margin: 0; font-size: 12px; line-height: 1.5; word-break: break-all; text-align: center">
+                  <a href="{{ .ConfirmationURL }}" style="color: #16a34a; text-decoration: underline">
+                    {{ .ConfirmationURL }}
+                  </a>
+                </p>
+              </td>
+            </tr>
+
+            <!-- Alt not -->
+            <tr>
+              <td style="padding: 28px 32px 36px">
+                <p
+                  style="
+                    margin: 0;
+                    font-size: 12px;
+                    line-height: 1.6;
+                    color: #94a3b8;
+                    text-align: center;
+                    border-top: 1px solid #ecfdf5;
+                    padding-top: 20px;
+                  "
+                >
+                  Bu işlemi siz yapmadıysanız bu e-postayı yok sayabilirsiniz.<br />
+                  <a href="mailto:destek@poust.app" style="color: #16a34a; text-decoration: none"
+                    >destek@poust.app</a
+                  >
+                  ·
+                  <a href="https://www.poust.app" style="color: #16a34a; text-decoration: none"
+                    >www.poust.app</a
+                  >
+                </p>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Footer -->
+          <p style="margin: 20px 0 0; font-size: 11px; line-height: 1.5; color: #94a3b8; text-align: center">
+            © poust · KOBİ özel gün Instagram postları
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

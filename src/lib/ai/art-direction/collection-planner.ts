@@ -51,7 +51,7 @@ const MOTIF_BY_CATEGORY: Record<SpecialDayCategory, string[]> = {
     "red-white symbolic background",
     "city lights and unity",
     "abstract republic pride",
-    "historic silhouette respect",
+    "modern celebration light",
   ],
   holiday: [
     "warm hospitality table",
