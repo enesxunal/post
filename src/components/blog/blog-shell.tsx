@@ -1,37 +1,13 @@
 import Link from "next/link";
 
-import { BrandLogo } from "@/components/brand/brand-logo";
-import { Button } from "@/components/ui/button";
+import { MarketingHeader } from "@/components/marketing/marketing-header";
 import { APP_NAME } from "@/lib/config";
 
 export function BlogShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(16,185,129,0.14),transparent),linear-gradient(180deg,#f7fdf9_0%,#ffffff_50%,#f0fdf4_100%)]">
       <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
-        <header className="flex items-center justify-between rounded-2xl border border-emerald-100/80 bg-white/90 px-4 py-3 shadow-sm backdrop-blur-md sm:rounded-full sm:px-6">
-          <div className="flex items-center gap-6">
-            <BrandLogo />
-            <nav className="hidden items-center gap-4 text-sm text-slate-600 md:flex">
-              <Link href="/blog" className="hover:text-emerald-700">
-                Blog
-              </Link>
-              <Link href="/blog?kategori=ozel-gun" className="hover:text-emerald-700">
-                Özel günler
-              </Link>
-              <Link href="/blog?kategori=meslek" className="hover:text-emerald-700">
-                Meslekler
-              </Link>
-            </nav>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href="/" className="hidden text-sm text-slate-600 hover:text-emerald-700 sm:block">
-              Ana sayfa
-            </Link>
-            <Link href="/onboarding">
-              <Button className="h-10 px-5 text-sm">Paket başlat</Button>
-            </Link>
-          </div>
-        </header>
+        <MarketingHeader showHomeLink blogSubNav />
 
         <main className="py-10 sm:py-14">{children}</main>
 
@@ -43,6 +19,12 @@ export function BlogShell({ children }: { children: React.ReactNode }) {
             <div className="flex flex-wrap gap-4">
               <Link href="/blog" className="hover:text-emerald-700">
                 Tüm yazılar
+              </Link>
+              <Link href="/nasil-kullanilir" className="hover:text-emerald-700">
+                Nasıl kullanılır
+              </Link>
+              <Link href="/sss" className="hover:text-emerald-700">
+                S.S.S.
               </Link>
               <Link href="/onboarding" className="hover:text-emerald-700">
                 Post üret

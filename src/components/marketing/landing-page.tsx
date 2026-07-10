@@ -20,11 +20,13 @@ import {
 
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { HeroVisual } from "@/components/marketing/hero-visual";
+import { MarketingHeader } from "@/components/marketing/marketing-header";
 import { ShowcasePostImage } from "@/components/marketing/showcase-post-image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { APP_DOMAIN, APP_NAME, BASE_PACKAGE_PRICE, BRAND_GRADIENT } from "@/lib/config";
+import { faqItems } from "@/lib/marketing-guide";
 import {
   heroShowcase,
   howItWorksSteps,
@@ -55,26 +57,7 @@ export function LandingPage() {
     <div className="overflow-hidden bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(16,185,129,0.18),transparent),linear-gradient(180deg,#f7fdf9_0%,#ffffff_45%,#f0fdf4_100%)]">
       {/* Üst navigasyon */}
       <section className="mx-auto max-w-7xl px-4 pb-4 pt-4 sm:px-6 lg:px-8">
-        <header className="flex items-center justify-between rounded-2xl border border-emerald-100/80 bg-white/90 px-4 py-3 shadow-sm backdrop-blur-md sm:rounded-full sm:px-6">
-          <BrandLogo />
-          <div className="flex items-center gap-3 sm:gap-5">
-            <Link
-              href="/blog"
-              className="hidden text-sm text-slate-600 transition hover:text-emerald-700 sm:block"
-            >
-              Blog
-            </Link>
-            <Link
-              href="/login"
-              className="hidden text-sm text-slate-600 transition hover:text-emerald-700 sm:block"
-            >
-              Giriş Yap
-            </Link>
-            <Link href="/onboarding">
-              <Button className="h-10 px-5 text-sm">Başla</Button>
-            </Link>
-          </div>
-        </header>
+        <MarketingHeader />
 
         {/* Hero */}
         <div className="grid gap-14 py-12 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-20">
@@ -158,11 +141,19 @@ export function LandingPage() {
 
       {/* Nasıl çalışır */}
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <SectionTitle
-          eyebrow="3 adımda hazır"
-          title="Karmaşık değil, akış gibi ilerler"
-          description="Mobilde hızlı, masaüstünde premium görünen onboarding deneyimi."
-        />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <SectionTitle
+            eyebrow="3 adımda hazır"
+            title="Karmaşık değil, akış gibi ilerler"
+            description="Mobilde hızlı, masaüstünde premium görünen onboarding deneyimi."
+          />
+          <Link href="/nasil-kullanilir">
+            <Button variant="outline" className="h-11 shrink-0">
+              Adım adım rehber
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
         <div className="mt-10 grid gap-5 md:grid-cols-3">
           {howItWorksSteps.map((step) => {
             const Icon = stepIcons[step.icon];
@@ -370,33 +361,24 @@ export function LandingPage() {
         </section>
 
         <section className="mt-12">
-          <SectionTitle
-            eyebrow="S.S.S."
-            title="En çok sorulan sorular"
-            description="Satın alma, üretim ve kullanım akışıyla ilgili kısa cevaplar."
-          />
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <SectionTitle
+              eyebrow="S.S.S."
+              title="En çok sorulan sorular"
+              description="Satın alma, üretim ve kullanım akışıyla ilgili kısa cevaplar."
+            />
+            <Link href="/sss">
+              <Button variant="outline" className="h-11 shrink-0">
+                Tüm sorular
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
           <div className="mt-8 grid gap-4 md:grid-cols-2">
-            {[
-              [
-                "Bu sistem abonelik mi?",
-                "Hayır. Ana paket tek seferlik satın alınır. Abonelik veya aylık zorunlu ödeme yoktur.",
-              ],
-              [
-                "Görseller hemen mi oluşuyor?",
-                "Ödeme sonrası panelinizde boş kartlar açılır. Her kartı tek tek üretir, beğenmezseniz revize notu yazarak tekrar oluşturabilirsiniz.",
-              ],
-              [
-                "Logoyu kendim yerleştiriyor muyum?",
-                "Hayır. Logo otomatik olarak en uygun alana eklenir. Böylece görsel daha profesyonel görünür.",
-              ],
-              [
-                "Caption ve story nasıl çalışıyor?",
-                "Ek paket seçtiyseniz post onayından sonra caption ve story de otomatik hazırlanır.",
-              ],
-            ].map(([question, answer]) => (
-              <Card key={question} className="rounded-3xl border-emerald-100 p-5">
-                <p className="text-base font-semibold text-slate-950">{question}</p>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{answer}</p>
+            {faqItems.slice(0, 4).map((item) => (
+              <Card key={item.question} className="rounded-3xl border-emerald-100 p-5">
+                <p className="text-base font-semibold text-slate-950">{item.question}</p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{item.answer}</p>
               </Card>
             ))}
           </div>
@@ -418,6 +400,12 @@ export function LandingPage() {
                 <div className="mt-3 flex flex-col gap-2 text-sm text-slate-600">
                   <Link href="/onboarding" className="hover:text-emerald-700">
                     Paketi Başlat
+                  </Link>
+                  <Link href="/nasil-kullanilir" className="hover:text-emerald-700">
+                    Nasıl kullanılır
+                  </Link>
+                  <Link href="/sss" className="hover:text-emerald-700">
+                    S.S.S.
                   </Link>
                   <Link href="/blog" className="hover:text-emerald-700">
                     Blog & rehberler
