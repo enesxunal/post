@@ -24,8 +24,10 @@ import { LazyJobImage } from "@/components/dashboard/lazy-job-image";
 import { JobProductionDetails } from "@/components/dashboard/job-production-details";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
+  buildBulkCalendarInputs,
   buildGoogleCalendarUrl,
   buildShareCaption,
+  downloadBulkIcsCalendar,
   downloadIcsFile,
 } from "@/lib/share/publish-schedule";
 import { buildSharePageUrl } from "@/lib/share/share-page-url";
@@ -198,6 +200,33 @@ export function UserDashboard({
   const previewAspect = getPreviewAspectClass(postFormat);
   const readyJobs = jobs.filter((job) => job.status === "ready");
 
+  function calendarPayloadForJob(job: DashboardJob) {
+    if (!project) return null;
+    const sequenceIndex = jobs.findIndex((item) => item.id === job.id);
+    const fridayJobs = jobs.filter((item) => item.dayId.includes("friday"));
+    const fridayIndex = fridayJobs.findIndex((item) => item.id === job.id);
+
+    return {
+      jobId: job.id,
+      dayId: job.dayId,
+      dayName: job.dayName,
+      dateLabel: job.dateLabel,
+      brandName: project.brandName,
+      caption: job.caption,
+      hashtags: job.hashtags,
+      shareReady: job.status === "ready" && Boolean(job.approvedAt),
+      fridayOccurrence:
+        job.dayId.includes("friday") && fridayIndex >= 0 ? fridayIndex : undefined,
+      sequenceIndex: sequenceIndex >= 0 ? sequenceIndex : undefined,
+    };
+  }
+
+  function addBulkCalendar() {
+    if (!project || jobs.length === 0) return;
+    const inputs = buildBulkCalendarInputs(jobs, project.brandName);
+    downloadBulkIcsCalendar(inputs, project.brandName);
+  }
+
   async function handleLogout() {
     if (!supabase) {
       router.push("/login");
@@ -281,28 +310,16 @@ export function UserDashboard({
 
   function addToCalendarIcs() {
     if (!selectedJob || !project) return;
-    downloadIcsFile({
-      jobId: selectedJob.id,
-      dayId: selectedJob.dayId,
-      dayName: selectedJob.dayName,
-      dateLabel: selectedJob.dateLabel,
-      brandName: project.brandName,
-      caption: selectedJob.caption,
-      hashtags: selectedJob.hashtags,
-    });
+    const payload = calendarPayloadForJob(selectedJob);
+    if (!payload) return;
+    downloadIcsFile(payload);
   }
 
   function openGoogleCalendar() {
     if (!selectedJob || !project) return;
-    const url = buildGoogleCalendarUrl({
-      jobId: selectedJob.id,
-      dayId: selectedJob.dayId,
-      dayName: selectedJob.dayName,
-      dateLabel: selectedJob.dateLabel,
-      brandName: project.brandName,
-      caption: selectedJob.caption,
-      hashtags: selectedJob.hashtags,
-    });
+    const payload = calendarPayloadForJob(selectedJob);
+    if (!payload) return;
+    const url = buildGoogleCalendarUrl(payload);
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
@@ -518,19 +535,46 @@ export function UserDashboard({
                     <span className="ml-1 text-emerald-700">Format: {getPostFormatLabel(postFormat)}</span>
                   </p>
                 </div>
-                {readyJobs.length > 0 ? (
-                  <Button
-                    variant="outline"
-                    disabled={actionLoading === "bulk-download"}
-                    onClick={() => void downloadAllPosts()}
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    {actionLoading === "bulk-download"
-                      ? "ZIP hazırlanıyor..."
-                      : `Toplu indir (${readyJobs.length})`}
-                  </Button>
-                ) : null}
+                <div className="flex flex-wrap gap-2">
+                  {readyJobs.length > 0 ? (
+                    <Button
+                      variant="outline"
+                      disabled={actionLoading === "bulk-download"}
+                      onClick={() => void downloadAllPosts()}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      {actionLoading === "bulk-download"
+                        ? "ZIP hazırlanıyor..."
+                        : `Toplu indir (${readyJobs.length})`}
+                    </Button>
+                  ) : null}
+                  {hasCalendarAddon && jobs.length > 0 ? (
+                    <Button variant="outline" onClick={addBulkCalendar}>
+                      <CalendarPlus2 className="mr-2 h-4 w-4" />
+                      30 günlük takvimi ekle
+                    </Button>
+                  ) : null}
+                </div>
               </div>
+
+              {hasCalendarAddon && jobs.length > 0 ? (
+                <Card className="border-sky-200 bg-sky-50/60 p-5">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">poust paylaşım takvimi</p>
+                      <p className="mt-1 text-sm leading-6 text-slate-600">
+                        Seçtiğiniz {jobs.length} özel günün her biri sabah <strong>09:00</strong>&apos;da
+                        takviminize &quot;poust paylaşım saati&quot; olarak eklenir. Hatırlatıcıya
+                        tıklayınca o günün paylaşım sayfası açılır.
+                      </p>
+                    </div>
+                    <Button onClick={addBulkCalendar}>
+                      <CalendarPlus2 className="mr-2 h-4 w-4" />
+                      Tüm günleri takvime ekle (.ics)
+                    </Button>
+                  </div>
+                </Card>
+              ) : null}
 
               {jobs.length === 0 ? (
                 <Card className="space-y-4 p-8 text-center">

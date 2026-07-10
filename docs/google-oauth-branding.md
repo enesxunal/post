@@ -123,35 +123,20 @@ Bu işlem DNS + Supabase Pro plan gerektirir.
 
 ---
 
-## 5. Kurumsal e-posta (onay / giriş mailleri)
+## 5. Müşteri kayıt onay e-postası (e-posta + şifre ile üye olanlar)
 
-Varsayılan Supabase mailleri `noreply@mail.app.supabase.io` benzeri bir adresten gider. Kurumsal görünüm için:
+Google OAuth onayı değil — müşteri normal mail ile kayıt olduğunda giden **hesap doğrulama maili**.
 
-### Supabase SMTP ayarı
+Detaylı adım adım rehber: **`docs/kurumsal-eposta-kurulumu.md`**
 
-Supabase → **Project Settings** → **Authentication** → **SMTP Settings**
+Kısa özet:
 
-| Alan | Örnek |
-|------|--------|
-| Host | `smtp.gmail.com` veya hosting sağlayıcınız |
-| Port | `587` |
-| User | `noreply@poust.app` veya `destek@poust.app` |
-| Sender name | `poust` |
-| Sender email | `noreply@poust.app` |
+1. `noreply@poust.app` mailbox aç (hosting veya Resend)  
+2. Supabase → **SMTP Settings** → kurumsal gönderen ayarla  
+3. Supabase → **Email Templates** → **Confirm signup** → Türkçe şablon  
+4. **Confirm email** açık olsun  
 
-**Gmail Workspace / Google Workspace** kullanıyorsanız uygulama şifresi veya OAuth SMTP gerekir.  
-**Hosting (cPanel, Turhost vb.)** üzerinden `noreply@poust.app` mailbox açıp SMTP bilgilerini girin.
-
-### E-posta şablonları
-
-**Authentication** → **Email Templates** — tüm şablonları Türkçeleştirin (kayıt onayı, şifre sıfırlama).
-
-Örnek konu: `poust hesabınızı doğrulayın`  
-Gönderen: `noreply@poust.app` (SMTP ayarlandıktan sonra)
-
-### Google OAuth onay maili
-
-Google Cloud doğrulama sonucu `enesunal700@gmail.com` adresine gelir — bu Google’ın kendi mailidir, Supabase SMTP ile değiştirilemez. Müşterilere giden mailler SMTP ile kurumsal olur.
+Google Cloud doğrulama maili (`enesunal700@gmail.com`) ayrı bir konudur; müşteri mailleri SMTP ile kurumsal olur.
 
 ---
 

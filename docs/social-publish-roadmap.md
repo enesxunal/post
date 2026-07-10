@@ -33,7 +33,7 @@ Otomatik paylaşım için gerekenler:
 ## Önerilen yol haritası
 
 ### Faz 1 (şimdi) ✅
-ICS + Google Takvim + paylaşım sayfası (`/paylasim/[jobId]`) — tıklayınca görsel indir + metin kopyala
+ICS + Google Takvim + paylaşım sayfası + **30 günlük toplu takvim** (sabah 09:00, `poust paylaşım saati`)
 
 ### Faz 2
 Meta Business Suite’e **yönlendirme linki** + hazır caption (hâlâ manuel onay)
