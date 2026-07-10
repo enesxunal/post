@@ -18,14 +18,16 @@ import {
   Zap,
 } from "lucide-react";
 
-import { BrandLogo } from "@/components/brand/brand-logo";
 import { HeroVisual } from "@/components/marketing/hero-visual";
-import { MarketingHeader } from "@/components/marketing/marketing-header";
 import { ShowcasePostImage } from "@/components/marketing/showcase-post-image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
-import { APP_DOMAIN, APP_NAME, BASE_PACKAGE_PRICE, BRAND_GRADIENT } from "@/lib/config";
+import {
+  BASE_PACKAGE_PRICE,
+  BRAND_GRADIENT,
+  MARKETING_START_HREF,
+} from "@/lib/config";
 import { faqItems } from "@/lib/marketing-guide";
 import {
   heroShowcase,
@@ -54,12 +56,8 @@ const stepIcons = {
 
 export function LandingPage() {
   return (
-    <div className="overflow-hidden bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(16,185,129,0.18),transparent),linear-gradient(180deg,#f7fdf9_0%,#ffffff_45%,#f0fdf4_100%)]">
-      {/* Üst navigasyon */}
-      <section className="mx-auto max-w-7xl px-4 pb-4 pt-4 sm:px-6 lg:px-8">
-        <MarketingHeader />
-
-        {/* Hero */}
+    <>
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-14 py-12 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-20">
           <div>
             <Badge className="gap-2 border-emerald-200 bg-emerald-50 text-emerald-800">
@@ -86,15 +84,15 @@ export function LandingPage() {
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link href="/onboarding">
+              <Link href={MARKETING_START_HREF}>
                 <Button className="h-12 w-full px-7 text-base shadow-lg shadow-emerald-500/20 sm:w-auto">
                   Postlarımı Oluştur
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="/login">
+              <Link href="/fiyatlandirma">
                 <Button variant="outline" className="h-12 w-full sm:w-auto">
-                  Giriş Yap
+                  Fiyatları gör
                 </Button>
               </Link>
             </div>
@@ -124,7 +122,7 @@ export function LandingPage() {
 
       {/* Güven şeridi */}
       <section className="border-y border-emerald-100/80 bg-white/60 backdrop-blur-sm">
-        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-6 px-4 py-8 sm:px-6 md:grid-cols-4 lg:px-8">
+        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-4 py-8 sm:px-6 md:grid-cols-4 lg:px-8">
           {[
             ["30", "özel gün postu"],
             ["10", "revizyon hakkı"],
@@ -140,7 +138,7 @@ export function LandingPage() {
       </section>
 
       {/* Nasıl çalışır */}
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <SectionTitle
             eyebrow="3 adımda hazır"
@@ -188,7 +186,7 @@ export function LandingPage() {
 
       {/* Örnek postlar */}
       <section className="bg-slate-950 py-16 text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-400">
               Örnek postlar
@@ -217,7 +215,7 @@ export function LandingPage() {
       </section>
 
       {/* Sektörler */}
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
         <SectionTitle
           eyebrow="KOBİ odaklı"
           title="Hangi işletmeler için?"
@@ -242,7 +240,7 @@ export function LandingPage() {
       </section>
 
       {/* Fiyat + panel önizlemesi */}
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
           <PricingCard />
 
@@ -280,7 +278,7 @@ export function LandingPage() {
       </section>
 
       {/* Alt CTA */}
-      <section className="mx-auto max-w-7xl px-4 pb-24 pt-4 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-6xl px-4 pb-16 pt-4 sm:px-6 lg:px-8">
         <Card className="overflow-hidden border-0 bg-gradient-to-br from-emerald-500 via-emerald-600 to-green-700 p-0 text-white shadow-xl shadow-emerald-500/25">
           <div className="grid lg:grid-cols-2">
             <div className="p-8 sm:p-12">
@@ -295,7 +293,7 @@ export function LandingPage() {
                 mimari.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link href="/onboarding">
+                <Link href={MARKETING_START_HREF}>
                   <Button
                     variant="secondary"
                     className="h-12 w-full bg-white px-7 text-emerald-700 hover:bg-emerald-50 sm:w-auto"
@@ -303,12 +301,12 @@ export function LandingPage() {
                     Paketimi Hazırla
                   </Button>
                 </Link>
-                <Link href="/login">
+                <Link href="/nasil-kullanilir">
                   <Button
                     variant="outline"
                     className="h-12 w-full border-white/40 bg-transparent text-white hover:bg-white/10 sm:w-auto"
                   >
-                    Giriş Yap
+                    Nasıl kullanılır
                   </Button>
                 </Link>
               </div>
@@ -383,57 +381,8 @@ export function LandingPage() {
             ))}
           </div>
         </section>
-
-        <footer className="mt-12 rounded-[28px] border border-emerald-100 bg-white/80 px-6 py-8 shadow-sm">
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-md">
-              <BrandLogo />
-              <p className="mt-4 text-sm leading-6 text-slate-600">
-                KOBİ'ler için özel gün postlarını tek akışta hazırlayan, logo ve marka diline
-                uyumlu sosyal medya tasarım platformu.
-              </p>
-              <p className="mt-3 text-sm text-slate-500">www.{APP_DOMAIN}</p>
-            </div>
-            <div className="grid gap-8 sm:grid-cols-2">
-              <div>
-                <p className="text-sm font-semibold text-slate-900">Hızlı Erişim</p>
-                <div className="mt-3 flex flex-col gap-2 text-sm text-slate-600">
-                  <Link href="/onboarding" className="hover:text-emerald-700">
-                    Paketi Başlat
-                  </Link>
-                  <Link href="/fiyatlandirma" className="hover:text-emerald-700">
-                    Fiyatlandırma
-                  </Link>
-                  <Link href="/nasil-kullanilir" className="hover:text-emerald-700">
-                    Nasıl kullanılır
-                  </Link>
-                  <Link href="/sss" className="hover:text-emerald-700">
-                    S.S.S.
-                  </Link>
-                  <Link href="/blog" className="hover:text-emerald-700">
-                    Blog & rehberler
-                  </Link>
-                  <Link href="/login" className="hover:text-emerald-700">
-                    Giriş Yap
-                  </Link>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-900">Ürün</p>
-                <div className="mt-3 flex flex-col gap-2 text-sm text-slate-600">
-                  <span>30 özel gün postu</span>
-                  <span>Revizyon kredileri</span>
-                  <span>Caption ve story eklentileri</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="mt-8 border-t border-emerald-100 pt-4 text-sm text-slate-500">
-            © {new Date().getFullYear()} {APP_NAME}. Tüm hakları saklıdır.
-          </div>
-        </footer>
       </section>
-    </div>
+    </>
   );
 }
 
@@ -505,7 +454,7 @@ function PricingCard() {
         ))}
       </div>
       <div className="mt-8">
-        <Link href="/onboarding">
+        <Link href={MARKETING_START_HREF}>
           <Button variant="secondary" className="h-12 w-full bg-white text-emerald-700 hover:bg-emerald-50">
             Postlarımı Oluştur
           </Button>

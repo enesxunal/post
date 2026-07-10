@@ -5,9 +5,10 @@ import { notFound } from "next/navigation";
 
 import { BlogPostCard } from "@/components/blog/blog-post-card";
 import { BlogShell } from "@/components/blog/blog-shell";
+import { MarketingPage } from "@/components/marketing/marketing-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { APP_NAME, APP_URL } from "@/lib/config";
+import { APP_NAME, APP_URL, MARKETING_START_HREF } from "@/lib/config";
 import {
   getAllBlogPosts,
   getBlogPostBySlug,
@@ -93,6 +94,7 @@ export default async function BlogPostPage({ params }: { params: Params }) {
 
   return (
     <BlogShell>
+      <MarketingPage>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -181,7 +183,7 @@ export default async function BlogPostPage({ params }: { params: Params }) {
           <p className="mt-3 text-sm text-white/90">
             Logonuzu yükleyin, özel günleri seçin, markanıza özel postları üretin.
           </p>
-          <Link href="/onboarding" className="mt-6 inline-block">
+          <Link href={MARKETING_START_HREF} className="mt-6 inline-block">
             <Button variant="secondary" className="h-12 bg-white px-6 text-emerald-700 hover:bg-emerald-50">
               Hemen başla
             </Button>
@@ -199,6 +201,7 @@ export default async function BlogPostPage({ params }: { params: Params }) {
           </div>
         </section>
       ) : null}
+      </MarketingPage>
     </BlogShell>
   );
 }

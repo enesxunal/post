@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { LandingPage } from "@/components/marketing/landing-page";
+import { MarketingShell } from "@/components/marketing/marketing-shell";
 import { APP_NAME, APP_URL } from "@/lib/config";
 
 export const metadata: Metadata = {
@@ -38,7 +39,9 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <LandingPage />
+      <MarketingShell>
+        <LandingPage />
+      </MarketingShell>
     </>
   );
 }

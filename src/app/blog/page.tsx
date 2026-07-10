@@ -3,9 +3,10 @@ import Link from "next/link";
 
 import { BlogPostCard } from "@/components/blog/blog-post-card";
 import { BlogShell } from "@/components/blog/blog-shell";
+import { MarketingPage } from "@/components/marketing/marketing-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { APP_NAME, APP_URL } from "@/lib/config";
+import { APP_NAME, APP_URL, MARKETING_START_HREF } from "@/lib/config";
 import {
   getAllBlogPosts,
   getBlogPostsByCategory,
@@ -59,6 +60,7 @@ export default async function BlogIndexPage({
 
   return (
     <BlogShell>
+      <MarketingPage>
       <div className="max-w-3xl">
         <Badge className="border-emerald-200 bg-emerald-50 text-emerald-800">Blog</Badge>
         <h1 className="mt-4 text-3xl font-bold tracking-tight text-slate-950 sm:text-5xl">
@@ -127,12 +129,13 @@ export default async function BlogIndexPage({
           Marka logonuz ve renklerinizle özel gün görsellerini {APP_NAME} panelinde dakikalar içinde
           hazırlayın.
         </p>
-        <Link href="/onboarding" className="mt-6 inline-block">
+        <Link href={MARKETING_START_HREF} className="mt-6 inline-block">
           <Button variant="secondary" className="h-12 bg-white px-6 text-emerald-700 hover:bg-emerald-50">
             Paketi başlat
           </Button>
         </Link>
       </section>
+      </MarketingPage>
     </BlogShell>
   );
 }

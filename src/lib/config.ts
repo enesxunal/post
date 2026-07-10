@@ -31,6 +31,13 @@ export function getCanonicalAppUrl(): string {
 
 export const APP_URL = getAppUrl();
 
+/** İletişim — vitrin ve iletişim sayfası */
+export const CONTACT_EMAIL = "destek@poust.app";
+export const CONTACT_ADDRESS = "Mustafa Kemal Mah. 2139. Sok. 15 Çankaya/ANKARA";
+
+/** Pazarlama sayfalarındaki Başla / paket CTA'ları önce girişe yönlendirir */
+export const MARKETING_START_HREF = "/login?next=%2Fonboarding";
+
 /** Logo gradyanı — poust marka rengi */
 export const BRAND_GRADIENT = {
   from: "#38C661",
