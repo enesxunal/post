@@ -24,7 +24,9 @@ import { Card } from "@/components/ui/card";
 import { LazyJobImage } from "@/components/dashboard/lazy-job-image";
 import { ProfileAvatar, ProfileBanner } from "@/components/dashboard/profile-avatar";
 import { ProfileSettings } from "@/components/dashboard/profile-settings";
+import { ProjectSwitcher } from "@/components/dashboard/project-switcher";
 import { JobProductionDetails } from "@/components/dashboard/job-production-details";
+import type { DashboardJob, ProjectBundle } from "@/lib/dashboard/project-bundles";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   buildBulkCalendarInputs,
@@ -71,32 +73,7 @@ export type DashboardProfile = {
   brandColors: string[];
 };
 
-export type DashboardProject = {
-  id: string;
-  brandName: string;
-  primaryColor: string;
-  visualStyle: string;
-  remainingCredits: number;
-  bonusCreditsGranted: boolean;
-};
-
-export type DashboardJob = {
-  id: string;
-  dayId: string;
-  dayName: string;
-  dateLabel: string;
-  status: string;
-  imageIndex: number;
-  caption: string | null;
-  hashtags?: string[];
-  imageUrl?: string | null;
-  previousVersions?: JobImageVersion[];
-  approvedAt?: string | null;
-  storyImageUrl?: string | null;
-  storyStatus?: string | null;
-  gradient: string;
-  errorMessage?: string | null;
-};
+export type { DashboardJob, DashboardProject } from "@/lib/dashboard/project-bundles";
 
 const addonLabels: Record<string, string> = {
   caption: "Caption paketi",
@@ -106,42 +83,73 @@ const addonLabels: Record<string, string> = {
 
 type UserDashboardProps = {
   user: DashboardProfile;
-  project: DashboardProject | null;
-  jobs: DashboardJob[];
+  projectBundles: ProjectBundle[];
+  initialProjectId?: string;
   postFormat?: PostFormat;
   hasStoryAddon?: boolean;
   hasCaptionAddon?: boolean;
   hasCalendarAddon?: boolean;
   emptyMessage?: string;
-  /** Arka planda üretim devam ediyorsa hafif polling (sayfa yenilemeden) */
   liveGenerating?: boolean;
-  /** Takvim linkinden veya /dashboard?job= ile açılan post */
   initialSelectedJobId?: string;
 };
 
 export function UserDashboard({
   user: profile,
-  project,
-  jobs: initialJobs,
-  postFormat = "square",
-  hasStoryAddon = false,
-  hasCaptionAddon = false,
-  hasCalendarAddon = false,
+  projectBundles,
+  initialProjectId,
+  postFormat: initialPostFormat = "square",
+  hasStoryAddon: initialHasStoryAddon = false,
+  hasCaptionAddon: initialHasCaptionAddon = false,
+  hasCalendarAddon: initialHasCalendarAddon = false,
   emptyMessage,
   liveGenerating = false,
   initialSelectedJobId,
 }: UserDashboardProps) {
   const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-  const [jobs, setJobs] = useState(initialJobs);
+  const [activeProjectId, setActiveProjectId] = useState(
+    initialProjectId && projectBundles.some((bundle) => bundle.project.id === initialProjectId)
+      ? initialProjectId
+      : projectBundles[0]?.project.id ?? "",
+  );
+  const activeBundle =
+    projectBundles.find((bundle) => bundle.project.id === activeProjectId) ??
+    projectBundles[0] ??
+    null;
+  const project = activeBundle?.project ?? null;
+  const [jobs, setJobs] = useState(activeBundle?.jobs ?? []);
+  const [postFormat, setPostFormat] = useState(activeBundle?.postFormat ?? initialPostFormat);
+  const [hasStoryAddon, setHasStoryAddon] = useState(
+    activeBundle?.hasStoryAddon ?? initialHasStoryAddon,
+  );
+  const [hasCaptionAddon, setHasCaptionAddon] = useState(
+    activeBundle?.hasCaptionAddon ?? initialHasCaptionAddon,
+  );
+  const [hasCalendarAddon, setHasCalendarAddon] = useState(
+    activeBundle?.hasCalendarAddon ?? initialHasCalendarAddon,
+  );
+  const [brandContext, setBrandContext] = useState({
+    businessName: activeBundle?.brandName ?? profile.businessName,
+    sector: activeBundle?.sectorLabel ?? profile.sector,
+    visualStyle: activeBundle?.visualStyleLabel ?? profile.visualStyle,
+    primaryColor: activeBundle?.primaryColor ?? profile.primaryColor,
+    brandColors: activeBundle?.brandColors ?? profile.brandColors,
+    logoUrl: activeBundle?.logoUrl ?? profile.logoUrl ?? null,
+    logoInitial: activeBundle?.logoInitial ?? profile.logoInitial,
+    postsTotal: activeBundle?.postsTotal ?? profile.postsTotal,
+    postsReady: activeBundle?.postsReady ?? profile.postsReady,
+    postsGenerating: activeBundle?.postsGenerating ?? profile.postsGenerating,
+    addons: activeBundle?.addons ?? profile.addons,
+  });
   const [tab, setTab] = useState<DashboardTab>("gallery");
   const selectTab = (next: DashboardTab) => {
     startTransition(() => setTab(next));
   };
   const [selectedJobId, setSelectedJobId] = useState(
-    initialSelectedJobId && initialJobs.some((job) => job.id === initialSelectedJobId)
+    initialSelectedJobId && (activeBundle?.jobs ?? []).some((job) => job.id === initialSelectedJobId)
       ? initialSelectedJobId
-      : initialJobs[0]?.id,
+      : activeBundle?.jobs[0]?.id,
   );
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -151,14 +159,50 @@ export function UserDashboard({
   const [generationNote, setGenerationNote] = useState("");
 
   useEffect(() => {
-    setJobs(initialJobs);
-    if (initialSelectedJobId && initialJobs.some((job) => job.id === initialSelectedJobId)) {
+    const bundle =
+      projectBundles.find((item) => item.project.id === activeProjectId) ??
+      projectBundles[0] ??
+      null;
+    if (!bundle) return;
+
+    setJobs(bundle.jobs);
+    setPostFormat(bundle.postFormat);
+    setHasStoryAddon(bundle.hasStoryAddon);
+    setHasCaptionAddon(bundle.hasCaptionAddon);
+    setHasCalendarAddon(bundle.hasCalendarAddon);
+    setBrandContext({
+      businessName: bundle.brandName,
+      sector: bundle.sectorLabel,
+      visualStyle: bundle.visualStyleLabel,
+      primaryColor: bundle.primaryColor,
+      brandColors: bundle.brandColors,
+      logoUrl: bundle.logoUrl,
+      logoInitial: bundle.logoInitial,
+      postsTotal: bundle.postsTotal,
+      postsReady: bundle.postsReady,
+      postsGenerating: bundle.postsGenerating,
+      addons: bundle.addons,
+    });
+    setSelectedJobId((current) => {
+      if (current && bundle.jobs.some((job) => job.id === current)) return current;
+      return bundle.jobs[0]?.id;
+    });
+  }, [activeProjectId, projectBundles]);
+
+  useEffect(() => {
+    if (initialSelectedJobId && jobs.some((job) => job.id === initialSelectedJobId)) {
       setSelectedJobId(initialSelectedJobId);
       setTab("gallery");
-      return;
     }
-    setSelectedJobId((current) => current ?? initialJobs[0]?.id);
-  }, [initialJobs, initialSelectedJobId]);
+  }, [initialSelectedJobId, jobs]);
+
+  function switchProject(projectId: string) {
+    if (projectId === activeProjectId) return;
+    setActiveProjectId(projectId);
+    const params = new URLSearchParams();
+    params.set("project", projectId);
+    router.replace(`/dashboard?${params.toString()}`, { scroll: false });
+  }
 
   useEffect(() => {
     setRevisionNote("");
@@ -210,7 +254,7 @@ export function UserDashboard({
   const selectedJob = jobs.find((job) => job.id === selectedJobId) ?? jobs[0];
   const remainingCredits = project?.remainingCredits ?? 0;
   const previewAspect = getPreviewAspectClass(postFormat);
-  const displayAvatarUrl = profile.avatarUrl ?? profile.logoUrl ?? null;
+  const displayAvatarUrl = profile.avatarUrl ?? brandContext.logoUrl ?? null;
   const displayFullName =
     [profile.firstName, profile.lastName].filter(Boolean).join(" ").trim() || profile.email;
   const readyJobs = jobs.filter((job) => job.status === "ready");
@@ -507,14 +551,14 @@ export function UserDashboard({
           <div className="flex items-center gap-3">
             <ProfileAvatar
               imageUrl={displayAvatarUrl}
-              fallbackInitial={profile.logoInitial}
-              brandColors={profile.brandColors}
-              primaryColor={profile.primaryColor}
+              fallbackInitial={brandContext.logoInitial}
+              brandColors={brandContext.brandColors}
+              primaryColor={brandContext.primaryColor}
               className="h-11 w-11"
               withGradientRing
             />
             <div>
-              <p className="font-semibold text-slate-900">{profile.businessName}</p>
+              <p className="font-semibold text-slate-900">{brandContext.businessName}</p>
               <p className="text-xs text-slate-500">Üye paneli</p>
             </div>
           </div>
@@ -539,28 +583,28 @@ export function UserDashboard({
         <aside className="space-y-4">
           <Card className="overflow-hidden p-0">
             <ProfileBanner
-              brandColors={profile.brandColors}
-              primaryColor={profile.primaryColor}
+              brandColors={brandContext.brandColors}
+              primaryColor={brandContext.primaryColor}
               className="h-20"
             />
             <div className="relative px-5 pb-5">
               <ProfileAvatar
                 imageUrl={displayAvatarUrl}
-                fallbackInitial={profile.logoInitial}
-                brandColors={profile.brandColors}
-                primaryColor={profile.primaryColor}
+                fallbackInitial={brandContext.logoInitial}
+                brandColors={brandContext.brandColors}
+                primaryColor={brandContext.primaryColor}
                 className="-mt-8 h-16 w-16 border-4 border-white shadow-sm"
                 withGradientRing
               />
               <h2 className="mt-3 text-lg font-semibold text-slate-950">{displayFullName}</h2>
               <p className="text-sm text-slate-500">{profile.email}</p>
               <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                <StatBox label="Hazır" value={String(profile.postsReady)} />
-                <StatBox label="Üretim" value={String(profile.postsGenerating)} />
-                <StatBox label="Toplam" value={String(profile.postsTotal)} />
+                <StatBox label="Hazır" value={String(brandContext.postsReady)} />
+                <StatBox label="Üretim" value={String(brandContext.postsGenerating)} />
+                <StatBox label="Toplam" value={String(brandContext.postsTotal)} />
               </div>
               <p className="mt-4 text-xs leading-5 text-slate-500">
-                Hesap bilgileri aşağıda özet olarak gösterilir. Düzenleme ekranı yakında eklenecek.
+                Aktif proje: <strong>{brandContext.businessName}</strong>
               </p>
             </div>
           </Card>
@@ -581,7 +625,7 @@ export function UserDashboard({
             <NavItem
               active={tab === "package"}
               icon={<Settings className="h-4 w-4" />}
-              label="Paketim"
+              label="Paketlerim"
               onClick={() => selectTab("package")}
             />
           </Card>
@@ -600,11 +644,26 @@ export function UserDashboard({
         <main className="space-y-6">
           {tab === "gallery" && (
             <>
+              <ProjectSwitcher
+                projects={projectBundles.map((bundle) => ({
+                  id: bundle.project.id,
+                  brandName: bundle.brandName,
+                  logoUrl: bundle.logoUrl,
+                  primaryColor: bundle.primaryColor,
+                  brandColors: bundle.brandColors,
+                  logoInitial: bundle.logoInitial,
+                  postsReady: bundle.postsReady,
+                  postsTotal: bundle.postsTotal,
+                }))}
+                activeProjectId={activeProjectId}
+                onSelect={switchProject}
+              />
+
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <Badge>Galeri</Badge>
                   <h1 className="mt-2 text-2xl font-semibold text-slate-950 sm:text-3xl">
-                    Özel gün postlarınız
+                    {brandContext.businessName} — özel gün postları
                   </h1>
                   <p className="mt-1 text-sm text-slate-600">
                     Kartlara tıklayın, <strong>Üret</strong> ile tek tek görsel oluşturun. Onayladıktan
@@ -1037,7 +1096,7 @@ export function UserDashboard({
                                 dayId: selectedJob.dayId,
                                 dayName: selectedJob.dayName,
                                 dateLabel: selectedJob.dateLabel,
-                                brandName: project?.brandName ?? profile.businessName,
+                                brandName: project?.brandName ?? brandContext.businessName,
                                 caption: selectedJob.caption,
                                 hashtags: selectedJob.hashtags,
                               }).slice(0, 120)}
@@ -1070,11 +1129,11 @@ export function UserDashboard({
                   projectId={project.id}
                   fullName={displayFullName}
                   email={profile.email}
-                  businessName={profile.businessName}
-                  primaryColor={profile.primaryColor}
-                  brandColors={profile.brandColors}
+                  businessName={brandContext.businessName}
+                  primaryColor={brandContext.primaryColor}
+                  brandColors={brandContext.brandColors}
                   avatarUrl={profile.avatarUrl}
-                  logoUrl={profile.logoUrl}
+                  logoUrl={brandContext.logoUrl}
                   memberSince={profile.memberSince}
                 />
               ) : (
@@ -1088,22 +1147,72 @@ export function UserDashboard({
           {tab === "package" && (
             <Card className="space-y-6 p-6">
               <div>
-                <Badge>Paketim</Badge>
-                <h1 className="mt-2 text-2xl font-semibold text-slate-950">
-                  {profile.packageName}
-                </h1>
-                <p className="mt-1 text-sm text-slate-600">Tek ödeme • 30 özel gün postu</p>
+                <Badge>Paketlerim</Badge>
+                <h1 className="mt-2 text-2xl font-semibold text-slate-950">Projeleriniz</h1>
+                <p className="mt-1 text-sm text-slate-600">
+                  Her satın alma ayrı bir marka projesidir. Görseller sekmesinden projeler arası
+                  geçiş yapabilirsiniz.
+                </p>
               </div>
+
+              {projectBundles.length > 0 ? (
+                <div className="grid gap-3">
+                  {projectBundles.map((bundle) => {
+                    const active = bundle.project.id === activeProjectId;
+                    return (
+                      <div
+                        key={bundle.project.id}
+                        className="flex flex-col gap-4 rounded-2xl border border-emerald-100 bg-emerald-50/30 p-4 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="flex items-center gap-3">
+                          <ProfileAvatar
+                            imageUrl={bundle.logoUrl}
+                            fallbackInitial={bundle.logoInitial}
+                            brandColors={bundle.brandColors}
+                            primaryColor={bundle.primaryColor}
+                            className="h-12 w-12"
+                            withGradientRing
+                          />
+                          <div>
+                            <p className="font-semibold text-slate-900">{bundle.brandName}</p>
+                            <p className="text-sm text-slate-500">
+                              {bundle.sectorLabel} · {bundle.visualStyleLabel}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {bundle.postsReady}/{bundle.postsTotal} hazır · {bundle.project.remainingCredits}{" "}
+                              revizyon kredisi
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant={active ? "default" : "outline"}
+                            onClick={() => {
+                              switchProject(bundle.project.id);
+                              selectTab("gallery");
+                            }}
+                          >
+                            {active ? "Aktif proje" : "Görselleri aç"}
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">Henüz proje yok.</p>
+              )}
+
               <div className="grid gap-3 sm:grid-cols-3">
-                <PackageStat label="Toplam post" value={String(profile.postsTotal)} />
-                <PackageStat label="Hazır" value={String(profile.postsReady)} />
+                <PackageStat label="Aktif proje post" value={String(brandContext.postsTotal)} />
+                <PackageStat label="Hazır" value={String(brandContext.postsReady)} />
                 <PackageStat label="Kredi" value={String(remainingCredits)} />
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-800">Ek paketler</p>
+                <p className="text-sm font-medium text-slate-800">Ek paketler (aktif proje)</p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {profile.addons.length > 0 ? (
-                    profile.addons.map((addon) => (
+                  {brandContext.addons.length > 0 ? (
+                    brandContext.addons.map((addon) => (
                       <Badge key={addon}>{addonLabels[addon] ?? addon}</Badge>
                     ))
                   ) : (

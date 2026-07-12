@@ -1,45 +1,20 @@
 import { DashboardProjectBootstrap } from "@/components/dashboard/dashboard-project-bootstrap";
 import { UserDashboard } from "@/components/dashboard/user-dashboard";
-import { decodeProjectMeta } from "@/lib/generation/project-service";
-import { mapGenerationJobsForDashboard } from "@/lib/generation/map-jobs";
+import {
+  buildProjectBundles,
+  pickProjectBundle,
+} from "@/lib/dashboard/project-bundles";
 import { findProjectIdByOrderId } from "@/lib/generation/queue-processor";
-import { parseProfileNames, resolveBrandColors } from "@/lib/profile/dashboard-user";
-import { getSectorOptionsFromSeed } from "@/lib/sectors/seed-data";
-import { resolveStyleName } from "@/lib/styles/seed-data";
+import { parseProfileNames } from "@/lib/profile/dashboard-user";
 import { requireSessionUser } from "@/lib/supabase/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-type ProjectRow = {
-  id: string;
-  brand_name: string;
-  brand_description: string | null;
-  sector: string;
-  primary_color: string;
-  visual_style: string;
-  logo_url: string | null;
-  remaining_credits: number;
-  bonus_credits_granted: boolean;
-  status: string;
-  created_at: string;
-  generation_jobs: Array<{
-    id: string;
-    status: string;
-    type: string;
-    caption_text: string | null;
-    created_at: string;
-    error_message: string | null;
-    approved_at: string | null;
-    story_status: string | null;
-    hashtags: string[] | null;
-  }> | null;
-};
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ job?: string }>;
+  searchParams: Promise<{ job?: string; project?: string }>;
 }) {
-  const { job: initialJobId } = await searchParams;
+  const { job: initialJobId, project: initialProjectId } = await searchParams;
   const user = await requireSessionUser("/dashboard");
   const supabase = await createSupabaseServerClient();
 
@@ -80,39 +55,24 @@ export default async function DashboardPage({
     `,
     )
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(1);
+    .order("created_at", { ascending: false });
 
-  const project = (projects?.[0] as ProjectRow | undefined) ?? null;
-  const meta = project ? decodeProjectMeta(project.brand_description) : null;
-  const rawJobs = project?.generation_jobs ?? [];
-  const jobs = mapGenerationJobsForDashboard(
-    [...rawJobs].sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-    ),
-  );
+  const projectBundles = buildProjectBundles(projects ?? []);
+  const activeBundle = pickProjectBundle(projectBundles, initialProjectId);
+  const profileNames = parseProfileNames(profileRow?.full_name, user);
+  const avatarUrl = profileRow?.avatar_url ?? activeBundle?.logoUrl ?? null;
 
-  const memberSince = project?.created_at
-    ? new Date(project.created_at).toLocaleDateString("tr-TR", {
+  const memberSince = activeBundle?.createdAt
+    ? new Date(activeBundle.createdAt).toLocaleDateString("tr-TR", {
         month: "long",
         year: "numeric",
       })
     : new Date().toLocaleDateString("tr-TR", { month: "long", year: "numeric" });
 
-  const postsGenerating = jobs.filter((job) => job.status === "generating").length;
-  const sectorLabel =
-    meta?.customSector ??
-    (project
-      ? getSectorOptionsFromSeed().find((item) => item.key === project.sector)?.label ?? "—"
-      : "—");
-  const styleLabel = project?.visual_style ? resolveStyleName(project.visual_style) : "—";
-  const profileNames = parseProfileNames(profileRow?.full_name, user);
-  const brandColors = resolveBrandColors(meta?.brandColors, project?.primary_color ?? "#16A34A");
-  const logoUrl = project?.logo_url ?? null;
-  const avatarUrl = profileRow?.avatar_url ?? logoUrl;
+  const liveGenerating = projectBundles.some((bundle) => bundle.postsGenerating > 0);
 
   let paidOrderNeedsSetup = false;
-  if (!project) {
+  if (projectBundles.length === 0) {
     const { data: paidOrders } = await supabase
       .from("orders")
       .select("id")
@@ -131,52 +91,41 @@ export default async function DashboardPage({
 
   return (
     <>
-      <DashboardProjectBootstrap hasProject={Boolean(project)} />
+      <DashboardProjectBootstrap hasProject={projectBundles.length > 0} />
       <UserDashboard
-      liveGenerating={postsGenerating > 0}
-      user={{
-        firstName: profileNames.firstName,
-        lastName: profileNames.lastName,
-        email: user.email,
-        businessName: project?.brand_name ?? "Henüz proje yok",
-        sector: sectorLabel,
-        visualStyle: styleLabel,
-        primaryColor: project?.primary_color ?? "#16A34A",
-        logoInitial: (project?.brand_name ?? user.firstName).charAt(0).toUpperCase(),
-        avatarUrl,
-        logoUrl,
-        brandColors,
-        packageName: "Ana Paket",
-        postsTotal: jobs.length || 30,
-        postsReady: jobs.filter((job) => job.status === "ready").length,
-        postsGenerating,
-        addons: meta?.purchasedAddons.map((key) => key) ?? [],
-        memberSince,
-      }}
-      project={
-        project
-          ? {
-              id: project.id,
-              brandName: project.brand_name,
-              primaryColor: project.primary_color,
-              visualStyle: project.visual_style,
-              remainingCredits: project.remaining_credits,
-              bonusCreditsGranted: project.bonus_credits_granted,
-            }
-          : null
-      }
-      jobs={jobs}
-      postFormat={meta?.postFormat ?? "square"}
-      hasStoryAddon={meta?.purchasedAddons.includes("story") ?? false}
-      hasCaptionAddon={meta?.purchasedAddons.includes("caption") ?? false}
-      hasCalendarAddon={meta?.purchasedAddons.includes("calendar") ?? false}
-      emptyMessage={
-        paidOrderNeedsSetup
-          ? "Ödemeniz onaylandı ama paket kurulumu yarım kalmış. Aşağıdaki butona tıklayıp formu tekrar doldurun — yeniden ödeme gerekmez."
-          : undefined
-      }
-      initialSelectedJobId={initialJobId}
-    />
+        liveGenerating={liveGenerating}
+        user={{
+          firstName: profileNames.firstName,
+          lastName: profileNames.lastName,
+          email: user.email,
+          businessName: activeBundle?.brandName ?? "Henüz proje yok",
+          sector: activeBundle?.sectorLabel ?? "—",
+          visualStyle: activeBundle?.visualStyleLabel ?? "—",
+          primaryColor: activeBundle?.primaryColor ?? "#16A34A",
+          logoInitial: (activeBundle?.brandName ?? user.firstName).charAt(0).toUpperCase(),
+          avatarUrl,
+          logoUrl: activeBundle?.logoUrl ?? null,
+          brandColors: activeBundle?.brandColors ?? ["#16A34A"],
+          packageName: "Ana Paket",
+          postsTotal: activeBundle?.postsTotal ?? 30,
+          postsReady: activeBundle?.postsReady ?? 0,
+          postsGenerating: activeBundle?.postsGenerating ?? 0,
+          addons: activeBundle?.addons ?? [],
+          memberSince,
+        }}
+        projectBundles={projectBundles}
+        initialProjectId={activeBundle?.project.id}
+        postFormat={activeBundle?.postFormat ?? "square"}
+        hasStoryAddon={activeBundle?.hasStoryAddon ?? false}
+        hasCaptionAddon={activeBundle?.hasCaptionAddon ?? false}
+        hasCalendarAddon={activeBundle?.hasCalendarAddon ?? false}
+        emptyMessage={
+          paidOrderNeedsSetup
+            ? "Ödemeniz onaylandı ama paket kurulumu yarım kalmış. Aşağıdaki butona tıklayıp formu tekrar doldurun — yeniden ödeme gerekmez."
+            : undefined
+        }
+        initialSelectedJobId={initialJobId}
+      />
     </>
   );
 }

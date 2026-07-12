@@ -1,37 +1,11 @@
 import { UserDashboard } from "@/components/dashboard/user-dashboard";
-import { decodeProjectMeta } from "@/lib/generation/project-service";
-import { mapGenerationJobsForDashboard } from "@/lib/generation/map-jobs";
+import {
+  buildProjectBundles,
+  pickProjectBundle,
+} from "@/lib/dashboard/project-bundles";
 import { parseProfileNames, resolveBrandColors } from "@/lib/profile/dashboard-user";
-import { getSectorOptionsFromSeed } from "@/lib/sectors/seed-data";
-import { resolveStyleName } from "@/lib/styles/seed-data";
 import { requireSessionUser } from "@/lib/supabase/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-type ProjectRow = {
-  id: string;
-  brand_name: string;
-  brand_description: string | null;
-  sector: string;
-  primary_color: string;
-  visual_style: string;
-  logo_url: string | null;
-  remaining_credits: number;
-  bonus_credits_granted: boolean;
-  status: string;
-  created_at: string;
-  user_id: string;
-  generation_jobs: Array<{
-    id: string;
-    status: string;
-    type: string;
-    caption_text: string | null;
-    created_at: string;
-    error_message: string | null;
-    approved_at: string | null;
-    story_status: string | null;
-    hashtags: string[] | null;
-  }> | null;
-};
 
 export default async function ProjectDetailPage({
   params,
@@ -48,7 +22,7 @@ export default async function ProjectDetailPage({
     .eq("id", user.id)
     .maybeSingle();
 
-  const { data: project } = await supabase
+  const { data: projects } = await supabase
     .from("projects")
     .select(
       `
@@ -63,7 +37,6 @@ export default async function ProjectDetailPage({
       bonus_credits_granted,
       status,
       created_at,
-      user_id,
       generation_jobs (
         id,
         status,
@@ -79,11 +52,14 @@ export default async function ProjectDetailPage({
       )
     `,
     )
-    .eq("id", projectId)
     .eq("user_id", user.id)
-    .maybeSingle();
+    .order("created_at", { ascending: false });
 
-  if (!project) {
+  const projectBundles = buildProjectBundles(projects ?? []);
+  const activeBundle = pickProjectBundle(projectBundles, projectId);
+  const profileNames = parseProfileNames(profileRow?.full_name, user);
+
+  if (!activeBundle) {
     return (
       <UserDashboard
         user={{
@@ -103,68 +79,46 @@ export default async function ProjectDetailPage({
           addons: [],
           memberSince: "—",
         }}
-        project={null}
-        jobs={[]}
+        projectBundles={[]}
         emptyMessage="Bu projeye erişiminiz yok veya proje henüz oluşturulmamış."
       />
     );
   }
 
-  const row = project as ProjectRow;
-  const meta = decodeProjectMeta(row.brand_description);
-  const rawJobs = row.generation_jobs ?? [];
-  const jobs = mapGenerationJobsForDashboard(
-    [...rawJobs].sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-    ),
-  );
-  const postsGenerating = jobs.filter((job) => job.status === "generating").length;
-  const profileNames = parseProfileNames(profileRow?.full_name, user);
-  const brandColors = resolveBrandColors(meta.brandColors, row.primary_color);
-  const logoUrl = row.logo_url ?? null;
-  const avatarUrl = profileRow?.avatar_url ?? logoUrl;
-  const sectorLabel =
-    meta.customSector ??
-    getSectorOptionsFromSeed().find((item) => item.key === row.sector)?.label ??
-    "—";
+  const liveGenerating = projectBundles.some((bundle) => bundle.postsGenerating > 0);
+  const avatarUrl = profileRow?.avatar_url ?? activeBundle.logoUrl;
 
   return (
     <UserDashboard
-      liveGenerating={postsGenerating > 0}
+      liveGenerating={liveGenerating}
       user={{
         firstName: profileNames.firstName,
         lastName: profileNames.lastName,
         email: user.email,
-        businessName: row.brand_name,
-        sector: sectorLabel,
-        visualStyle: resolveStyleName(row.visual_style),
-        primaryColor: row.primary_color,
-        logoInitial: row.brand_name.charAt(0).toUpperCase(),
+        businessName: activeBundle.brandName,
+        sector: activeBundle.sectorLabel,
+        visualStyle: activeBundle.visualStyleLabel,
+        primaryColor: activeBundle.primaryColor,
+        logoInitial: activeBundle.logoInitial,
         avatarUrl,
-        logoUrl,
-        brandColors,
+        logoUrl: activeBundle.logoUrl,
+        brandColors: resolveBrandColors(activeBundle.brandColors, activeBundle.primaryColor),
         packageName: "Ana Paket",
-        postsTotal: jobs.length,
-        postsReady: jobs.filter((job) => job.status === "ready").length,
-        postsGenerating,
-        addons: meta.purchasedAddons,
-        memberSince: new Date(row.created_at).toLocaleDateString("tr-TR", {
+        postsTotal: activeBundle.postsTotal,
+        postsReady: activeBundle.postsReady,
+        postsGenerating: activeBundle.postsGenerating,
+        addons: activeBundle.addons,
+        memberSince: new Date(activeBundle.createdAt).toLocaleDateString("tr-TR", {
           month: "long",
           year: "numeric",
         }),
       }}
-      project={{
-        id: row.id,
-        brandName: row.brand_name,
-        primaryColor: row.primary_color,
-        visualStyle: row.visual_style,
-        remainingCredits: row.remaining_credits,
-        bonusCreditsGranted: row.bonus_credits_granted,
-      }}
-      jobs={jobs}
-      postFormat={meta.postFormat}
-      hasStoryAddon={meta.purchasedAddons.includes("story")}
-      hasCaptionAddon={meta.purchasedAddons.includes("caption")}
+      projectBundles={projectBundles}
+      initialProjectId={projectId}
+      postFormat={activeBundle.postFormat}
+      hasStoryAddon={activeBundle.hasStoryAddon}
+      hasCaptionAddon={activeBundle.hasCaptionAddon}
+      hasCalendarAddon={activeBundle.hasCalendarAddon}
     />
   );
 }
