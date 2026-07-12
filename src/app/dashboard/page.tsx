@@ -60,6 +60,8 @@ export default async function DashboardPage({
         status,
         type,
         caption_text,
+        image_url,
+        design_metadata,
         created_at,
         error_message,
         approved_at,

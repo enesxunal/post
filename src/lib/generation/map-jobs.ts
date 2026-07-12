@@ -1,4 +1,5 @@
 import { getSpecialDayById } from "@/lib/special-days-data";
+import { parseJobDesignMetadata } from "@/lib/generation/design-metadata";
 
 const gradients = [
   "from-rose-600 via-red-700 to-rose-950",
@@ -24,6 +25,8 @@ export function mapGenerationJobsForDashboard(
     type: string;
     caption_text: string | null;
     image_url?: string | null;
+    thumbnail_url?: string | null;
+    design_metadata?: unknown;
     created_at: string;
     error_message?: string | null;
     approved_at?: string | null;
@@ -34,6 +37,11 @@ export function mapGenerationJobsForDashboard(
 ) {
   return jobs.map((job, index) => {
     const day = getSpecialDayById(job.type);
+    const meta = parseJobDesignMetadata(job.design_metadata);
+    const previousVersions = meta.previousVersions ?? [];
+    const fallbackImageUrl =
+      job.image_url ?? previousVersions[0]?.imageUrl ?? null;
+
     return {
       id: job.id,
       dayId: job.type,
@@ -43,7 +51,8 @@ export function mapGenerationJobsForDashboard(
       imageIndex: index,
       caption: job.caption_text,
       hashtags: job.hashtags ?? [],
-      imageUrl: job.image_url,
+      imageUrl: fallbackImageUrl,
+      previousVersions,
       approvedAt: job.approved_at,
       storyImageUrl: job.story_image_url,
       storyStatus: job.story_status,

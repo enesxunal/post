@@ -17,6 +17,7 @@ export type ComposeImagePromptOptions = {
   artDirection?: ArtDirection;
   selectedHeadline?: string;
   userNote?: string;
+  isRevision?: boolean;
 };
 
 function usesTextFreeBackground(hasLogo: boolean) {
@@ -106,6 +107,7 @@ export async function composeImagePrompt(
     artDirection: options?.artDirection,
     selectedHeadline: customHeadline,
     userNote,
+    isRevision: options?.isRevision,
   });
 
   return {

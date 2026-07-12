@@ -36,6 +36,7 @@ import { DASHBOARD_POLL_MS } from "@/lib/config";
 import { mapJobStatus } from "@/lib/generation/map-jobs";
 import { getPostFormatLabel, getPreviewAspectClass } from "@/lib/image-formats";
 import type { PostFormat } from "@/types/domain";
+import type { JobImageVersion } from "@/lib/generation/design-metadata";
 import { cn } from "@/lib/utils";
 
 const statusMap = {
@@ -84,6 +85,7 @@ export type DashboardJob = {
   caption: string | null;
   hashtags?: string[];
   imageUrl?: string | null;
+  previousVersions?: JobImageVersion[];
   approvedAt?: string | null;
   storyImageUrl?: string | null;
   storyStatus?: string | null;
@@ -405,6 +407,38 @@ export function UserDashboard({
     }
   }
 
+  async function restorePreviousVersion(versionId: string) {
+    if (!project || !selectedJob) return;
+
+    setActionLoading(`restore-${versionId}`);
+    try {
+      const response = await fetch("/api/generation/restore-version", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: selectedJob.id, versionId }),
+      });
+      const data = (await response.json()) as { error?: string; imageUrl?: string };
+      if (!response.ok) throw new Error(data.error ?? "Versiyon geri yüklenemedi");
+
+      setJobs((current) =>
+        current.map((job) =>
+          job.id === selectedJob.id
+            ? {
+                ...job,
+                status: "ready",
+                imageUrl: data.imageUrl ?? job.imageUrl,
+                previousVersions: job.previousVersions?.filter((item) => item.id !== versionId),
+              }
+            : job,
+        ),
+      );
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Versiyon geri yüklenemedi");
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
   async function regeneratePost() {
     if (!project || !selectedJob || !canRevise) return;
 
@@ -420,6 +454,32 @@ export function UserDashboard({
       });
       const data = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(data.error ?? "Yeniden üretilemedi");
+
+      if (selectedJob.imageUrl) {
+        setJobs((current) =>
+          current.map((job) =>
+            job.id === selectedJob.id
+              ? {
+                  ...job,
+                  status: "generating",
+                  previousVersions: [
+                    {
+                      id: `local-${Date.now()}`,
+                      imageUrl: selectedJob.imageUrl!,
+                      thumbnailUrl: selectedJob.imageUrl!,
+                      createdAt: new Date().toISOString(),
+                      revisionNote: revisionNote.trim() || undefined,
+                    },
+                    ...(job.previousVersions ?? []).filter(
+                      (item) => item.imageUrl !== selectedJob.imageUrl,
+                    ),
+                  ],
+                  imageUrl: selectedJob.imageUrl,
+                }
+              : job,
+          ),
+        );
+      }
 
       const dayName = encodeURIComponent(selectedJob.dayName);
       router.push(
@@ -674,7 +734,59 @@ export function UserDashboard({
                           initialUrl={selectedJob.imageUrl}
                           lazy={false}
                         />
+                        {selectedJob.status !== "ready" && selectedJob.status !== "draft" ? (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/35 text-sm font-medium text-white">
+                            Yeni versiyon üretiliyor…
+                          </div>
+                        ) : null}
                       </div>
+                      {selectedJob.previousVersions?.length ? (
+                        <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                          <p className="text-sm font-semibold text-slate-900">Önceki versiyonlar</p>
+                          <p className="text-xs leading-5 text-slate-500">
+                            Revize öncesi görseller kaybolmaz. Beğendiğiniz eski versiyonu tekrar
+                            kullanabilirsiniz — ek kredi harcanmaz.
+                          </p>
+                          <div className="grid grid-cols-2 gap-3">
+                            {selectedJob.previousVersions.map((version) => (
+                              <div
+                                key={version.id}
+                                className="overflow-hidden rounded-xl border border-slate-200 bg-white"
+                              >
+                                <div className={cn("relative overflow-hidden", previewAspect)}>
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={version.thumbnailUrl ?? version.imageUrl}
+                                    alt="Önceki versiyon"
+                                    className="h-full w-full object-cover"
+                                  />
+                                </div>
+                                <div className="space-y-2 p-3">
+                                  <p className="text-[11px] text-slate-500">
+                                    {new Date(version.createdAt).toLocaleString("tr-TR")}
+                                  </p>
+                                  {version.revisionNote ? (
+                                    <p className="line-clamp-2 text-xs text-slate-600">
+                                      {version.revisionNote}
+                                    </p>
+                                  ) : null}
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="h-8 w-full text-xs"
+                                    disabled={actionLoading === `restore-${version.id}`}
+                                    onClick={() => void restorePreviousVersion(version.id)}
+                                  >
+                                    {actionLoading === `restore-${version.id}`
+                                      ? "Yükleniyor…"
+                                      : "Bunu kullan"}
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
                       <div className="space-y-2">
                         <h2 className="text-xl font-semibold text-slate-950">
                           {selectedJob.dayName}
@@ -871,12 +983,13 @@ export function UserDashboard({
                               Revize notu
                             </span>
                             <span className="mt-1 block text-xs leading-5 text-slate-500">
-                              Ne değişmesini istediğinizi yazın. AI yeni üretimde bunu dikkate alır.
+                              Ne değişmesini istediğinizi yazın — marka yöneticimiz bu talebe göre yeni
+                              prompt hazırlar. Boş bıraksanız da farklı bir alternatif üretilir.
                             </span>
                             <textarea
                               value={revisionNote}
                               onChange={(event) => setRevisionNote(event.target.value)}
-                              placeholder="Örn: Başlık daha büyük olsun, arka plan daha premium ve mağaza hissi versin, altın tonları azalt."
+                              placeholder="Örn: Daha sıcak tonlar olsun, çiçekleri azalt, yazı daha sade, arka plan daha premium ve mağaza hissi versin."
                               className="mt-3 min-h-[110px] w-full rounded-2xl border border-emerald-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
                             />
                           </label>

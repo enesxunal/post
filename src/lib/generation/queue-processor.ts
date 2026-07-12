@@ -1,6 +1,6 @@
 import { composeImagePrompt } from "@/lib/ai/prompt-composer";
+import { buildRevisionCreativeDirective } from "@/lib/ai/revision-director";
 import {
-  artDirectionToMetadata,
   assignArtDirectionForDay,
   buildBrandProfile,
   normalizeArtDirection,
@@ -20,13 +20,21 @@ import {
 } from "@/lib/ai/quality-checker";
 import { JOB_STUCK_MINUTES, MAX_JOB_RETRIES } from "@/lib/config";
 import { consumeRevisionCredit } from "@/lib/jobs";
-import { patchProjectMeta, projectToBrandContext } from "@/lib/generation/project-service";
-import type { ProjectGenerationMode } from "@/lib/generation/project-service";
+import {
+  archiveJobImageVersion,
+  buildReadyDesignMetadata,
+  DEFAULT_REVISION_DIRECTIVE,
+  mergeJobDesignMetadata,
+  parseJobDesignMetadata,
+  parseUserGenerationNote,
+} from "@/lib/generation/design-metadata";
 import { resolveAspectRatio } from "@/lib/image-formats";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { scheduleQueueProcessing } from "@/lib/generation/schedule-queue";
 import { persistGeneratedImage } from "@/lib/storage/generated-images";
+import { patchProjectMeta, projectToBrandContext } from "@/lib/generation/project-service";
+import type { ProjectGenerationMode } from "@/lib/generation/project-service";
 import { getSpecialDayById } from "@/lib/special-days-data";
 import { getSectorRuleFromSeed } from "@/lib/sectors/seed-data";
 import { recordRevisionFeedback } from "@/lib/trend-brain/repository";
@@ -51,22 +59,6 @@ function parseArtDirection(
   return normalizeArtDirection(raw, options);
 }
 
-function parseUserGenerationNote(raw: unknown): string | undefined {
-  if (!raw || typeof raw !== "object") return undefined;
-  const candidate = raw as {
-    revisionNote?: unknown;
-    generationNote?: unknown;
-    visualNote?: unknown;
-  };
-
-  for (const value of [candidate.generationNote, candidate.visualNote, candidate.revisionNote]) {
-    if (typeof value === "string" && value.trim()) {
-      return value.trim();
-    }
-  }
-
-  return undefined;
-}
 
 function brandProfileFromProject(project: {
   brand_name: string;
@@ -295,7 +287,7 @@ export async function regenerateGenerationJob(jobId: string, userId: string, rea
 
   const { data: job } = await supabase
     .from("generation_jobs")
-    .select("id, project_id, user_id, status, image_url, approved_at, type, art_direction, prompt_version_refs")
+    .select("id, project_id, user_id, status, image_url, thumbnail_url, approved_at, type, art_direction, prompt_version_refs, design_metadata")
     .eq("id", jobId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -353,15 +345,26 @@ export async function regenerateGenerationJob(jobId: string, userId: string, rea
   const category = (day?.category ?? "popular") as SpecialDayCategory;
   const projectMemory = await loadProjectArtMemory(job.project_id, jobId);
   const brandProfile = brandProfileFromProject(project);
+  const previousArtDirection = parseArtDirection(job.art_direction, {
+    sectorKey: project.sector,
+    category,
+  });
   const nextArtDirection = regenerateArtDirection(
-    parseArtDirection(job.art_direction, {
-      sectorKey: project.sector,
-      category,
-    }),
+    previousArtDirection,
     projectMemory,
     { dayId: job.type, category },
     brandProfile,
   );
+
+  const revisionRequest = reason?.trim() || DEFAULT_REVISION_DIRECTIVE;
+  const archivedMetadata = isRevision
+    ? archiveJobImageVersion({
+        existingRaw: job.design_metadata,
+        imageUrl: job.image_url as string,
+        thumbnailUrl: job.thumbnail_url,
+        revisionNote: revisionRequest,
+      })
+    : parseJobDesignMetadata(job.design_metadata);
 
   try {
     await recordRevisionFeedback({
@@ -371,7 +374,7 @@ export async function regenerateGenerationJob(jobId: string, userId: string, rea
       dayId: job.type,
       sector: project.sector,
       style: project.visual_style,
-      reason,
+      reason: revisionRequest,
       previousArtDirection: job.art_direction ?? null,
       previousPromptVersionRefs: job.prompt_version_refs ?? null,
     });
@@ -402,7 +405,12 @@ export async function regenerateGenerationJob(jobId: string, userId: string, rea
       story_image_url: null,
       story_status: null,
       art_direction: nextArtDirection,
-      design_metadata: reason?.trim() ? { revisionNote: reason.trim() } : null,
+      design_metadata: mergeJobDesignMetadata(archivedMetadata, {
+        revisionNote: revisionRequest,
+        isRevision: true,
+        previousVersions: archivedMetadata.previousVersions,
+        supersededArtDirection: previousArtDirection ?? undefined,
+      }),
       created_at: queueTime,
       updated_at: nowIso(),
     })
@@ -569,6 +577,70 @@ export async function applyProjectGenerationMode(
   return status;
 }
 
+/** Kullanıcı önceki üretilmiş bir versiyonu tekrar aktif görsel yapar (kredi harcamaz). */
+export async function restoreJobImageVersion(
+  jobId: string,
+  userId: string,
+  versionId: string,
+) {
+  const supabase = adminClient();
+
+  const { data: job } = await supabase
+    .from("generation_jobs")
+    .select("id, user_id, status, image_url, thumbnail_url, design_metadata, approved_at")
+    .eq("id", jobId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!job) {
+    throw new Error("Post bulunamadı");
+  }
+
+  if (job.approved_at) {
+    throw new Error("Onaylanan postta versiyon değiştirilemez");
+  }
+
+  const meta = parseJobDesignMetadata(job.design_metadata);
+  const version = meta.previousVersions?.find((item) => item.id === versionId);
+  if (!version) {
+    throw new Error("Önceki versiyon bulunamadı");
+  }
+
+  const remainingVersions = (meta.previousVersions ?? []).filter(
+    (item) => item.id !== versionId,
+  );
+
+  if (job.image_url) {
+    remainingVersions.unshift({
+      id: `ver-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      imageUrl: job.image_url,
+      thumbnailUrl: job.thumbnail_url ?? job.image_url,
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  await supabase
+    .from("generation_jobs")
+    .update({
+      status: "ready",
+      image_url: version.imageUrl,
+      thumbnail_url: version.thumbnailUrl ?? version.imageUrl,
+      error_message: null,
+      design_metadata: mergeJobDesignMetadata(meta, {
+        previousVersions: remainingVersions.slice(0, 6),
+        isRevision: false,
+      }),
+      updated_at: nowIso(),
+    })
+    .eq("id", jobId);
+
+  return {
+    jobId,
+    imageUrl: version.imageUrl,
+    restoredVersionId: versionId,
+  };
+}
+
 export async function stopProjectGeneration(projectId: string, userId: string) {
   const supabase = adminClient();
 
@@ -696,15 +768,38 @@ export async function processOneQueuedJob(projectId: string) {
 
   try {
     const artDirection = await ensureJobArtDirection(nextJob, project);
+    const designMeta = parseJobDesignMetadata(nextJob.design_metadata);
     const revisionNote = parseUserGenerationNote(nextJob.design_metadata);
     const promptVersionRefs = await resolvePromptVersionRefs({
       dayId,
       sector: project.sector,
       style: project.visual_style,
     });
+
+    let userNote = revisionNote;
+    if (designMeta.isRevision) {
+      const dayEntry =
+        (await getPromptLibraryEntry(dayId)) ?? getSpecialDayById(dayId) ?? undefined;
+      if (dayEntry) {
+        const previousArtDirection =
+          parseArtDirection(designMeta.supersededArtDirection, {
+            sectorKey: project.sector,
+            category: (dayEntry.category ?? "popular") as SpecialDayCategory,
+          }) ?? null;
+        const revisionDirective = await buildRevisionCreativeDirective({
+          context,
+          day: dayEntry,
+          userNote: revisionNote,
+          previousArtDirection,
+        });
+        userNote = [revisionNote, revisionDirective].filter(Boolean).join("\n\n");
+      }
+    }
+
     const preview = await composeImagePrompt(context, dayId, {
       artDirection,
-      userNote: revisionNote,
+      userNote,
+      isRevision: designMeta.isRevision,
     });
 
     await supabase
@@ -860,7 +955,7 @@ export async function processOneQueuedJob(projectId: string) {
         hashtags: [],
         provider: image.provider,
         error_message: null,
-        design_metadata: artDirectionToMetadata(artDirection),
+        design_metadata: buildReadyDesignMetadata(nextJob.design_metadata, artDirection),
         updated_at: nowIso(),
       })
       .eq("id", nextJob.id);

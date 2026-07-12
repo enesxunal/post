@@ -62,7 +62,7 @@ export function regenerateArtDirection(
     ...next,
     sectorLayer: forcedSectorLayer,
     antiRepeatNote:
-      "Regenerate: keep the same special day and brand, but change composition and sector-native elements. Avoid a generic greeting-card layout.",
+      "Regenerate: keep the same special day and brand, but change composition and sector-native elements. Avoid a generic greeting-card layout. Must look visibly different from the rejected version.",
   };
 
   if (hasMinimumDifference(previous, next)) return next;

@@ -89,6 +89,7 @@ export type CreativeBrief = {
   occasionIsolation: string;
   backgroundOnly?: boolean;
   userDirection?: string;
+  isRevision?: boolean;
   rawArtDirection?: ArtDirection;
 };
 
@@ -110,6 +111,7 @@ export type CreativeBriefInput = {
   styleRule?: StyleRule;
   backgroundOnly?: boolean;
   artDirection?: ArtDirection;
+  isRevision?: boolean;
 };
 
 const COMMERCIAL_DESIGN_AVOID = [
@@ -459,7 +461,7 @@ export function buildCreativeBrief(input: CreativeBriefInput): CreativeBrief {
     },
     occasionIsolation: buildOccasionIsolationPrompt(input.specialDay),
     backgroundOnly,
-    ...(userDirection ? { userDirection } : {}),
+    ...(userDirection ? { userDirection, isRevision: input.isRevision } : {}),
     rawArtDirection: art,
   };
 }
@@ -507,7 +509,15 @@ export function writeImagePrompt(brief: CreativeBrief, postFormat?: PostFormat):
   ];
 
   if (brief.userDirection) {
-    parts.push(`User visual preference: ${brief.userDirection}`);
+    if (brief.isRevision) {
+      parts.push(
+        "=== CUSTOMER REVISION (MANDATORY — highest priority) ===",
+        `The customer rejected the previous visual. Follow this direction exactly: ${brief.userDirection}`,
+        "Create a clearly different composition from the rejected version — not a near-duplicate.",
+      );
+    } else {
+      parts.push(`User visual preference: ${brief.userDirection}`);
+    }
   }
 
   if (brief.backgroundOnly) {
