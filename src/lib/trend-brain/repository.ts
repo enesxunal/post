@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { formatTrendBrainError } from "@/lib/trend-brain/errors";
 import type {
   TrendBrainRun,
   TrendBrainSuggestion,
@@ -58,7 +59,7 @@ export async function createTrendBrainRun(triggerType: "cron" | "manual", trigge
     .select("*")
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(formatTrendBrainError(error));
   return rowToRun(data);
 }
 
@@ -87,7 +88,7 @@ export async function completeTrendBrainRun(
     .select("*")
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(formatTrendBrainError(error));
   return rowToRun(data);
 }
 
@@ -112,7 +113,7 @@ export async function insertSuggestion(
     .select("*")
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(formatTrendBrainError(error));
   return rowToSuggestion(data);
 }
 
@@ -124,7 +125,7 @@ export async function listTrendBrainRuns(limit = 20) {
     .order("started_at", { ascending: false })
     .limit(limit);
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(formatTrendBrainError(error));
   return (data ?? []).map((row) => rowToRun(row));
 }
 
@@ -139,7 +140,7 @@ export async function listSuggestions(filters?: { status?: SuggestionStatus; run
   if (filters?.runId) query = query.eq("run_id", filters.runId);
 
   const { data, error } = await query.limit(100);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(formatTrendBrainError(error));
   return (data ?? []).map((row) => rowToSuggestion(row));
 }
 
@@ -151,7 +152,7 @@ export async function getSuggestionById(id: string) {
     .eq("id", id)
     .maybeSingle();
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(formatTrendBrainError(error));
   return data ? rowToSuggestion(data) : null;
 }
 
@@ -179,7 +180,7 @@ export async function updateSuggestionStatus(
     .select("*")
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(formatTrendBrainError(error));
   return rowToSuggestion(data);
 }
 
@@ -208,7 +209,7 @@ export async function recordRevisionFeedback(input: {
     previous_prompt_version_refs: input.previousPromptVersionRefs ?? null,
   });
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(formatTrendBrainError(error));
 }
 
 export async function listPerformanceAggregates(limit = 50) {
@@ -219,7 +220,7 @@ export async function listPerformanceAggregates(limit = 50) {
     .order("computed_at", { ascending: false })
     .limit(limit);
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(formatTrendBrainError(error));
 
   return (data ?? []).map((row) => ({
     id: row.id as string,

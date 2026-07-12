@@ -3,9 +3,8 @@ import {
   buildCreativeBrief,
   writeImagePrompt,
 } from "@/lib/ai/creative-brief";
-import { isIdeogramConfigured } from "@/lib/ai/ideogram-config";
+import { shouldUseTextFreeBackground } from "@/lib/ai/composition-policy";
 import { getPromptLibraryEntry } from "@/lib/ai/prompt-library";
-import { isOpenAIConfigured, isOpenAITextFreeMode } from "@/lib/ai/openai-config";
 import { getStyleRule } from "@/lib/styles/repository";
 import { getSectorRule } from "@/lib/sectors/repository";
 import type { BrandContext, PromptPreview } from "@/types/domain";
@@ -20,17 +19,8 @@ export type ComposeImagePromptOptions = {
   userNote?: string;
 };
 
-function usesTextFreeBackground(): boolean {
-  if (process.env.HEADLINE_OVERLAY === "true") return true;
-  if (process.env.HEADLINE_OVERLAY === "false") return false;
-  const provider = process.env.IMAGE_PROVIDER?.trim();
-  if (provider === "openai") return isOpenAITextFreeMode();
-  if (provider === "ideogram") return process.env.IDEOGRAM_TEXT_FREE === "true";
-  if (!provider) {
-    if (isOpenAIConfigured()) return isOpenAITextFreeMode();
-    if (isIdeogramConfigured()) return process.env.IDEOGRAM_TEXT_FREE === "true";
-  }
-  return false;
+function usesTextFreeBackground(hasLogo: boolean) {
+  return shouldUseTextFreeBackground({ hasLogo });
 }
 
 export async function composeImagePrompt(
@@ -41,7 +31,7 @@ export async function composeImagePrompt(
   const day = await getPromptLibraryEntry(dayId);
   const sectorRule = await getSectorRule(context.sector);
   const styleRule = await getStyleRule(context.visualStyle);
-  const backgroundOnly = usesTextFreeBackground();
+  const backgroundOnly = usesTextFreeBackground(Boolean(context.logoUrl));
   const dayCustom = context.dayCustomizations?.[dayId];
   const customHeadline = options?.selectedHeadline ?? dayCustom?.headline;
   const userNote = [

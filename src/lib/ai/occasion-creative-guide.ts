@@ -149,7 +149,7 @@ const SLUG_OVERRIDES: Partial<Record<string, Partial<OccasionCreativeGuide>>> = 
     avoid: ["cold empty dark gradient only", "typo in Turkish subtext"],
   },
   "29-ekim": {
-    soul: "Laik Cumhuriyet gururu — Türk bayrağı, kırmızı-beyaz, modern kutlama. Dini veya Osmanlı turistik siluet DEĞİL.",
+    soul: "Cumhuriyet Bayramı gururu — Türk bayrağı, kırmızı-beyaz, modern kutlama. Başka özel gün sembolleri (cami, kandil, bayram, Cuma) bu tasarıma karışmasın.",
     visualMetaphors: [
       "Türk bayrağı kompozisyonu",
       "kırmızı-beyaz ışık ve derinlik",
@@ -159,7 +159,7 @@ const SLUG_OVERRIDES: Partial<Record<string, Partial<OccasionCreativeGuide>>> = 
     culturalElements: [
       "Türk bayrağı veya güçlü kırmızı-beyaz kompozisyon",
       "cumhuriyet gururu",
-      "laik milli kutlama estetiği",
+      "milli kutlama estetiği",
     ],
     avoid: [
       "mosque",
@@ -230,12 +230,19 @@ const SLUG_OVERRIDES: Partial<Record<string, Partial<OccasionCreativeGuide>>> = 
   },
 };
 
-function mergeGuide(base: OccasionCreativeGuide, patch?: Partial<OccasionCreativeGuide>): OccasionCreativeGuide {
+const OVERRIDE_ONLY_LIST_SLUGS = new Set(["29-ekim", "30-agustos", "19-mayis", "23-nisan"]);
+
+function mergeGuide(base: OccasionCreativeGuide, patch?: Partial<OccasionCreativeGuide>, slug?: string): OccasionCreativeGuide {
   if (!patch) return base;
+  const listOnly = slug && OVERRIDE_ONLY_LIST_SLUGS.has(slug);
   return {
     soul: patch.soul ?? base.soul,
-    visualMetaphors: [...new Set([...(patch.visualMetaphors ?? []), ...base.visualMetaphors])],
-    culturalElements: [...new Set([...(patch.culturalElements ?? []), ...base.culturalElements])],
+    visualMetaphors: listOnly && patch.visualMetaphors?.length
+      ? patch.visualMetaphors
+      : [...new Set([...(patch.visualMetaphors ?? []), ...base.visualMetaphors])],
+    culturalElements: listOnly && patch.culturalElements?.length
+      ? patch.culturalElements
+      : [...new Set([...(patch.culturalElements ?? []), ...base.culturalElements])],
     compositionIdeas: [...new Set([...(patch.compositionIdeas ?? []), ...base.compositionIdeas])],
     moodKeywords: [...new Set([...(patch.moodKeywords ?? []), ...base.moodKeywords])],
     avoid: [...new Set([...(patch.avoid ?? []), ...base.avoid])],
@@ -244,7 +251,8 @@ function mergeGuide(base: OccasionCreativeGuide, patch?: Partial<OccasionCreativ
 
 export function buildOccasionCreativeGuide(day: SpecialDay): OccasionCreativeGuide {
   const base = CATEGORY_BASE[day.category] ?? CATEGORY_BASE.recommended;
-  return mergeGuide(base, SLUG_OVERRIDES[day.id] ?? SLUG_OVERRIDES[day.slug]);
+  const slug = day.id ?? day.slug;
+  return mergeGuide(base, SLUG_OVERRIDES[day.id] ?? SLUG_OVERRIDES[day.slug], slug);
 }
 
 export function buildStyleBalanceRule(day: SpecialDay, context: BrandContext): string {

@@ -49,7 +49,7 @@ const MOTIF_BY_CATEGORY: Record<SpecialDayCategory, string[]> = {
   national: [
     "flag wave motion",
     "red-white symbolic background",
-    "city lights and unity",
+    "unity celebration glow",
     "abstract republic pride",
     "modern celebration light",
   ],

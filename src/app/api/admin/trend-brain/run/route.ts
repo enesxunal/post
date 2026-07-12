@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getAdminSession } from "@/lib/admin/auth";
-import { runTrendBrain } from "@/lib/trend-brain";
+import { formatTrendBrainError, runTrendBrain } from "@/lib/trend-brain";
 
 export async function POST() {
   const admin = await getAdminSession();
@@ -16,7 +16,7 @@ export async function POST() {
     });
     return NextResponse.json({ ok: true, run });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Trend Brain çalıştırılamadı";
+    const message = formatTrendBrainError(error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

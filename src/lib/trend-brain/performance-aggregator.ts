@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { formatTrendBrainError } from "@/lib/trend-brain/errors";
 import type { PerformanceAggregate, PerformanceMetrics, TrendTargetType } from "@/lib/trend-brain/types";
 
 type JobRow = {
@@ -24,13 +25,15 @@ type RevisionRow = {
   created_at: string;
 };
 
-function metricsFromCounts(input: {
+type MetricBucket = {
   total: number;
   ready: number;
   failed: number;
   regenerates: number;
   approvals: number;
-}): PerformanceMetrics {
+};
+
+function metricsFromCounts(input: MetricBucket): PerformanceMetrics {
   const total = input.total || 1;
   return {
     totalJobs: input.total,
@@ -65,7 +68,7 @@ export async function aggregatePerformanceSignals(days = 30) {
     .gte("created_at", startIso)
     .lte("created_at", endIso);
 
-  if (jobsError) throw new Error(jobsError.message);
+  if (jobsError) throw new Error(formatTrendBrainError(jobsError));
 
   const jobList = (jobs ?? []) as JobRow[];
   const projectIds = [...new Set(jobList.map((job) => job.project_id))];
@@ -79,21 +82,15 @@ export async function aggregatePerformanceSignals(days = 30) {
     ((projects ?? []) as ProjectRow[]).map((project) => [project.id, project]),
   );
 
-  const { data: revisions } = await supabase
+  const { data: revisions, error: revisionsError } = await supabase
     .from("revision_feedback")
     .select("day_id, sector, style, created_at")
     .gte("created_at", startIso)
     .lte("created_at", endIso);
 
-  const revisionList = (revisions ?? []) as RevisionRow[];
+  if (revisionsError) throw new Error(formatTrendBrainError(revisionsError));
 
-type MetricBucket = {
-  total: number;
-  ready: number;
-  failed: number;
-  regenerates: number;
-  approvals: number;
-};
+  const revisionList = (revisions ?? []) as RevisionRow[];
 
   const byDay = new Map<string, MetricBucket>();
   const bySector = new Map<string, MetricBucket>();
@@ -164,7 +161,7 @@ type MetricBucket = {
       .select("id")
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(formatTrendBrainError(error));
 
     aggregates.push({
       id: data.id as string,

@@ -3,6 +3,10 @@ import {
   buildSafeZonePrompt,
   normalizePostFormat,
 } from "@/lib/image-formats";
+import {
+  buildOccasionIsolationPrompt,
+  getCrossOccasionAvoidList,
+} from "@/lib/ai/occasion-isolation";
 import { buildOccasionCreativeGuide } from "@/lib/ai/occasion-creative-guide";
 import type { ArtDirection } from "@/lib/ai/art-direction";
 import {
@@ -82,6 +86,7 @@ export type CreativeBrief = {
   constraints: {
     avoid: string[];
   };
+  occasionIsolation: string;
   backgroundOnly?: boolean;
   userDirection?: string;
   rawArtDirection?: ArtDirection;
@@ -244,35 +249,13 @@ function buildLogoUsage(input: CreativeBriefInput, placement: string, treatment:
   if (!input.logoUrl) {
     return "No logo provided — do not invent any logo or brand mark.";
   }
-  return (
-    `Do NOT draw logo/brand mark. Reserve a clean intentional area at ${placement.replace(/-/g, " ")} ` +
-    `suited for a ${treatment.replace(/-/g, " ")} logo treatment — real logo is overlaid after generation.`
-  );
+  return [
+    `CRITICAL — real logo is overlaid ONCE after generation. Do NOT draw, write, or imitate "${input.brandName}"`,
+    "as text, wordmark, icon, emblem, uniform badge, footer brand block, or tagline anywhere in the image.",
+    `Keep ${placement.replace(/-/g, " ")} region completely empty and clean for programmatic logo placement.`,
+    `No duplicate brand marks — only the overlaid logo will appear.`,
+  ].join(" ");
 }
-
-const SECULAR_NATIONAL_DAY_IDS = new Set([
-  "29-ekim",
-  "30-agustos",
-  "23-nisan",
-  "19-mayis",
-  "1-mayis",
-  "15-temmuz",
-  "10-kasim",
-  "1-kasim",
-]);
-
-const RELIGIOUS_ARCHITECTURE_AVOID = [
-  "mosque",
-  "minaret",
-  "cami",
-  "mihrab",
-  "Islamic prayer hall",
-  "Ottoman skyline",
-  "Blue Mosque",
-  "Hagia Sophia silhouette",
-  "religious architecture in window view",
-  "dome and minaret skyline",
-];
 
 function buildAvoidList(
   day: SpecialDay,
@@ -282,15 +265,23 @@ function buildAvoidList(
   hasLogo: boolean,
 ): string[] {
   const guide = buildOccasionCreativeGuide(day);
-  const secularNational =
-    day.category === "national" || SECULAR_NATIONAL_DAY_IDS.has(day.id);
+  const crossOccasionAvoid = getCrossOccasionAvoidList(day);
   const seedAvoid = [
     ...(hasLogo
-      ? ["AI-drawn logo", "watermark", "company name corner text", "duplicate logos"]
+      ? [
+          "AI-drawn logo",
+          "watermark",
+          "company name as visible text",
+          "brand name on uniform",
+          "footer brand block",
+          "tagline subtext",
+          "duplicate logos",
+          "extra Turkish sentences",
+        ]
       : []),
     ...COMMERCIAL_DESIGN_AVOID,
     ...guide.avoid,
-    ...(secularNational ? RELIGIOUS_ARCHITECTURE_AVOID : []),
+    ...crossOccasionAvoid,
     day.avoidRules,
     ...(sectorRule ? sectorAvoidList(sectorRule) : []),
     ...(styleRule ? styleAvoidList(styleRule) : []),
@@ -466,6 +457,7 @@ export function buildCreativeBrief(input: CreativeBriefInput): CreativeBrief {
         hasLogo,
       ),
     },
+    occasionIsolation: buildOccasionIsolationPrompt(input.specialDay),
     backgroundOnly,
     ...(userDirection ? { userDirection } : {}),
     rawArtDirection: art,
@@ -502,8 +494,8 @@ export function writeImagePrompt(brief: CreativeBrief, postFormat?: PostFormat):
   const parts: string[] = [
     buildFormatPromptLine(postFormat),
     buildSafeZonePrompt("post", postFormat),
+    brief.occasionIsolation,
     `Create a ${sizeLabel} premium branded Instagram post for ${brief.brand.name}, a ${brief.sector.name} business, for ${brief.occasion.name}.`,
-    `Occasion-first rule: ${brief.occasion.name} identity must be obvious — use ONLY symbols and atmosphere that belong to THIS specific day. Never borrow religious imagery (mosque, minaret) for secular national days like Republic Day.`,
     `This must NOT look like a generic holiday greeting card. It should feel art-directed and custom-made for this brand and sector — a sector-native branded scene, not occasion wallpaper with a headline sticker.`,
     `Occasion layer: ${brief.occasion.emotionalGoal}, shown through ${brief.occasion.culturalSignal} / ${brief.occasion.primaryVisualIdea}.`,
     `Sector-native layer: integrate ${sectorElements || brief.sector.nativeScene} as natural parts of the scene, with ${integration}. ${brief.sector.blendHint} These elements should make the design feel specific to a ${brief.sector.name} business without overpowering the special day.`,
@@ -519,6 +511,7 @@ export function writeImagePrompt(brief: CreativeBrief, postFormat?: PostFormat):
   if (brief.backgroundOnly) {
     parts.push(
       `No text in the image — leave clean space for headline overlay and logo at ${placement}.`,
+      "Absolutely no brand name, no tagline, no footer text, no extra Turkish sentences.",
     );
   } else {
     parts.push(`Text on image: ONLY "${brief.text.headline}".`);

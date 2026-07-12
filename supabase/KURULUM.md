@@ -52,6 +52,17 @@ Aynı dosyada `drop policy` + `create policy` kısmını **ayrı** sorgu olarak 
 
 Index'ler olmadan da site çalışır; sadece panel biraz yavaş kalır. Storage bucket olmadan yeni görseller yine veritabanına kaydedilir (eski yöntem).
 
+## Trend Brain tabloları
+
+Admin panelde **Trend Brain** hata veriyorsa (`relation "trend_brain_runs" does not exist`):
+
+1. Supabase → **SQL Editor** → **New query**
+2. `supabase/migrations/20260710_trend_brain.sql` dosyasının tamamını yapıştır
+3. **Run**
+4. Admin → Trend Brain sayfasını yenile
+
+Gerekli tablolar: `trend_brain_runs`, `trend_brain_suggestions`, `performance_aggregates`, `revision_feedback`, `prompt_versions`
+
 ## `draft` enum hatası (unsafe use of new value)
 
 `alter type ... add value 'draft'` ile `update ... set status = 'draft'` **aynı sorguda çalışmaz**.

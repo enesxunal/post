@@ -1,5 +1,7 @@
 import sharp, { type Sharp } from "sharp";
 
+import { getSafeZoneInsets } from "@/lib/image-formats";
+
 import type { LogoAnalysis } from "@/lib/ai/logo-analysis";
 
 function parseDataUrl(dataUrl: string): { mime: string; buffer: Buffer } | null {
@@ -205,6 +207,7 @@ export async function applyLogoOverlay(
   const meta = await base.metadata();
   const width = meta.width ?? 1080;
   const height = meta.height ?? 1080;
+  const safe = getSafeZoneInsets(width, height);
 
   const placement = await detectBestLogoPlacement(
     imageBuffer,
@@ -224,39 +227,40 @@ export async function applyLogoOverlay(
   const logoW = logoMeta.width ?? maxLogoW;
   const logoH = logoMeta.height ?? maxLogoH;
 
-  const margin = Math.round(width * 0.045);
-  let left = width - logoW - margin;
-  let top = height - logoH - margin;
+  const marginX = safe.sides;
+  const marginY = Math.round(safe.bottom * 0.35);
+  let left = width - logoW - marginX;
+  let top = height - logoH - marginY;
 
   switch (placement) {
     case "top-left":
-      left = margin;
-      top = margin;
+      left = marginX;
+      top = safe.top;
       break;
     case "top-right":
-      left = width - logoW - margin;
-      top = margin;
+      left = width - logoW - marginX;
+      top = safe.top;
       break;
     case "bottom-left":
-      left = margin;
-      top = height - logoH - margin;
+      left = marginX;
+      top = height - logoH - marginY;
       break;
     case "bottom-center":
       left = Math.round((width - logoW) / 2);
-      top = height - logoH - margin;
+      top = height - logoH - marginY;
       break;
     case "bottom-right":
     default:
-      left = width - logoW - margin;
-      top = height - logoH - margin;
+      left = width - logoW - marginX;
+      top = height - logoH - marginY;
       break;
   }
 
   const regionStats = await regionBusyScore(base, width, height, {
-    left: Math.max(0, left - margin),
-    top: Math.max(0, top - margin),
-    w: logoW + margin * 2,
-    h: logoH + margin * 2,
+    left: Math.max(0, left - marginX),
+    top: Math.max(0, top - marginY),
+    w: logoW + marginX * 2,
+    h: logoH + marginY * 2,
   });
 
   const adaptedLogo = await recolorLogoForBackground(resizedLogo, regionStats.mean);

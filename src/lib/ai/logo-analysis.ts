@@ -56,7 +56,7 @@ function buildUsageNote(
           ? "bottom-center"
           : "bottom-right";
 
-  return `Do NOT draw any logo in the image. ${placementText} corner must stay empty — real logo added after generation.`;
+  return `Do NOT draw any logo or brand name text in the image. ${placementText} region must stay empty — real logo added once after generation. No duplicate brand marks, no taglines, no uniform badges.`;
 }
 
 /** Logo bir kez analiz edilir; sonuç proje meta'sında saklanır. */

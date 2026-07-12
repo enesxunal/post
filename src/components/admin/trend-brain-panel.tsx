@@ -56,21 +56,30 @@ export function TrendBrainPanel() {
   const [running, setRunning] = useState(false);
   const [actionId, setActionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [setupRequired, setSetupRequired] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [overview, pending] = await Promise.all([
-        fetch("/api/admin/trend-brain").then((r) => r.json()),
-        fetch("/api/admin/trend-brain/suggestions?status=pending").then((r) => r.json()),
-      ]);
+      const overview = await fetch("/api/admin/trend-brain").then((r) => r.json());
 
-      if (overview.error) throw new Error(overview.error);
-      if (pending.error) throw new Error(pending.error);
+      if (overview.error && !overview.setupRequired) throw new Error(overview.error);
 
+      setSetupRequired(Boolean(overview.setupRequired));
       setRuns(overview.runs ?? []);
       setPerformance(overview.performance ?? []);
+
+      if (overview.setupRequired) {
+        setSuggestions([]);
+        if (overview.error) setError(overview.error);
+        return;
+      }
+
+      const pending = await fetch("/api/admin/trend-brain/suggestions?status=pending").then((r) =>
+        r.json(),
+      );
+      if (pending.error) throw new Error(pending.error);
       setSuggestions(pending.suggestions ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Veri alınamadı");
@@ -165,12 +174,23 @@ export function TrendBrainPanel() {
             <RefreshCcw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
             Yenile
           </Button>
-          <Button onClick={() => void runTrendBrain()} disabled={running}>
+          <Button onClick={() => void runTrendBrain()} disabled={running || setupRequired}>
             <Play className={cn("mr-2 h-4 w-4", running && "animate-pulse")} />
             Trend Brain Çalıştır
           </Button>
         </div>
       </div>
+
+      {setupRequired ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p className="font-medium">Kurulum gerekli</p>
+          <p className="mt-1">
+            Trend Brain tabloları Supabase&apos;de henüz oluşturulmamış. SQL Editor&apos;da{" "}
+            <code className="rounded bg-white px-1">supabase/migrations/20260710_trend_brain.sql</code>{" "}
+            dosyasını çalıştırın, sonra bu sayfayı yenileyin.
+          </p>
+        </div>
+      ) : null}
 
       {error ? (
         <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">

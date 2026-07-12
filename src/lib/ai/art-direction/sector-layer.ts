@@ -11,6 +11,17 @@ import {
 } from "@/lib/ai/sector-native-profiles";
 import type { SectorKey, SpecialDayCategory, VisualStyle } from "@/types/domain";
 
+const NATIONAL_RISKY_ELEMENT = /skyline|city lights|window view|bosphorus|istanbul|mosque|minaret|dome silhouette/i;
+
+export function filterSectorElementsForOccasion(
+  pool: string[],
+  category: SpecialDayCategory,
+): string[] {
+  if (category !== "national") return pool;
+  const filtered = pool.filter((el) => !NATIONAL_RISKY_ELEMENT.test(el));
+  return filtered.length >= 2 ? filtered : pool;
+}
+
 function hashSeed(value: string): number {
   let hash = 0;
   for (let i = 0; i < value.length; i++) {
@@ -91,9 +102,12 @@ export function buildSectorLayer(
   dayId: string,
 ): SectorLayer {
   const seedBase = `${brandProfile.brandName}:${dayId}:${index}:sector`;
-  const pool = filterSectorElementsForAntiRepeat(
-    previous,
-    resolveSectorElementPool(brandProfile),
+  const pool = filterSectorElementsForOccasion(
+    filterSectorElementsForAntiRepeat(
+      previous,
+      resolveSectorElementPool(brandProfile),
+    ),
+    category,
   );
 
   const elementCount =

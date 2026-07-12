@@ -1,5 +1,7 @@
 import sharp from "sharp";
 
+import { getSafeZoneInsets } from "@/lib/image-formats";
+
 function parseDataUrl(dataUrl: string): { mime: string; buffer: Buffer } | null {
   const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) return null;
@@ -39,10 +41,10 @@ function wrapHeadline(headline: string, maxCharsPerLine: number) {
     }
   }
   if (current) lines.push(current);
-  return lines.slice(0, 2);
+  return lines.slice(0, 3);
 }
 
-/** AI yerine doğru Türkçe başlığı görsele bindirir (Ideogram yazım sorununu aşar). */
+/** AI yerine doğru Türkçe başlığı güvenli alan içinde bindirir. */
 export async function applyHeadlineOverlay(
   imageUrl: string,
   headline: string,
@@ -58,12 +60,17 @@ export async function applyHeadlineOverlay(
   const meta = await base.metadata();
   const width = meta.width ?? 1080;
   const height = meta.height ?? 1080;
+  const safe = getSafeZoneInsets(width, height);
 
-  const lines = wrapHeadline(trimmed, width > 1200 ? 22 : 18);
-  const fontSize = Math.round(width * (lines.length > 1 ? 0.052 : 0.062));
-  const lineHeight = Math.round(fontSize * 1.15);
+  const maxTextWidth = width - safe.sides * 2;
+  const fontSize = Math.round(
+    Math.min(width * (width > height ? 0.062 : 0.056), maxTextWidth / 7),
+  );
+  const maxCharsPerLine = Math.max(10, Math.round(maxTextWidth / (fontSize * 0.52)));
+  const lines = wrapHeadline(trimmed, maxCharsPerLine);
+  const lineHeight = Math.round(fontSize * 1.18);
   const blockHeight = lineHeight * lines.length;
-  const startY = Math.round(height * 0.1) + fontSize;
+  const startY = safe.top + fontSize;
 
   const fill = options?.brandColor && options.brandColor !== "#FFFFFF" ? "#FFFFFF" : "#111827";
   const tspans = lines
@@ -73,7 +80,7 @@ export async function applyHeadlineOverlay(
     })
     .join("");
 
-  const svg = Buffer.from(`<svg width="${width}" height="${blockHeight + startY}" xmlns="http://www.w3.org/2000/svg">
+  const svg = Buffer.from(`<svg width="${width}" height="${blockHeight + startY + safe.top}" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <filter id="headlineShadow" x="-30%" y="-30%" width="160%" height="160%">
         <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#000000" flood-opacity="0.45"/>
@@ -92,22 +99,19 @@ export async function applyHeadlineOverlay(
   </svg>`);
 
   const textLayer = await sharp(svg).png().toBuffer();
-  const textMeta = await sharp(textLayer).metadata();
-  const textH = textMeta.height ?? blockHeight + startY;
 
   const output = await base
     .composite([{ input: textLayer, top: 0, left: 0 }])
     .png()
     .toBuffer();
 
-  void textH;
   return `data:image/png;base64,${output.toString("base64")}`;
 }
 
 export function useHeadlineOverlayForProvider(provider: string) {
   if (process.env.HEADLINE_OVERLAY === "true") return true;
   if (process.env.HEADLINE_OVERLAY === "false") return false;
-  if (provider === "ideogram") return process.env.IDEOGRAM_TEXT_FREE === "true";
+  if (provider === "ideogram") return process.env.IDEOGRAM_TEXT_FREE !== "false";
   if (provider === "openai") return process.env.OPENAI_TEXT_FREE === "true";
   return false;
 }

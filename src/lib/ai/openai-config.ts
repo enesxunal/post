@@ -56,7 +56,7 @@ export function getDalle3Style(): Dalle3Style {
   return "vivid";
 }
 
-/** Instagram formatlarına yakın boyut — modele göre farklı çözünürlükler */
+/** Instagram formatlarına yakın boyut — OpenAI 4:5 desteklemez; en yakın dikey 1024x1536 (2:3). */
 export function resolveOpenAIImageSize(aspectRatio?: string, model = getOpenAIImageModel()) {
   if (model.startsWith("dall-e")) {
     switch (aspectRatio) {
@@ -74,6 +74,7 @@ export function resolveOpenAIImageSize(aspectRatio?: string, model = getOpenAIIm
   switch (aspectRatio) {
     case "4:5":
     case "9:16":
+      // API'de tam 4:5 yok; 2:3 üretilir, teslimde kırpma olmadan 1080x1350'ye sığdırılır
       return "1024x1536";
     case "5:4":
       return "1536x1024";

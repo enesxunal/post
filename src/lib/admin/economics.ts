@@ -278,7 +278,7 @@ export async function getAdminEconomicsReport(): Promise<AdminEconomicsReport> {
     },
     costBreakdownTry: globalAi.breakdownTry,
     unitCosts: getUnitCosts(),
-    qualityCheckEnabled: process.env.QUALITY_CHECK_ENABLED?.trim() === "true",
+    qualityCheckEnabled: process.env.QUALITY_CHECK_ENABLED?.trim() !== "false",
     orders: orderRows,
     unlinkedProjects,
   };

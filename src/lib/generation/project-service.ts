@@ -11,6 +11,7 @@ import {
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ensureUserProfile } from "@/lib/supabase/profiles";
+import { persistBrandLogo } from "@/lib/storage/brand-logos";
 import { normalizeStyleKey } from "@/lib/styles/style-key-map";
 import { getSectorRuleFromSeed } from "@/lib/sectors/seed-data";
 import type { AddonKey, BrandContext, PostFormat, SectorKey, VisualStyle } from "@/types/domain";
@@ -146,7 +147,10 @@ export async function createProjectWithJobs(
   const supabase = await getWritableClient();
   const primaryColor = draft.brandColors[0] ?? "#16A34A";
   const expandedDays = expandSelectedDaysForJobs(draft.selectedDays);
-  const logoAnalysisRaw = draft.logoUrl ? await analyzeLogo(draft.logoUrl) : null;
+  const logoUrl = draft.logoUrl
+    ? await persistBrandLogo(draft.logoUrl, userId)
+    : null;
+  const logoAnalysisRaw = logoUrl ? await analyzeLogo(logoUrl) : null;
   const logoAnalysis = logoAnalysisRaw ?? null;
 
   const brandProfile = buildBrandProfile({
@@ -182,7 +186,7 @@ export async function createProjectWithJobs(
       custom_sector: draft.customSector ?? null,
       primary_color: primaryColor,
       visual_style: draft.visualStyle,
-      logo_url: draft.logoUrl ?? null,
+      logo_url: logoUrl,
       package_type: orderId ? `order:${orderId}` : "base",
       status: "paid",
     })

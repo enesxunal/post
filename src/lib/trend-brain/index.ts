@@ -15,3 +15,5 @@ export {
 } from "@/lib/trend-brain/prompt-versions";
 export { previewSuggestionMerge } from "@/lib/trend-brain/suggestion-generator";
 export { diffSnapshots } from "@/lib/trend-brain/snapshots";
+export { checkTrendBrainSetup } from "@/lib/trend-brain/setup";
+export { formatTrendBrainError, isTrendBrainSetupError } from "@/lib/trend-brain/errors";

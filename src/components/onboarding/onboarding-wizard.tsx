@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { BasicOnboardingForm } from "@/components/onboarding/basic-onboarding-form";
 import { BrandColorSelector } from "@/components/onboarding/brand-color-selector";
+import { LogoInput } from "@/components/onboarding/logo-input";
 import { DayCustomizationPanel } from "@/components/onboarding/day-customization-panel";
 import { OnboardingModePicker } from "@/components/onboarding/onboarding-mode-picker";
 import { SpecialDaySelector } from "@/components/onboarding/special-day-selector";
@@ -182,10 +183,10 @@ function DetailedOnboardingWizard({ onBack }: { onBack: () => void }) {
                       <Field label="İşletme adı">
                         <Input placeholder="Örn: Liva Güzellik" {...form.register("brandName")} />
                       </Field>
-                      <Field label="Logo yükleme">
-                        <Input
-                          placeholder="Logo linki (PNG, JPG veya SVG desteklenir)"
-                          {...form.register("logoUrl")}
+                      <Field label="Logo (isteğe bağlı)">
+                        <LogoInput
+                          value={watched.logoUrl ?? ""}
+                          onChange={(logoUrl) => form.setValue("logoUrl", logoUrl)}
                         />
                         <p className="mt-1.5 text-xs text-slate-500">
                           SVG logolar otomatik dönüştürülür; konum tasarıma göre otomatik seçilir.

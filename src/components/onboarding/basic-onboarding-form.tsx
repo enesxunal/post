@@ -14,6 +14,7 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { BrandColorSelector } from "@/components/onboarding/brand-color-selector";
+import { LogoInput } from "@/components/onboarding/logo-input";
 import { PostFormatSelector } from "@/components/onboarding/post-format-selector";
 import { SpecialDaySelector } from "@/components/onboarding/special-day-selector";
 import { addonOptions, sectors } from "@/lib/mock-data";
@@ -155,8 +156,10 @@ export function BasicOnboardingForm({ onBack }: { onBack: () => void }) {
                 <Input placeholder="Örn: Liva Güzellik" {...form.register("brandName")} />
               </Field>
               <Field label="Logo (isteğe bağlı)">
-                <Input placeholder="Logo linki" {...form.register("logoUrl")} />
-                <p className="mt-1 text-xs text-slate-500">Logo tasarıma uygun yere otomatik eklenir.</p>
+                <LogoInput
+                  value={watched.logoUrl ?? ""}
+                  onChange={(logoUrl) => form.setValue("logoUrl", logoUrl)}
+                />
               </Field>
               <Field label="Marka renkleri">
                 <BrandColorSelector

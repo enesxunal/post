@@ -26,7 +26,21 @@ function targetSizeForFormat(format?: PostFormat) {
   return { width: 1080, height: 1080 };
 }
 
-/** AI çıktısını Instagram feed boyutuna kesin ölçekler (4:5 veya kare). */
+async function sampleBackgroundColor(buffer: Buffer) {
+  const { dominant } = await sharp(buffer).resize(120, 120, { fit: "inside" }).stats();
+  return {
+    r: Math.round(dominant.r),
+    g: Math.round(dominant.g),
+    b: Math.round(dominant.b),
+    alpha: 1,
+  };
+}
+
+/**
+ * Instagram teslim boyutuna getirir.
+ * - Aynı en-boy oranı → sadece ölçekler (kırpma yok)
+ * - Farklı oran (ör. OpenAI 2:3 → 4:5) → içine sığdırır, boşlukları arka plan rengiyle doldurur (kırpma yok)
+ */
 export async function normalizeGeneratedImageSize(
   imageUrl: string,
   postFormat?: PostFormat,
@@ -36,14 +50,32 @@ export async function normalizeGeneratedImageSize(
 
   const { width, height } = targetSizeForFormat(postFormat);
   const meta = await sharp(buffer).metadata();
-  if (meta.width === width && meta.height === height) {
+  const sourceW = meta.width ?? width;
+  const sourceH = meta.height ?? height;
+
+  if (sourceW === width && sourceH === height) {
     return imageUrl;
   }
 
-  const output = await sharp(buffer)
-    .resize(width, height, { fit: "cover", position: "centre" })
-    .png()
-    .toBuffer();
+  const sourceRatio = sourceW / sourceH;
+  const targetRatio = width / height;
+  const sameRatio = Math.abs(sourceRatio - targetRatio) < 0.012;
+
+  let output: Buffer;
+
+  if (sameRatio) {
+    output = await sharp(buffer).resize(width, height).png().toBuffer();
+  } else {
+    const background = await sampleBackgroundColor(buffer);
+    output = await sharp(buffer)
+      .resize(width, height, {
+        fit: "contain",
+        position: "centre",
+        background,
+      })
+      .png()
+      .toBuffer();
+  }
 
   return `data:image/png;base64,${output.toString("base64")}`;
 }

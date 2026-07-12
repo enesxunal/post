@@ -61,8 +61,8 @@ export function resolvePublishDate(
 
   const fixed = raw.match(/^(\d{2})-(\d{2})$/);
   if (fixed) {
-    const month = Number(fixed[2]) - 1;
-    const dayOfMonth = Number(fixed[1]);
+    const month = Number(fixed[1]) - 1;
+    const dayOfMonth = Number(fixed[2]);
     let year = now.getFullYear();
     let candidate = new Date(
       Date.UTC(year, month, dayOfMonth, POUST_SHARE_HOUR_UTC, 0, 0),

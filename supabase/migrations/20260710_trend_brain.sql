@@ -91,10 +91,21 @@ create index if not exists revision_feedback_day_idx
 alter table generation_jobs
   add column if not exists prompt_version_refs jsonb;
 
-alter table prompt_versions
-  add constraint prompt_versions_run_fk
-  foreign key (source_run_id) references trend_brain_runs(id) on delete set null;
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'prompt_versions_run_fk'
+  ) then
+    alter table prompt_versions
+      add constraint prompt_versions_run_fk
+      foreign key (source_run_id) references trend_brain_runs(id) on delete set null;
+  end if;
 
-alter table prompt_versions
-  add constraint prompt_versions_suggestion_fk
-  foreign key (source_suggestion_id) references trend_brain_suggestions(id) on delete set null;
+  if not exists (
+    select 1 from pg_constraint where conname = 'prompt_versions_suggestion_fk'
+  ) then
+    alter table prompt_versions
+      add constraint prompt_versions_suggestion_fk
+      foreign key (source_suggestion_id) references trend_brain_suggestions(id) on delete set null;
+  end if;
+end $$;

@@ -83,7 +83,7 @@ export const BRAND_COLOR_PALETTE = [
 
 export const BRAND_COLORS = BRAND_COLOR_PALETTE.map((item) => item.hex);
 
-export const MAX_JOB_RETRIES = 1;
+export const MAX_JOB_RETRIES = 2;
 export const JOB_STUCK_MINUTES = 3;
 export const GENERATION_POLL_MS = 5000;
 /** Dashboard arka plan polling — üretim ekranından daha seyrek */
@@ -93,9 +93,9 @@ export const DASHBOARD_POLL_MS = 15000;
 export const LEAN_GENERATION_MODE =
   process.env.LEAN_GENERATION_MODE?.trim() !== "false";
 
-/** Gemini vision kalite kontrolü — varsayılan kapalı (hız için) */
+/** Gemini vision kalite kontrolü — varsayılan açık (false ile kapatılır) */
 export const QUALITY_CHECK_ENABLED =
-  process.env.QUALITY_CHECK_ENABLED?.trim() === "true";
+  process.env.QUALITY_CHECK_ENABLED?.trim() !== "false";
 
 export const GENERATING_MESSAGES = [
   "Markanız analiz ediliyor...",

@@ -9,7 +9,8 @@ import {
 } from "@/lib/ai/art-direction";
 import { getPromptLibraryEntry } from "@/lib/ai/prompt-library";
 import { generateImage, isPlaceholderImageUrl } from "@/lib/ai/image-provider";
-import { applyHeadlineOverlay, useHeadlineOverlayForProvider } from "@/lib/ai/headline-pipeline";
+import { shouldApplyHeadlineOverlay } from "@/lib/ai/composition-policy";
+import { applyHeadlineOverlay } from "@/lib/ai/headline-pipeline";
 import { applyLogoOverlay } from "@/lib/ai/logo-pipeline";
 import { normalizeGeneratedImageSize } from "@/lib/ai/normalize-output-image";
 import {
@@ -642,7 +643,49 @@ export async function processOneQueuedJob(projectId: string) {
       finalImageUrl,
       context.postFormat ?? "square",
     );
-    const headlineOverlay = useHeadlineOverlayForProvider(image.provider);
+
+    const hasLogo = Boolean(context.logoUrl);
+    const headlineOverlay = shouldApplyHeadlineOverlay(image.provider, hasLogo);
+
+    if (hasLogo && isQualityCheckEnabled()) {
+      const preOverlayQc = await checkGeneratedImageQuality({
+        imageUrl: finalImageUrl,
+        expectedHeadline: preview.headline,
+        brandName: context.brandName,
+        dayName: (await getPromptLibraryEntry(dayId))?.name,
+        phase: "pre-overlay",
+      });
+
+      if (shouldRetryQualityCheck(preOverlayQc)) {
+        const nextRetry = (nextJob.retry_count ?? 0) + 1;
+        if (nextRetry >= MAX_JOB_RETRIES) {
+          await supabase
+            .from("generation_jobs")
+            .update({
+              status: "failed",
+              retry_count: nextRetry,
+              error_message: `Ön kontrol: ${preOverlayQc.issues.join(", ") || "AI marka/metin çizdi"}`,
+              updated_at: nowIso(),
+            })
+            .eq("id", nextJob.id);
+        } else {
+          await supabase
+            .from("generation_jobs")
+            .update({
+              status: "queued",
+              retry_count: nextRetry,
+              image_url: null,
+              thumbnail_url: null,
+              error_message: `Ön kontrol yeniden denenecek: ${preOverlayQc.issues.join(", ")}`,
+              updated_at: nowIso(),
+            })
+            .eq("id", nextJob.id);
+        }
+
+        const status = await getProjectStatusAdmin(projectId);
+        return { processed: true, qualityRejected: true, status, shouldContinue: true };
+      }
+    }
 
     if (headlineOverlay) {
       finalImageUrl = await applyHeadlineOverlay(finalImageUrl, preview.headline, {
@@ -675,8 +718,9 @@ export async function processOneQueuedJob(projectId: string) {
         dayName: day?.name,
         dayCategory: day?.category,
         culturalContext: day?.culturalContext,
-        logoComposited: Boolean(context.logoUrl),
+        logoComposited: hasLogo,
         headlineOverlay,
+        phase: "final",
       });
 
       if (shouldRetryQualityCheck(quality)) {

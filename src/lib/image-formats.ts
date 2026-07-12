@@ -55,6 +55,16 @@ export function getPreviewAspectClass(format?: string) {
   return "aspect-square";
 }
 
+/** Prompt + bindirme için güvenli alan (kenar boşlukları) */
+export function getSafeZoneInsets(width: number, height: number) {
+  const portrait = height > width;
+  return {
+    top: Math.round(height * (portrait ? 0.14 : 0.12)),
+    bottom: Math.round(height * (portrait ? 0.2 : 0.14)),
+    sides: Math.round(width * 0.08),
+  };
+}
+
 /** Instagram feed + story güvenli alan kuralları — prompt'a eklenir */
 export function buildSafeZonePrompt(kind: "post" | "story", format?: string) {
   const normalized = normalizePostFormat(format);
