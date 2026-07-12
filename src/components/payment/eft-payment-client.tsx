@@ -40,7 +40,7 @@ export function EftPaymentClient({ orderId }: EftPaymentClientProps) {
         if (data.paid || data.status === "paid") {
           setStatus("paid");
           window.setTimeout(() => {
-            window.location.href = `/orders/${orderId}/generating`;
+            window.location.href = `/orders/${orderId}/basla`;
           }, 1200);
           return;
         }
@@ -88,7 +88,7 @@ export function EftPaymentClient({ orderId }: EftPaymentClientProps) {
           <Button
             className="mt-5 w-full"
             onClick={() => {
-              window.location.href = `/orders/${orderId}/generating`;
+              window.location.href = `/orders/${orderId}/basla`;
             }}
           >
             Hemen devam et

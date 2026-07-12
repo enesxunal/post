@@ -495,23 +495,25 @@ export function writeImagePrompt(brief: CreativeBrief, postFormat?: PostFormat):
     buildFormatPromptLine(postFormat),
     buildSafeZonePrompt("post", postFormat),
     brief.occasionIsolation,
-    `Create a ${sizeLabel} premium branded Instagram post for ${brief.brand.name}, a ${brief.sector.name} business, for ${brief.occasion.name}.`,
+    `Create a ${sizeLabel} premium branded Instagram post for a ${brief.sector.name} business, for ${brief.occasion.name}.`,
     `This must NOT look like a generic holiday greeting card. It should feel art-directed and custom-made for this brand and sector — a sector-native branded scene, not occasion wallpaper with a headline sticker.`,
     `Occasion layer: ${brief.occasion.emotionalGoal}, shown through ${brief.occasion.culturalSignal} / ${brief.occasion.primaryVisualIdea}.`,
     `Sector-native layer: integrate ${sectorElements || brief.sector.nativeScene} as natural parts of the scene, with ${integration}. ${brief.sector.blendHint} These elements should make the design feel specific to a ${brief.sector.name} business without overpowering the special day.`,
     `Style layer: ${brief.style.name} — ${brief.style.designLanguage}. Style shapes layout density and typography character; it is not just a color filter.`,
     `Brand layer: use brand color ${brief.brand.color} with ${colorRule}. ${brief.brand.logoUsage}`,
-    `Composition: ${brief.artDirection.layout.replace(/-/g, " ")}, text ${brief.artDirection.textPosition}, ${brief.artDirection.typographyMood.replace(/-/g, " ")}, ${brief.artDirection.density} density, premium agency-quality finish, mobile-readable Turkish headline.`,
+    brief.backgroundOnly
+      ? `Composition: ${brief.artDirection.layout.replace(/-/g, " ")}, ${brief.artDirection.typographyMood.replace(/-/g, " ")}, ${brief.artDirection.density} density, premium agency-quality finish, clean background for overlays.`
+      : `Composition: ${brief.artDirection.layout.replace(/-/g, " ")}, text ${brief.artDirection.textPosition}, ${brief.artDirection.typographyMood.replace(/-/g, " ")}, ${brief.artDirection.density} density, premium agency-quality finish, mobile-readable Turkish headline.`,
   ];
 
   if (brief.userDirection) {
-    parts.push(`Revision note from user: ${brief.userDirection}`);
+    parts.push(`User visual preference: ${brief.userDirection}`);
   }
 
   if (brief.backgroundOnly) {
     parts.push(
       `No text in the image — leave clean space for headline overlay and logo at ${placement}.`,
-      "Absolutely no brand name, no tagline, no footer text, no extra Turkish sentences.",
+      `Absolutely no brand name ("${brief.brand.name}"), no tagline, no footer text, no extra Turkish sentences, no AI-drawn logo.`,
     );
   } else {
     parts.push(`Text on image: ONLY "${brief.text.headline}".`);

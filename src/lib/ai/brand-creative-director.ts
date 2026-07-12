@@ -177,7 +177,9 @@ function buildFallbackHarmony(
       context.sector === "agency"
         ? "Ajans markası: katmanlı premium dijital estetik kullanılabilir — özel gün atmosferi ana sahne."
         : `Sektör aksanı (arka plan detayı): ${sectorAccent}.`,
-      `${context.brandName} logosu köşede küçük. Sıcak, paylaşılabilir, kültürel olarak doğru kompozisyon.`,
+      context.logoUrl
+        ? "Gerçek logo üretimden sonra bindirilecek — görselde marka adı, logo veya footer YAZMA; köşede boş alan bırak."
+        : `${context.brandName} logosu köşede küçük. Sıcak, paylaşılabilir, kültürel olarak doğru kompozisyon.`,
     ].join(" "),
     sectorBlend: [
       `Özel gün kimliği önce (%65), marka aksanı sonra (%35).`,
@@ -224,8 +226,9 @@ function buildFallbackBrief(
     visualQuality:
       "Ajans kalitesinde premium sosyal medya tasarımı: katmanlı kompozisyon, okunaklı tipografi, gerçekçi veya üst düzey illüstrasyon — asla clip art veya amatör çizim değil.",
     subtextOnImage: null,
-    onImageTextRules:
-      "Görselde YALNIZCA büyük kutlama başlığı + köşede küçük marka adı/logo. Müşterinin ham cümlesini, hizmet listesini veya uzun sloganı görsele yazma.",
+    onImageTextRules: context.logoUrl
+      ? "Görselde HİÇBİR yazı olmasın — başlık ve logo sonradan bindirilecek. Marka adı, slogan veya footer YASAK."
+      : "Görselde YALNIZCA büyük kutlama başlığı + köşede küçük marka adı/logo. Müşterinin ham cümlesini, hizmet listesini veya uzun sloganı görsele yazma.",
     avoidOnImage: [
       ...UNIVERSAL_AVOID,
       ...(sectorRule?.avoidRules ?? []),

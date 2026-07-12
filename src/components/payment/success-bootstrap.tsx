@@ -22,7 +22,7 @@ export function SuccessBootstrap({ orderId }: SuccessBootstrapProps) {
       const resolvedOrderId = draft?.orderId ?? orderId;
 
       if (resolvedOrderId) {
-        router.replace(`/orders/${resolvedOrderId}/generating`);
+        router.replace(`/orders/${resolvedOrderId}/basla`);
         return;
       }
 

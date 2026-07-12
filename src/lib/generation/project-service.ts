@@ -18,8 +18,25 @@ import type { AddonKey, BrandContext, PostFormat, SectorKey, VisualStyle } from 
 
 const META_SEPARATOR = "\n<!--POST_META:";
 
-export function encodeProjectMeta(draft: OnboardingDraft) {
-  const meta = {
+export type ProjectGenerationMode = "manual" | "bulk";
+
+type ProjectMetaPayload = {
+  brandColors: string[];
+  purchasedAddons: AddonKey[];
+  customSector?: string;
+  selectedDays: OnboardingDraft["selectedDays"];
+  postFormat: PostFormat;
+  logoAnalysis?: LogoAnalysis;
+  logoPlacement?: OnboardingDraft["logoPlacement"];
+  styleCustomNotes?: string;
+  dayCustomizations?: OnboardingDraft["dayCustomizations"];
+  formMode?: OnboardingDraft["formMode"];
+  generationMode?: ProjectGenerationMode;
+  generationModeChosen?: boolean;
+};
+
+function buildMetaPayload(draft: OnboardingDraft): ProjectMetaPayload {
+  return {
     brandColors: draft.brandColors,
     purchasedAddons: draft.purchasedAddons,
     customSector: draft.customSector,
@@ -31,7 +48,34 @@ export function encodeProjectMeta(draft: OnboardingDraft) {
     dayCustomizations: draft.dayCustomizations,
     formMode: draft.formMode,
   };
+}
+
+export function encodeProjectMeta(draft: OnboardingDraft) {
   const userText = draft.brandDescription?.trim() ?? "";
+  return `${userText}${META_SEPARATOR}${JSON.stringify(buildMetaPayload(draft))}-->`;
+}
+
+export function patchProjectMeta(
+  brandDescription: string | null,
+  patch: Partial<Pick<ProjectMetaPayload, "generationMode" | "generationModeChosen">>,
+) {
+  const decoded = decodeProjectMeta(brandDescription);
+  const meta: ProjectMetaPayload = {
+    brandColors: decoded.brandColors,
+    purchasedAddons: decoded.purchasedAddons,
+    customSector: decoded.customSector,
+    selectedDays: decoded.selectedDays,
+    postFormat: decoded.postFormat,
+    logoAnalysis: decoded.logoAnalysis,
+    logoPlacement: decoded.logoPlacement,
+    styleCustomNotes: decoded.styleCustomNotes,
+    dayCustomizations: decoded.dayCustomizations,
+    formMode: decoded.formMode,
+    generationMode: patch.generationMode ?? decoded.generationMode,
+    generationModeChosen:
+      patch.generationModeChosen ?? decoded.generationModeChosen ?? false,
+  };
+  const userText = decoded.userDescription?.trim() ?? "";
   return `${userText}${META_SEPARATOR}${JSON.stringify(meta)}-->`;
 }
 
@@ -49,6 +93,8 @@ export function decodeProjectMeta(brandDescription: string | null) {
       styleCustomNotes: undefined as string | undefined,
       dayCustomizations: undefined as OnboardingDraft["dayCustomizations"],
       formMode: undefined as OnboardingDraft["formMode"],
+      generationMode: undefined as ProjectGenerationMode | undefined,
+      generationModeChosen: false,
     };
   }
 
@@ -67,6 +113,8 @@ export function decodeProjectMeta(brandDescription: string | null) {
       styleCustomNotes?: string;
       dayCustomizations?: OnboardingDraft["dayCustomizations"];
       formMode?: OnboardingDraft["formMode"];
+      generationMode?: ProjectGenerationMode;
+      generationModeChosen?: boolean;
     };
 
     return {
@@ -81,6 +129,8 @@ export function decodeProjectMeta(brandDescription: string | null) {
       styleCustomNotes: parsed.styleCustomNotes,
       dayCustomizations: parsed.dayCustomizations,
       formMode: parsed.formMode,
+      generationMode: parsed.generationMode,
+      generationModeChosen: parsed.generationModeChosen ?? Boolean(parsed.generationMode),
     };
   } catch {
     return {
@@ -95,6 +145,8 @@ export function decodeProjectMeta(brandDescription: string | null) {
       styleCustomNotes: undefined,
       dayCustomizations: undefined,
       formMode: undefined,
+      generationMode: undefined,
+      generationModeChosen: false,
     };
   }
 }

@@ -266,7 +266,7 @@ export function buildStyleBalanceRule(day: SpecialDay, context: BrandContext): s
     "",
     `Occasion (≈40%): "${day.name}" — ${day.culturalContext}`,
     `Business sector (≈35%): the design must feel specific to this type of business.`,
-    `Brand accent (≈25%): "${context.brandName}" via colors + logo corner.`,
+    `Brand accent (≈25%): brand colors only${context.logoUrl ? " — real logo is added after generation, do NOT draw logo or write brand name" : `: "${context.brandName}" via colors + logo corner`}.`,
     `Style "${styleName}" adapts to occasion + sector — never a soulless generic template.`,
     "Viewer must instantly understand BOTH the special day AND that this is a business post.",
   ].join("\n");

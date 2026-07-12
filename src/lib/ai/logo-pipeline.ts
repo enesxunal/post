@@ -161,36 +161,46 @@ async function loadImageBuffer(imageUrl: string): Promise<Buffer | null> {
   return Buffer.from(await response.arrayBuffer());
 }
 
-async function recolorLogoForBackground(
+/** Orijinal logo renklerini korur; okunabilirlik için hafif gölge ekler. */
+async function prepareLogoForOverlay(
   logoBuffer: Buffer,
-  regionMean: number,
-): Promise<Buffer> {
-  const lightBackground = regionMean >= 128;
-  const target = lightBackground
-    ? { r: 15, g: 23, b: 42 }
-    : { r: 255, g: 255, b: 255 };
+  lightBackground: boolean,
+): Promise<{ buffer: Buffer; pad: number }> {
+  const meta = await sharp(logoBuffer).metadata();
+  const w = meta.width ?? 100;
+  const h = meta.height ?? 100;
+  const pad = Math.max(6, Math.round(Math.min(w, h) * 0.1));
+  const offset = Math.max(2, Math.round(Math.min(w, h) * 0.035));
 
-  const { data, info } = await sharp(logoBuffer)
+  const shadow = await sharp(logoBuffer)
     .ensureAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
+    .greyscale()
+    .linear(lightBackground ? 0.35 : 0.65, lightBackground ? 0 : 255)
+    .blur(Math.max(2, Math.round(pad * 0.45)))
+    .toBuffer();
 
-  for (let i = 0; i < data.length; i += 4) {
-    const alpha = data[i + 3] ?? 0;
-    if (alpha < 24) continue;
-    data[i] = target.r;
-    data[i + 1] = target.g;
-    data[i + 2] = target.b;
-  }
+  const canvasW = w + pad * 2;
+  const canvasH = h + pad * 2;
 
-  return sharp(data, {
-    raw: { width: info.width, height: info.height, channels: 4 },
+  const buffer = await sharp({
+    create: {
+      width: canvasW,
+      height: canvasH,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    },
   })
+    .composite([
+      { input: shadow, left: pad + offset, top: pad + offset, blend: "over" },
+      { input: logoBuffer, left: pad, top: pad },
+    ])
     .png()
     .toBuffer();
+
+  return { buffer, pad };
 }
 
-/** Üretilen görsele gerçek logoyu bindirir — arka plana göre renk uyarlar, kutu eklemez. */
+/** Üretilen görsele gerçek logoyu bindirir — orijinal renkler korunur, kutu eklenmez. */
 export async function applyLogoOverlay(
   imageUrl: string,
   logoUrl: string,
@@ -263,10 +273,17 @@ export async function applyLogoOverlay(
     h: logoH + marginY * 2,
   });
 
-  const adaptedLogo = await recolorLogoForBackground(resizedLogo, regionStats.mean);
+  const lightBackground = regionStats.mean >= 128;
+  const { buffer: preparedLogo, pad } = await prepareLogoForOverlay(resizedLogo, lightBackground);
 
   const output = await base
-    .composite([{ input: adaptedLogo, left, top }])
+    .composite([
+      {
+        input: preparedLogo,
+        left: Math.max(0, left - pad),
+        top: Math.max(0, top - pad),
+      },
+    ])
     .png()
     .toBuffer();
 

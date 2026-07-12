@@ -20,7 +20,8 @@ import {
 } from "@/lib/ai/quality-checker";
 import { JOB_STUCK_MINUTES, MAX_JOB_RETRIES } from "@/lib/config";
 import { consumeRevisionCredit } from "@/lib/jobs";
-import { projectToBrandContext } from "@/lib/generation/project-service";
+import { patchProjectMeta, projectToBrandContext } from "@/lib/generation/project-service";
+import type { ProjectGenerationMode } from "@/lib/generation/project-service";
 import { resolveAspectRatio } from "@/lib/image-formats";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -50,12 +51,21 @@ function parseArtDirection(
   return normalizeArtDirection(raw, options);
 }
 
-function parseRevisionNote(raw: unknown): string | undefined {
+function parseUserGenerationNote(raw: unknown): string | undefined {
   if (!raw || typeof raw !== "object") return undefined;
-  const candidate = raw as { revisionNote?: unknown };
-  return typeof candidate.revisionNote === "string" && candidate.revisionNote.trim()
-    ? candidate.revisionNote.trim()
-    : undefined;
+  const candidate = raw as {
+    revisionNote?: unknown;
+    generationNote?: unknown;
+    visualNote?: unknown;
+  };
+
+  for (const value of [candidate.generationNote, candidate.visualNote, candidate.revisionNote]) {
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return undefined;
 }
 
 function brandProfileFromProject(project: {
@@ -410,7 +420,11 @@ export async function regenerateGenerationJob(jobId: string, userId: string, rea
 }
 
 /** Kullanıcı tek bir boş slot için üretim başlatır. */
-export async function requestJobGeneration(jobId: string, userId: string) {
+export async function requestJobGeneration(
+  jobId: string,
+  userId: string,
+  options?: { visualNote?: string },
+) {
   const supabase = adminClient();
 
   const { data: job } = await supabase
@@ -453,6 +467,8 @@ export async function requestJobGeneration(jobId: string, userId: string) {
     })
     .eq("id", job.project_id);
 
+  const visualNote = options?.visualNote?.trim();
+
   await supabase
     .from("generation_jobs")
     .update({
@@ -466,6 +482,7 @@ export async function requestJobGeneration(jobId: string, userId: string) {
       approved_at: null,
       story_image_url: null,
       story_status: null,
+      design_metadata: visualNote ? { generationNote: visualNote } : null,
       updated_at: nowIso(),
     })
     .eq("id", jobId);
@@ -478,6 +495,78 @@ export async function requestJobGeneration(jobId: string, userId: string) {
   }
 
   return { ...status, focusJobId: jobId };
+}
+
+/** Ödeme sonrası kullanıcı tercihini kaydeder; toplu modda tüm boş postları kuyruğa alır. */
+export async function applyProjectGenerationMode(
+  projectId: string,
+  userId: string,
+  mode: ProjectGenerationMode,
+) {
+  const supabase = adminClient();
+
+  const { data: project } = await supabase
+    .from("projects")
+    .select("id, user_id, brand_description")
+    .eq("id", projectId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!project) {
+    throw new Error("Proje bulunamadı");
+  }
+
+  await supabase
+    .from("projects")
+    .update({
+      brand_description: patchProjectMeta(project.brand_description, {
+        generationMode: mode,
+        generationModeChosen: true,
+      }),
+      updated_at: nowIso(),
+    })
+    .eq("id", projectId);
+
+  if (mode !== "bulk") {
+    const status = await getProjectStatusAdmin(projectId);
+    if (!status) throw new Error("Durum alınamadı");
+    return status;
+  }
+
+  const { data: draftJobs } = await supabase
+    .from("generation_jobs")
+    .select("id")
+    .eq("project_id", projectId)
+    .eq("user_id", userId)
+    .in("status", ["draft", "failed"]);
+
+  if (draftJobs?.length) {
+    await supabase
+      .from("projects")
+      .update({
+        generation_stopped_at: null,
+        status: "generating",
+        updated_at: nowIso(),
+      })
+      .eq("id", projectId);
+
+    await supabase
+      .from("generation_jobs")
+      .update({
+        status: "queued",
+        retry_count: 0,
+        error_message: null,
+        updated_at: nowIso(),
+      })
+      .eq("project_id", projectId)
+      .in("status", ["draft", "failed"]);
+
+    scheduleQueueProcessing(projectId);
+  }
+
+  const status = await getProjectStatusAdmin(projectId);
+  if (!status) throw new Error("Durum alınamadı");
+  return status;
 }
 
 export async function stopProjectGeneration(projectId: string, userId: string) {
@@ -607,7 +696,7 @@ export async function processOneQueuedJob(projectId: string) {
 
   try {
     const artDirection = await ensureJobArtDirection(nextJob, project);
-    const revisionNote = parseRevisionNote(nextJob.design_metadata);
+    const revisionNote = parseUserGenerationNote(nextJob.design_metadata);
     const promptVersionRefs = await resolvePromptVersionRefs({
       dayId,
       sector: project.sector,

@@ -22,6 +22,6 @@ export async function GET(
     amount: order.amount_total,
     paid: order.status === "paid",
     generatingUrl:
-      order.status === "paid" ? `/orders/${order.id}/generating` : null,
+      order.status === "paid" ? `/orders/${order.id}/basla` : null,
   });
 }

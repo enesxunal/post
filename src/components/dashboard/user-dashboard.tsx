@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   CalendarPlus2,
   CheckCircle2,
+  ChevronDown,
   Copy,
   Download,
   ImageIcon,
@@ -139,6 +140,8 @@ export function UserDashboard({
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [copiedCaption, setCopiedCaption] = useState(false);
   const [revisionNote, setRevisionNote] = useState("");
+  const [showVisualPrompt, setShowVisualPrompt] = useState(false);
+  const [generationNote, setGenerationNote] = useState("");
 
   useEffect(() => {
     setJobs(initialJobs);
@@ -152,6 +155,8 @@ export function UserDashboard({
 
   useEffect(() => {
     setRevisionNote("");
+    setShowVisualPrompt(false);
+    setGenerationNote("");
   }, [selectedJobId]);
 
   useEffect(() => {
@@ -381,7 +386,10 @@ export function UserDashboard({
       const response = await fetch("/api/generation/generate-job", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId: selectedJob.id }),
+        body: JSON.stringify({
+          jobId: selectedJob.id,
+          visualNote: generationNote.trim() || undefined,
+        }),
       });
       const data = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(data.error ?? "Üretim başlatılamadı");
@@ -729,19 +737,53 @@ export function UserDashboard({
                       )}
 
                       {canGenerate ? (
-                        <Button
-                          className="w-full"
-                          onClick={generatePost}
-                          disabled={actionLoading === "generate"}
-                        >
-                          <Sparkles
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              actionLoading === "generate" && "animate-spin",
-                            )}
-                          />
-                          Üret
-                        </Button>
+                        <div className="space-y-3">
+                          <button
+                            type="button"
+                            onClick={() => setShowVisualPrompt((open) => !open)}
+                            className="flex w-full items-center justify-between rounded-2xl border border-emerald-100 bg-emerald-50/40 px-4 py-3 text-left text-sm font-medium text-slate-800 transition hover:bg-emerald-50"
+                          >
+                            <span>Görsel tercihi ekle (isteğe bağlı)</span>
+                            <ChevronDown
+                              className={cn(
+                                "h-4 w-4 text-slate-500 transition",
+                                showVisualPrompt && "rotate-180",
+                              )}
+                            />
+                          </button>
+                          {showVisualPrompt ? (
+                            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4">
+                              <label className="block">
+                                <span className="text-sm font-medium text-slate-800">
+                                  Bu post için nasıl bir görsel istersiniz?
+                                </span>
+                                <span className="mt-1 block text-xs leading-5 text-slate-500">
+                                  Boş bırakırsanız poust markanıza göre üretir. İsterseniz renk,
+                                  atmosfer veya obje tercihinizi yazın.
+                                </span>
+                                <textarea
+                                  value={generationNote}
+                                  onChange={(event) => setGenerationNote(event.target.value)}
+                                  placeholder="Örn: Daha sıcak tonlar, çiçekli arka plan, minimalist ve premium his, yaz sezonu enerjisi…"
+                                  className="mt-3 min-h-[110px] w-full rounded-2xl border border-emerald-100 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
+                                />
+                              </label>
+                            </div>
+                          ) : null}
+                          <Button
+                            className="w-full"
+                            onClick={generatePost}
+                            disabled={actionLoading === "generate"}
+                          >
+                            <Sparkles
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                actionLoading === "generate" && "animate-spin",
+                              )}
+                            />
+                            Üret
+                          </Button>
+                        </div>
                       ) : null}
 
                       {selectedJob.status === "ready" && !selectedJob.approvedAt ? (

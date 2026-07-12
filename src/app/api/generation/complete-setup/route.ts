@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       orderId: pending.orderId,
       projectId: result.projectId,
-      redirectUrl: `/orders/${pending.orderId}/generating`,
+      redirectUrl: `/orders/${pending.orderId}/basla`,
       ...status,
     });
   } catch (error) {
