@@ -3,6 +3,7 @@ import { UserDashboard } from "@/components/dashboard/user-dashboard";
 import { decodeProjectMeta } from "@/lib/generation/project-service";
 import { mapGenerationJobsForDashboard } from "@/lib/generation/map-jobs";
 import { findProjectIdByOrderId } from "@/lib/generation/queue-processor";
+import { parseProfileNames, resolveBrandColors } from "@/lib/profile/dashboard-user";
 import { getSectorOptionsFromSeed } from "@/lib/sectors/seed-data";
 import { resolveStyleName } from "@/lib/styles/seed-data";
 import { requireSessionUser } from "@/lib/supabase/auth";
@@ -15,6 +16,7 @@ type ProjectRow = {
   sector: string;
   primary_color: string;
   visual_style: string;
+  logo_url: string | null;
   remaining_credits: number;
   bonus_credits_granted: boolean;
   status: string;
@@ -41,6 +43,12 @@ export default async function DashboardPage({
   const user = await requireSessionUser("/dashboard");
   const supabase = await createSupabaseServerClient();
 
+  const { data: profileRow } = await supabase
+    .from("profiles")
+    .select("full_name, avatar_url")
+    .eq("id", user.id)
+    .maybeSingle();
+
   const { data: projects } = await supabase
     .from("projects")
     .select(
@@ -51,6 +59,7 @@ export default async function DashboardPage({
       sector,
       primary_color,
       visual_style,
+      logo_url,
       remaining_credits,
       bonus_credits_granted,
       status,
@@ -97,6 +106,10 @@ export default async function DashboardPage({
       ? getSectorOptionsFromSeed().find((item) => item.key === project.sector)?.label ?? "—"
       : "—");
   const styleLabel = project?.visual_style ? resolveStyleName(project.visual_style) : "—";
+  const profileNames = parseProfileNames(profileRow?.full_name, user);
+  const brandColors = resolveBrandColors(meta?.brandColors, project?.primary_color ?? "#16A34A");
+  const logoUrl = project?.logo_url ?? null;
+  const avatarUrl = profileRow?.avatar_url ?? logoUrl;
 
   let paidOrderNeedsSetup = false;
   if (!project) {
@@ -122,14 +135,17 @@ export default async function DashboardPage({
       <UserDashboard
       liveGenerating={postsGenerating > 0}
       user={{
-        firstName: user.firstName,
-        lastName: user.lastName,
+        firstName: profileNames.firstName,
+        lastName: profileNames.lastName,
         email: user.email,
         businessName: project?.brand_name ?? "Henüz proje yok",
         sector: sectorLabel,
         visualStyle: styleLabel,
         primaryColor: project?.primary_color ?? "#16A34A",
         logoInitial: (project?.brand_name ?? user.firstName).charAt(0).toUpperCase(),
+        avatarUrl,
+        logoUrl,
+        brandColors,
         packageName: "Ana Paket",
         postsTotal: jobs.length || 30,
         postsReady: jobs.filter((job) => job.status === "ready").length,

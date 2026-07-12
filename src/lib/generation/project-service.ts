@@ -57,11 +57,16 @@ export function encodeProjectMeta(draft: OnboardingDraft) {
 
 export function patchProjectMeta(
   brandDescription: string | null,
-  patch: Partial<Pick<ProjectMetaPayload, "generationMode" | "generationModeChosen">>,
+  patch: Partial<
+    Pick<
+      ProjectMetaPayload,
+      "generationMode" | "generationModeChosen" | "brandColors"
+    >
+  >,
 ) {
   const decoded = decodeProjectMeta(brandDescription);
   const meta: ProjectMetaPayload = {
-    brandColors: decoded.brandColors,
+    brandColors: patch.brandColors ?? decoded.brandColors,
     purchasedAddons: decoded.purchasedAddons,
     customSector: decoded.customSector,
     selectedDays: decoded.selectedDays,
@@ -262,6 +267,14 @@ export async function createProjectWithJobs(
 
   if (jobsError) {
     throw new Error(jobsError.message);
+  }
+
+  if (logoUrl) {
+    await supabase
+      .from("profiles")
+      .update({ avatar_url: logoUrl })
+      .eq("id", userId)
+      .is("avatar_url", null);
   }
 
   return {

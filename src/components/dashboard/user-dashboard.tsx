@@ -22,6 +22,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { LazyJobImage } from "@/components/dashboard/lazy-job-image";
+import { ProfileAvatar, ProfileBanner } from "@/components/dashboard/profile-avatar";
+import { ProfileSettings } from "@/components/dashboard/profile-settings";
 import { JobProductionDetails } from "@/components/dashboard/job-production-details";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
@@ -64,6 +66,9 @@ export type DashboardProfile = {
   postsGenerating: number;
   addons: string[];
   memberSince: string;
+  avatarUrl?: string | null;
+  logoUrl?: string | null;
+  brandColors: string[];
 };
 
 export type DashboardProject = {
@@ -205,6 +210,9 @@ export function UserDashboard({
   const selectedJob = jobs.find((job) => job.id === selectedJobId) ?? jobs[0];
   const remainingCredits = project?.remainingCredits ?? 0;
   const previewAspect = getPreviewAspectClass(postFormat);
+  const displayAvatarUrl = profile.avatarUrl ?? profile.logoUrl ?? null;
+  const displayFullName =
+    [profile.firstName, profile.lastName].filter(Boolean).join(" ").trim() || profile.email;
   const readyJobs = jobs.filter((job) => job.status === "ready");
 
   function calendarPayloadForJob(job: DashboardJob) {
@@ -497,12 +505,14 @@ export function UserDashboard({
       <header className="border-b border-emerald-100 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <div
-              className="flex h-11 w-11 items-center justify-center rounded-2xl text-lg font-bold text-white"
-              style={{ backgroundColor: profile.primaryColor }}
-            >
-              {profile.logoInitial}
-            </div>
+            <ProfileAvatar
+              imageUrl={displayAvatarUrl}
+              fallbackInitial={profile.logoInitial}
+              brandColors={profile.brandColors}
+              primaryColor={profile.primaryColor}
+              className="h-11 w-11"
+              withGradientRing
+            />
             <div>
               <p className="font-semibold text-slate-900">{profile.businessName}</p>
               <p className="text-xs text-slate-500">Üye paneli</p>
@@ -528,22 +538,21 @@ export function UserDashboard({
       <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[280px_1fr] lg:px-8">
         <aside className="space-y-4">
           <Card className="overflow-hidden p-0">
-            <div
+            <ProfileBanner
+              brandColors={profile.brandColors}
+              primaryColor={profile.primaryColor}
               className="h-20"
-              style={{
-                background: `linear-gradient(135deg, ${profile.primaryColor}, #10B981)`,
-              }}
             />
             <div className="relative px-5 pb-5">
-              <div
-                className="-mt-8 flex h-16 w-16 items-center justify-center rounded-2xl border-4 border-white text-xl font-bold text-white shadow-sm"
-                style={{ backgroundColor: profile.primaryColor }}
-              >
-                {profile.logoInitial}
-              </div>
-              <h2 className="mt-3 text-lg font-semibold text-slate-950">
-                {profile.firstName} {profile.lastName}
-              </h2>
+              <ProfileAvatar
+                imageUrl={displayAvatarUrl}
+                fallbackInitial={profile.logoInitial}
+                brandColors={profile.brandColors}
+                primaryColor={profile.primaryColor}
+                className="-mt-8 h-16 w-16 border-4 border-white shadow-sm"
+                withGradientRing
+              />
+              <h2 className="mt-3 text-lg font-semibold text-slate-950">{displayFullName}</h2>
               <p className="text-sm text-slate-500">{profile.email}</p>
               <div className="mt-4 grid grid-cols-3 gap-2 text-center">
                 <StatBox label="Hazır" value={String(profile.postsReady)} />
@@ -1052,42 +1061,27 @@ export function UserDashboard({
                   Hesap ve marka bilgileri
                 </h1>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Buradaki bilgiler onboarding ve hesap verilerinizden gelir. Düzenleme alanları
-                  yakında eklenecek; şimdilik sadece temiz bir özet gösteriyoruz.
+                  Adınızı, işletme bilgilerinizi, marka renklerinizi ve profil fotoğrafınızı buradan
+                  güncelleyebilirsiniz.
                 </p>
               </div>
-              <div className="grid gap-4 lg:grid-cols-2">
-                <div className="rounded-3xl border border-emerald-100 bg-white p-5">
-                  <p className="text-sm font-semibold text-slate-900">Hesap özeti</p>
-                  <div className="mt-4 grid gap-3">
-                    <InfoField
-                      label="Ad Soyad"
-                      value={`${profile.firstName} ${profile.lastName}`.trim()}
-                    />
-                    <InfoField label="E-posta" value={profile.email} />
-                    <InfoField label="Üyelik başlangıcı" value={profile.memberSince} />
-                  </div>
-                </div>
-                <div className="rounded-3xl border border-emerald-100 bg-white p-5">
-                  <p className="text-sm font-semibold text-slate-900">Marka özeti</p>
-                  <div className="mt-4 grid gap-3">
-                    <InfoField label="İşletme adı" value={profile.businessName} />
-                    <InfoField label="Sektör" value={profile.sector} />
-                    <InfoField label="Görsel stil" value={profile.visualStyle} />
-                    <InfoField label="Paket" value={profile.packageName} />
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 rounded-2xl border border-emerald-100 p-4">
-                <span
-                  className="h-10 w-10 rounded-xl"
-                  style={{ backgroundColor: profile.primaryColor }}
+              {project ? (
+                <ProfileSettings
+                  projectId={project.id}
+                  fullName={displayFullName}
+                  email={profile.email}
+                  businessName={profile.businessName}
+                  primaryColor={profile.primaryColor}
+                  brandColors={profile.brandColors}
+                  avatarUrl={profile.avatarUrl}
+                  logoUrl={profile.logoUrl}
+                  memberSince={profile.memberSince}
                 />
-                <div>
-                  <p className="text-sm font-medium text-slate-800">Ana marka rengi</p>
-                  <p className="text-sm text-slate-500">{profile.primaryColor}</p>
-                </div>
-              </div>
+              ) : (
+                <p className="text-sm text-slate-500">
+                  Profil düzenlemek için önce bir paket oluşturmanız gerekir.
+                </p>
+              )}
             </Card>
           )}
 
@@ -1163,16 +1157,6 @@ function NavItem({
       {icon}
       {label}
     </button>
-  );
-}
-
-function InfoField({ label, value }: { label: string; value: string }) {
-  const resolved = value?.trim() ? value : "Henüz belirtilmedi";
-  return (
-    <div className="rounded-2xl border border-emerald-100 bg-white px-4 py-3">
-      <p className="text-xs text-slate-500">{label}</p>
-      <p className="mt-1 text-sm font-medium text-slate-900">{resolved}</p>
-    </div>
   );
 }
 
