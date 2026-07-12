@@ -68,6 +68,11 @@ export function parseJobDesignMetadata(raw: unknown): JobDesignMetadata {
 
 export function parseUserGenerationNote(raw: unknown): string | undefined {
   const meta = parseJobDesignMetadata(raw);
+
+  if (meta.isRevision && meta.revisionNote?.trim()) {
+    return meta.revisionNote.trim();
+  }
+
   for (const value of [meta.generationNote, meta.visualNote, meta.revisionNote]) {
     if (typeof value === "string" && value.trim()) return value.trim();
   }

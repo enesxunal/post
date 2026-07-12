@@ -8,7 +8,7 @@ import {
   type ArtDirection,
 } from "@/lib/ai/art-direction";
 import { getPromptLibraryEntry } from "@/lib/ai/prompt-library";
-import { generateImage, isPlaceholderImageUrl } from "@/lib/ai/image-provider";
+import { generateImage, isPlaceholderImageUrl, regenerateImage } from "@/lib/ai/image-provider";
 import { shouldApplyHeadlineOverlay } from "@/lib/ai/composition-policy";
 import { applyHeadlineOverlay } from "@/lib/ai/headline-pipeline";
 import { applyLogoOverlay } from "@/lib/ai/logo-pipeline";
@@ -345,6 +345,7 @@ export async function regenerateGenerationJob(jobId: string, userId: string, rea
   const category = (day?.category ?? "popular") as SpecialDayCategory;
   const projectMemory = await loadProjectArtMemory(job.project_id, jobId);
   const brandProfile = brandProfileFromProject(project);
+  const revisionRequest = reason?.trim() || DEFAULT_REVISION_DIRECTIVE;
   const previousArtDirection = parseArtDirection(job.art_direction, {
     sectorKey: project.sector,
     category,
@@ -354,9 +355,9 @@ export async function regenerateGenerationJob(jobId: string, userId: string, rea
     projectMemory,
     { dayId: job.type, category },
     brandProfile,
+    revisionRequest,
   );
 
-  const revisionRequest = reason?.trim() || DEFAULT_REVISION_DIRECTIVE;
   const archivedMetadata = isRevision
     ? archiveJobImageVersion({
         existingRaw: job.design_metadata,
@@ -407,6 +408,8 @@ export async function regenerateGenerationJob(jobId: string, userId: string, rea
       art_direction: nextArtDirection,
       design_metadata: mergeJobDesignMetadata(archivedMetadata, {
         revisionNote: revisionRequest,
+        generationNote: undefined,
+        visualNote: undefined,
         isRevision: true,
         previousVersions: archivedMetadata.previousVersions,
         supersededArtDirection: previousArtDirection ?? undefined,
@@ -799,7 +802,7 @@ export async function processOneQueuedJob(projectId: string) {
     const preview = await composeImagePrompt(context, dayId, {
       artDirection,
       userNote,
-      isRevision: designMeta.isRevision,
+      isRevision: Boolean(designMeta.isRevision),
     });
 
     await supabase
@@ -813,10 +816,21 @@ export async function processOneQueuedJob(projectId: string) {
       })
       .eq("id", nextJob.id);
 
-    const image = await generateImage(preview.prompt, [], {
-      aspectRatio: resolveAspectRatio(context.postFormat ?? "square"),
-      headline: preview.headline,
-    });
+    const previousImageUrl = designMeta.previousVersions?.[0]?.imageUrl;
+    const image =
+      designMeta.isRevision && previousImageUrl
+        ? await regenerateImage(
+            previousImageUrl,
+            `${preview.prompt}\n\nIMPORTANT: Create a visibly different alternative. Do not copy the reference image layout.`,
+            {
+              aspectRatio: resolveAspectRatio(context.postFormat ?? "square"),
+              headline: preview.headline,
+            },
+          )
+        : await generateImage(preview.prompt, [], {
+            aspectRatio: resolveAspectRatio(context.postFormat ?? "square"),
+            headline: preview.headline,
+          });
 
     if (isPlaceholderImageUrl(image.imageUrl)) {
       throw new Error("Görsel üretilemedi (placeholder döndü)");

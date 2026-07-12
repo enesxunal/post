@@ -42,8 +42,10 @@ export function regenerateArtDirection(
   projectMemory: ArtDirection[],
   day: CollectionDayInput,
   brandProfile: BrandCreativeProfile,
+  revisionNote?: string,
 ): ArtDirection {
-  const index = projectMemory.length;
+  const index = projectMemory.length + (revisionNote?.length ?? 0);
+  const regenSalt = `${revisionNote?.slice(0, 48) ?? "default"}:${Date.now()}`;
   let next = assignArtDirectionForDay(day, index, projectMemory, brandProfile);
 
   if (!previous) return next;
@@ -55,7 +57,7 @@ export function regenerateArtDirection(
     day.category,
     index + 17,
     [previous, ...projectMemory],
-    `${day.dayId}:regen`,
+    `${day.dayId}:regen:${regenSalt}`,
   );
 
   next = {

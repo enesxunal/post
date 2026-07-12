@@ -364,9 +364,10 @@ function brandDescriptionSnippet(description?: string): string | undefined {
   return shorten(firstSentence(description, 90), 90);
 }
 
-function normalizeUserDirection(userNote?: string): string | undefined {
+function normalizeUserDirection(userNote?: string, isRevision?: boolean): string | undefined {
   if (!userNote?.trim()) return undefined;
-  return shorten(userNote.trim(), 200);
+  const limit = isRevision ? 700 : 200;
+  return shorten(userNote.trim(), limit);
 }
 
 export function buildCreativeBrief(input: CreativeBriefInput): CreativeBrief {
@@ -387,7 +388,7 @@ export function buildCreativeBrief(input: CreativeBriefInput): CreativeBrief {
 
   const backgroundOnly = input.backgroundOnly ?? false;
   const hasLogo = Boolean(input.logoUrl);
-  const userDirection = normalizeUserDirection(input.userNote);
+  const userDirection = normalizeUserDirection(input.userNote, input.isRevision);
   const art = ensureArtDirection(input, seed);
   const styleName = resolveStyleName(input.selectedStyle);
 
@@ -511,9 +512,11 @@ export function writeImagePrompt(brief: CreativeBrief, postFormat?: PostFormat):
   if (brief.userDirection) {
     if (brief.isRevision) {
       parts.push(
-        "=== CUSTOMER REVISION (MANDATORY — highest priority) ===",
-        `The customer rejected the previous visual. Follow this direction exactly: ${brief.userDirection}`,
-        "Create a clearly different composition from the rejected version — not a near-duplicate.",
+        "=== CUSTOMER REVISION (MANDATORY — HIGHEST PRIORITY) ===",
+        `The customer REJECTED the previous visual. You MUST follow this feedback exactly and produce a visibly different result:`,
+        brief.userDirection,
+        "Do NOT repeat the previous composition, color balance, props, or layout. This must look like a fresh creative alternative — not a near-duplicate.",
+        `Revision variation token: rev-${Date.now()}`,
       );
     } else {
       parts.push(`User visual preference: ${brief.userDirection}`);
@@ -550,8 +553,9 @@ export function writeImagePrompt(brief: CreativeBrief, postFormat?: PostFormat):
     prompt = `${prompt}\n\n${enrichment}`.trim();
   }
 
-  if (prompt.length > 1400) {
-    prompt = `${prompt.slice(0, 1397).trim()}…`;
+  if (prompt.length > (brief.isRevision ? 2000 : 1400)) {
+    const limit = brief.isRevision ? 1997 : 1397;
+    prompt = `${prompt.slice(0, limit).trim()}…`;
   }
 
   return prompt;
