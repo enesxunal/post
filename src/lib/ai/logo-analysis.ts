@@ -1,5 +1,7 @@
 import sharp from "sharp";
 
+import { analyzeLogoColors } from "@/lib/ai/logo-color-profile";
+
 export type LogoAnalysis = {
   logoType: "wordmark" | "icon" | "emblem" | "mixed" | "unknown";
   dominantColors: string[];
@@ -89,10 +91,20 @@ export async function analyzeLogo(logoUrl: string): Promise<LogoAnalysis | null>
     const bestPlacement: LogoAnalysis["bestPlacement"] =
       logoType === "wordmark" ? "bottom-center" : "bottom-right";
 
+    const colorProfile = await analyzeLogoColors(buffer);
+
     return {
       logoType,
-      dominantColors: [],
-      background,
+      dominantColors: colorProfile.dominantColors,
+      background: colorProfile.hasOpaqueBackground
+        ? colorProfile.backgroundRgb &&
+          (colorProfile.backgroundRgb.r + colorProfile.backgroundRgb.g +
+            colorProfile.backgroundRgb.b) /
+            3 >
+            180
+          ? "light"
+          : "dark"
+        : background,
       complexity,
       bestPlacement,
       usageNote: buildUsageNote(bestPlacement, complexity),

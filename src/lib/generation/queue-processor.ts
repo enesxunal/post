@@ -892,12 +892,12 @@ export async function processOneQueuedJob(projectId: string) {
     }
 
     if (context.logoUrl) {
-      finalImageUrl = await applyLogoOverlay(
-        finalImageUrl,
-        context.logoUrl,
-        context.logoAnalysis ?? undefined,
-        artDirection.brandIntegration?.logoPlacement ?? null,
-      );
+      finalImageUrl = await applyLogoOverlay(finalImageUrl, context.logoUrl, {
+        logoAnalysis: context.logoAnalysis ?? undefined,
+        preferredPlacement: artDirection.brandIntegration?.logoPlacement ?? null,
+        brandColor: context.primaryColor,
+        logoTreatment: artDirection.brandIntegration?.logoTreatment ?? null,
+      });
     }
 
     if (isQualityCheckEnabled()) {

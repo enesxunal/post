@@ -1,8 +1,20 @@
 import sharp, { type Sharp } from "sharp";
 
 import { getSafeZoneInsets } from "@/lib/image-formats";
-
+import type { LogoTreatment } from "@/lib/ai/art-direction/types";
+import {
+  analyzeLogoColors,
+  recolorLogo,
+  stripUniformLogoBackground,
+} from "@/lib/ai/logo-color-profile";
 import type { LogoAnalysis } from "@/lib/ai/logo-analysis";
+import {
+  buildLogoOverlayPlan,
+  parseHexColor,
+  type LogoOverlayPlan,
+  type Rgb,
+  type ZoneSample,
+} from "@/lib/ai/logo-overlay-plan";
 
 function parseDataUrl(dataUrl: string): { mime: string; buffer: Buffer } | null {
   const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
@@ -62,12 +74,12 @@ export async function rasterizeLogo(logoUrl: string): Promise<Buffer | null> {
 
 type Placement = LogoAnalysis["bestPlacement"];
 
-async function regionBusyScore(
+async function regionSample(
   image: Sharp,
   width: number,
   height: number,
   region: { left: number; top: number; w: number; h: number },
-) {
+): Promise<ZoneSample> {
   const sample = await image
     .clone()
     .extract({
@@ -77,19 +89,46 @@ async function regionBusyScore(
       height: Math.min(region.h, height),
     })
     .resize(48, 48, { fit: "fill" })
-    .greyscale()
     .raw()
-    .toBuffer();
+    .toBuffer({ resolveWithObject: true });
 
+  const { data } = sample;
+  const channels = sample.info.channels;
   let sum = 0;
   let sumSq = 0;
-  for (const value of sample) {
-    sum += value;
-    sumSq += value * value;
+  let rSum = 0;
+  let gSum = 0;
+  let bSum = 0;
+  const count = data.length / channels;
+
+  for (let i = 0; i < data.length; i += channels) {
+    const r = data[i] ?? 0;
+    const g = data[i + 1] ?? r;
+    const b = data[i + 2] ?? r;
+    const grey =
+      channels >= 3 ? Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b) : r;
+    sum += grey;
+    sumSq += grey * grey;
+    rSum += r;
+    gSum += g;
+    bSum += b;
   }
-  const mean = sum / sample.length;
-  const variance = sumSq / sample.length - mean * mean;
-  return { variance, mean };
+
+  const mean = sum / count;
+  const variance = sumSq / count - mean * mean;
+  const rgb = {
+    r: Math.round(rSum / count),
+    g: Math.round(gSum / count),
+    b: Math.round(bSum / count),
+  };
+
+  return {
+    mean,
+    variance,
+    rgb,
+    luminance: mean,
+    isLight: mean >= 128,
+  };
 }
 
 /** En sakin bölgeyi bulur; preferred verilirse önce onu dener. */
@@ -121,7 +160,7 @@ export async function detectBestLogoPlacement(
 
   const scores = await Promise.all(
     candidates.map(async (candidate) => {
-      const stats = await regionBusyScore(image, width, height, {
+      const stats = await regionSample(image, width, height, {
         left: candidate.left,
         top: candidate.top,
         w: regionW,
@@ -161,95 +200,27 @@ async function loadImageBuffer(imageUrl: string): Promise<Buffer | null> {
   return Buffer.from(await response.arrayBuffer());
 }
 
-/** Orijinal logo renklerini korur; okunabilirlik için hafif gölge ekler. */
-async function prepareLogoForOverlay(
-  logoBuffer: Buffer,
-  lightBackground: boolean,
-): Promise<{ buffer: Buffer; pad: number }> {
-  const meta = await sharp(logoBuffer).metadata();
-  const w = meta.width ?? 100;
-  const h = meta.height ?? 100;
-  const pad = Math.max(6, Math.round(Math.min(w, h) * 0.1));
-  const offset = Math.max(2, Math.round(Math.min(w, h) * 0.035));
-
-  const shadow = await sharp(logoBuffer)
-    .ensureAlpha()
-    .greyscale()
-    .linear(lightBackground ? 0.35 : 0.65, lightBackground ? 0 : 255)
-    .blur(Math.max(2, Math.round(pad * 0.45)))
-    .toBuffer();
-
-  const canvasW = w + pad * 2;
-  const canvasH = h + pad * 2;
-
-  const buffer = await sharp({
-    create: {
-      width: canvasW,
-      height: canvasH,
-      channels: 4,
-      background: { r: 0, g: 0, b: 0, alpha: 0 },
-    },
-  })
-    .composite([
-      { input: shadow, left: pad + offset, top: pad + offset, blend: "over" },
-      { input: logoBuffer, left: pad, top: pad },
-    ])
-    .png()
-    .toBuffer();
-
-  return { buffer, pad };
-}
-
-/** Üretilen görsele gerçek logoyu bindirir — orijinal renkler korunur, kutu eklenmez. */
-export async function applyLogoOverlay(
-  imageUrl: string,
-  logoUrl: string,
-  logoAnalysis?: LogoAnalysis | null,
-  preferredPlacement?: Placement | null,
-): Promise<string> {
-  const logoBuffer = await rasterizeLogo(logoUrl);
-  if (!logoBuffer) return imageUrl;
-
-  const imageBuffer = await loadImageBuffer(imageUrl);
-  if (!imageBuffer) return imageUrl;
-
-  const base = sharp(imageBuffer);
-  const meta = await base.metadata();
-  const width = meta.width ?? 1080;
-  const height = meta.height ?? 1080;
-  const safe = getSafeZoneInsets(width, height);
-
-  const placement = await detectBestLogoPlacement(
-    imageBuffer,
-    logoAnalysis,
-    preferredPlacement ?? null,
-  );
-
-  const maxLogoW = Math.round(width * 0.24);
-  const maxLogoH = Math.round(height * 0.16);
-
-  const resizedLogo = await sharp(logoBuffer)
-    .resize(maxLogoW, maxLogoH, { fit: "inside" })
-    .png()
-    .toBuffer();
-
-  const logoMeta = await sharp(resizedLogo).metadata();
-  const logoW = logoMeta.width ?? maxLogoW;
-  const logoH = logoMeta.height ?? maxLogoH;
-
-  const marginX = safe.sides;
-  const marginY = Math.round(safe.bottom * 0.35);
+function placementToCoords(
+  placement: Placement,
+  width: number,
+  height: number,
+  logoW: number,
+  logoH: number,
+  marginX: number,
+  marginY: number,
+  safeTop: number,
+) {
   let left = width - logoW - marginX;
   let top = height - logoH - marginY;
 
   switch (placement) {
     case "top-left":
       left = marginX;
-      top = safe.top;
+      top = safeTop;
       break;
     case "top-right":
       left = width - logoW - marginX;
-      top = safe.top;
+      top = safeTop;
       break;
     case "bottom-left":
       left = marginX;
@@ -266,26 +237,202 @@ export async function applyLogoOverlay(
       break;
   }
 
-  const regionStats = await regionBusyScore(base, width, height, {
+  return { left, top };
+}
+
+async function createRoundedMask(width: number, height: number, radius: number) {
+  const svg = `<svg width="${width}" height="${height}"><rect x="0" y="0" width="${width}" height="${height}" rx="${radius}" ry="${radius}" fill="white"/></svg>`;
+  return sharp(Buffer.from(svg)).png().toBuffer();
+}
+
+function zoneVeilRgb(plan: LogoOverlayPlan): Rgb {
+  if (plan.plateStyle === "frosted") {
+    return plan.plateRgb;
+  }
+  return {
+    r: Math.round(plan.plateRgb.r * 0.7 + 255 * 0.3),
+    g: Math.round(plan.plateRgb.g * 0.7 + 255 * 0.3),
+    b: Math.round(plan.plateRgb.b * 0.7 + 255 * 0.3),
+  };
+}
+
+async function buildPlate(
+  base: Sharp,
+  width: number,
+  height: number,
+  left: number,
+  top: number,
+  plateW: number,
+  plateH: number,
+  plan: LogoOverlayPlan,
+): Promise<Buffer | null> {
+  if (plan.plateStyle === "none" || plan.plateOpacity <= 0) {
+    return null;
+  }
+
+  const pad = Math.round(Math.min(plateW, plateH) * 0.18);
+  const radius =
+    plan.plateStyle === "badge"
+      ? Math.round(Math.min(plateW, plateH) * 0.22)
+      : plan.plateStyle === "card"
+        ? Math.round(Math.min(plateW, plateH) * 0.12)
+        : Math.round(Math.min(plateW, plateH) * 0.16);
+
+  const extractLeft = Math.max(0, left - pad);
+  const extractTop = Math.max(0, top - pad);
+  const extractW = Math.min(width - extractLeft, plateW + pad * 2);
+  const extractH = Math.min(height - extractTop, plateH + pad * 2);
+
+  let plate = base
+    .clone()
+    .extract({
+      left: extractLeft,
+      top: extractTop,
+      width: extractW,
+      height: extractH,
+    })
+    .resize(extractW, extractH, { fit: "fill" })
+    .blur(plan.plateStyle === "glass" || plan.plateStyle === "frosted" ? 14 : 4);
+
+  const fillRgb =
+    plan.plateStyle === "glass" || plan.plateStyle === "frosted"
+      ? zoneVeilRgb(plan)
+      : plan.plateRgb;
+
+  plate = plate.composite([
+    {
+      input: {
+        create: {
+          width: extractW,
+          height: extractH,
+          channels: 4,
+          background: {
+            r: fillRgb.r,
+            g: fillRgb.g,
+            b: fillRgb.b,
+            alpha: plan.plateOpacity,
+          },
+        },
+      },
+      blend: "over",
+    },
+  ]);
+
+  const mask = await createRoundedMask(extractW, extractH, radius);
+  return plate
+    .composite([{ input: mask, blend: "dest-in" }])
+    .png()
+    .toBuffer();
+}
+
+async function prepareLogoAsset(
+  logoBuffer: Buffer,
+  plan: LogoOverlayPlan,
+  brandColor?: string | null,
+): Promise<Buffer> {
+  const stripped = await stripUniformLogoBackground(logoBuffer);
+  const brandRgb = parseHexColor(brandColor);
+  return recolorLogo(stripped.buffer, plan.colorMode, brandRgb);
+}
+
+export type LogoOverlayOptions = {
+  logoAnalysis?: LogoAnalysis | null;
+  preferredPlacement?: Placement | null;
+  brandColor?: string | null;
+  logoTreatment?: LogoTreatment | string | null;
+};
+
+/** Üretilen görsele gerçek logoyu bindirir — zemin ve marka rengine göre uyumlu yerleşim. */
+export async function applyLogoOverlay(
+  imageUrl: string,
+  logoUrl: string,
+  options?: LogoOverlayOptions,
+): Promise<string> {
+  const logoBuffer = await rasterizeLogo(logoUrl);
+  if (!logoBuffer) return imageUrl;
+
+  const imageBuffer = await loadImageBuffer(imageUrl);
+  if (!imageBuffer) return imageUrl;
+
+  const base = sharp(imageBuffer);
+  const meta = await base.metadata();
+  const width = meta.width ?? 1080;
+  const height = meta.height ?? 1080;
+  const safe = getSafeZoneInsets(width, height);
+
+  const placement = await detectBestLogoPlacement(
+    imageBuffer,
+    options?.logoAnalysis,
+    options?.preferredPlacement ?? null,
+  );
+
+  const maxLogoW = Math.round(width * 0.24);
+  const maxLogoH = Math.round(height * 0.16);
+
+  const resizedLogo = await sharp(logoBuffer)
+    .resize(maxLogoW, maxLogoH, { fit: "inside" })
+    .png()
+    .toBuffer();
+
+  const logoMeta = await sharp(resizedLogo).metadata();
+  const logoW = logoMeta.width ?? maxLogoW;
+  const logoH = logoMeta.height ?? maxLogoH;
+
+  const marginX = safe.sides;
+  const marginY = Math.round(safe.bottom * 0.35);
+  const { left, top } = placementToCoords(
+    placement,
+    width,
+    height,
+    logoW,
+    logoH,
+    marginX,
+    marginY,
+    safe.top,
+  );
+
+  const zone = await regionSample(base, width, height, {
     left: Math.max(0, left - marginX),
     top: Math.max(0, top - marginY),
     w: logoW + marginX * 2,
     h: logoH + marginY * 2,
   });
 
-  const lightBackground = regionStats.mean >= 128;
-  const { buffer: preparedLogo, pad } = await prepareLogoForOverlay(resizedLogo, lightBackground);
+  const logoProfile = await analyzeLogoColors(resizedLogo);
+  const plan = buildLogoOverlayPlan({
+    zone,
+    logo: logoProfile,
+    brandColor: options?.brandColor,
+    logoAnalysis: options?.logoAnalysis,
+    logoTreatment: options?.logoTreatment,
+  });
 
-  const output = await base
-    .composite([
-      {
-        input: preparedLogo,
-        left: Math.max(0, left - pad),
-        top: Math.max(0, top - pad),
-      },
-    ])
-    .png()
-    .toBuffer();
+  const preparedLogo = await prepareLogoAsset(
+    resizedLogo,
+    plan,
+    options?.brandColor,
+  );
+
+  const plate = await buildPlate(base, width, height, left, top, logoW, logoH, plan);
+  const pad = Math.round(Math.min(logoW, logoH) * 0.12);
+  const platePad = plate ? Math.round(Math.min(logoW, logoH) * 0.18) : 0;
+
+  const composites: Array<{ input: Buffer; left: number; top: number }> = [];
+  if (plate) {
+    composites.push({
+      input: plate,
+      left: Math.max(0, left - platePad),
+      top: Math.max(0, top - platePad),
+    });
+  }
+
+  composites.push({
+    input: preparedLogo,
+    left: Math.max(0, left - pad),
+    top: Math.max(0, top - pad),
+  });
+
+  const output = await base.composite(composites).png().toBuffer();
 
   return `data:image/png;base64,${output.toString("base64")}`;
 }

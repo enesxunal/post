@@ -22,6 +22,7 @@ import {
   mergeSectorElementPool,
 } from "@/lib/ai/sector-native-profiles";
 import type { LogoAnalysis } from "@/lib/ai/logo-analysis";
+import { logoZonePromptHint } from "@/lib/ai/logo-overlay-plan";
 import { sectorAvoidList } from "@/lib/sectors/build-sector-prompt";
 import { getSectorOptionsFromSeed } from "@/lib/sectors/seed-data";
 import { styleAvoidList } from "@/lib/styles/build-style-prompt";
@@ -251,10 +252,17 @@ function buildLogoUsage(input: CreativeBriefInput, placement: string, treatment:
   if (!input.logoUrl) {
     return "No logo provided — do not invent any logo or brand mark.";
   }
+  const zoneHint = logoZonePromptHint({
+    placement,
+    treatment,
+    brandColor: input.brandColor,
+    logoAnalysis: input.logoAnalysis,
+  });
   return [
     `CRITICAL — real logo is overlaid ONCE after generation. Do NOT draw, write, or imitate "${input.brandName}"`,
     "as text, wordmark, icon, emblem, uniform badge, footer brand block, or tagline anywhere in the image.",
     `Keep ${placement.replace(/-/g, " ")} region completely empty and clean for programmatic logo placement.`,
+    zoneHint,
     `No duplicate brand marks — only the overlaid logo will appear.`,
   ].join(" ");
 }
@@ -279,6 +287,8 @@ function buildAvoidList(
           "tagline subtext",
           "duplicate logos",
           "extra Turkish sentences",
+          "harsh black logo sticker box",
+          "flat pasted logo rectangle",
         ]
       : []),
     ...COMMERCIAL_DESIGN_AVOID,

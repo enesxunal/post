@@ -93,6 +93,7 @@ export function brandIntegrationToPromptPhrase(integration: BrandIntegration): s
   return (
     `Brand integration: leave a clean reserved area at ${integration.logoPlacement.replace(/-/g, " ")} ` +
     `for the real logo ${treatment}. Brand color usage: ${integration.colorUsage}. ` +
+    `Logo zone must harmonize with brand colors — soft tinted surface, frosted pocket, or calm muted background; never a harsh black/white sticker box. ` +
     `Do NOT draw the logo yourself — composition must feel intentionally designed for logo placement.`
   );
 }
